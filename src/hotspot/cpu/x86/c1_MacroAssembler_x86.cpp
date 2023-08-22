@@ -178,6 +178,14 @@ void C1_MacroAssembler::initialize_header(Register obj, Register klass, Register
 
   if (len->is_valid()) {
     movl(Address(obj, arrayOopDesc::length_offset_in_bytes()), len);
+#ifdef _LP64
+    if (!is_aligned(arrayOopDesc::header_size_in_bytes(), BytesPerWord)) {
+      assert(is_aligned(arrayOopDesc::header_size_in_bytes(), BytesPerInt), "must be 4-byte aligned");
+      movl(Address(obj, arrayOopDesc::header_size_in_bytes()), 0);
+    }
+#else
+    assert(is_aligned(arrayOopDesc::header_size_in_bytes(), BytesPerInt), "must be 4-byte aligned");
+#endif
   }
 #ifdef _LP64
   else if (UseCompressedClassPointers) {
@@ -261,7 +269,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
   verify_oop(obj);
 }
 
-void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, Register t2, int header_size, Address::ScaleFactor f, Register klass, Label& slow_case) {
+void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, Register t2, int base_offset_in_bytes, Address::ScaleFactor f, Register klass, Label& slow_case) {
   assert(obj == rax, "obj must be in rax, for cmpxchg");
   assert_different_registers(obj, len, t1, t2, klass);
 
@@ -274,7 +282,7 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
 
   const Register arr_size = t2; // okay to be the same
   // align object end
-  movptr(arr_size, header_size * BytesPerWord + MinObjAlignmentInBytesMask);
+  movptr(arr_size, base_offset_in_bytes + MinObjAlignmentInBytesMask);
   lea(arr_size, Address(arr_size, len, f));
   andptr(arr_size, ~MinObjAlignmentInBytesMask);
 
@@ -284,7 +292,10 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
 
   // clear rest of allocated space
   const Register len_zero = len;
-  initialize_body(obj, arr_size, header_size * BytesPerWord, len_zero);
+  // We align-up the header size to word-size, because we clear the
+  // possible alignment gap in initialize_header().
+  int hdr_size = align_up(base_offset_in_bytes, BytesPerWord);
+  initialize_body(obj, arr_size, hdr_size, len_zero);
 
   if (CURRENT_ENV->dtrace_alloc_probes()) {
     assert(obj == rax, "must be");

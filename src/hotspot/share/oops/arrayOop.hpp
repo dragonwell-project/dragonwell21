@@ -27,6 +27,7 @@
 
 #include "oops/oop.hpp"
 #include "utilities/align.hpp"
+#include "utilities/globalDefinitions.hpp"
 
 // arrayOopDesc is the abstract baseclass for all arrays.  It doesn't
 // declare pure virtual to enforce this because that would allocate a vtbl
@@ -45,13 +46,12 @@ class arrayOopDesc : public oopDesc {
 
   // Interpreter/Compiler offsets
 
+public:
   // Header size computation.
   // The header is considered the oop part of this type plus the length.
-  // Returns the aligned header_size_in_bytes.  This is not equivalent to
-  // sizeof(arrayOopDesc) which should not appear in the code.
+  // This is not equivalent to sizeof(arrayOopDesc) which should not appear in the code.
   static int header_size_in_bytes() {
-    size_t hs = align_up(length_offset_in_bytes() + sizeof(int),
-                              HeapWordSize);
+    size_t hs = length_offset_in_bytes() + sizeof(int);
 #ifdef ASSERT
     // make sure it isn't called before UseCompressedOops is initialized.
     static size_t arrayoopdesc_hs = 0;
@@ -61,6 +61,7 @@ class arrayOopDesc : public oopDesc {
     return (int)hs;
   }
 
+private:
   // Returns the address of the length "field".  See length_offset_in_bytes().
   static int* length_addr_impl(void* obj_ptr) {
     char* ptr = static_cast<char*>(obj_ptr);
@@ -71,6 +72,11 @@ class arrayOopDesc : public oopDesc {
   // aligned 0 mod 8.  The typeArrayOop itself must be aligned at least this
   // strongly.
   static bool element_type_should_be_aligned(BasicType type) {
+#ifdef _LP64
+    if (type == T_OBJECT || type == T_ARRAY) {
+      return !UseCompressedOops;
+    }
+#endif
     return type == T_DOUBLE || type == T_LONG;
   }
 
@@ -85,7 +91,8 @@ class arrayOopDesc : public oopDesc {
 
   // Returns the offset of the first element.
   static int base_offset_in_bytes(BasicType type) {
-    return header_size(type) * HeapWordSize;
+    size_t hs = header_size_in_bytes();
+    return (int)(element_type_should_be_aligned(type) ? align_up(hs, BytesPerLong) : hs);
   }
 
   // Returns the address of the first element. The elements in the array will not
@@ -130,7 +137,7 @@ class arrayOopDesc : public oopDesc {
     size_t typesize_in_bytes = header_size_in_bytes();
     return (int)(element_type_should_be_aligned(type)
       ? align_object_offset(typesize_in_bytes/HeapWordSize)
-      : typesize_in_bytes/HeapWordSize);
+      : align_up(typesize_in_bytes, HeapWordSize)/HeapWordSize);
   }
 
   // Return the maximum length of an array of BasicType.  The length can passed

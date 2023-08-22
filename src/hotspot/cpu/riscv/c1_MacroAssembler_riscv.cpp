@@ -181,6 +181,10 @@ void C1_MacroAssembler::initialize_header(Register obj, Register klass, Register
 
   if (len->is_valid()) {
     sw(len, Address(obj, arrayOopDesc::length_offset_in_bytes()));
+    if (!is_aligned(arrayOopDesc::header_size_in_bytes(), BytesPerWord)) {
+      assert(is_aligned(arrayOopDesc::header_size_in_bytes(), BytesPerInt), "must be 4-byte aligned");
+      sw(zr, Address(obj, arrayOopDesc::header_size_in_bytes()));
+    }
   } else if (UseCompressedClassPointers) {
     store_klass_gap(obj, zr);
   }
@@ -280,7 +284,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
   verify_oop(obj);
 }
 
-void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1, Register tmp2, int header_size, int f, Register klass, Label& slow_case) {
+void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1, Register tmp2, int base_offset_in_bytes, int f, Register klass, Label& slow_case) {
   assert_different_registers(obj, len, tmp1, tmp2, klass);
 
   // determine alignment mask
@@ -292,7 +296,7 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1
 
   const Register arr_size = tmp2; // okay to be the same
   // align object end
-  mv(arr_size, (int32_t)header_size * BytesPerWord + MinObjAlignmentInBytesMask);
+  mv(arr_size, (int32_t)base_offset_in_bytes + MinObjAlignmentInBytesMask);
   shadd(arr_size, len, arr_size, t0, f);
   andi(arr_size, arr_size, ~(uint)MinObjAlignmentInBytesMask);
 
@@ -302,7 +306,10 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1
 
   // clear rest of allocated space
   const Register len_zero = len;
-  initialize_body(obj, arr_size, header_size * BytesPerWord, len_zero);
+  // We align-up the header size to word-size, because we clear the
+  // possible alignment gap in initialize_header().
+  int hdr_size = align_up(base_offset_in_bytes, BytesPerWord);
+  initialize_body(obj, arr_size, hdr_size, len_zero);
 
   membar(MacroAssembler::StoreStore);
 
