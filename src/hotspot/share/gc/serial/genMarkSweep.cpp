@@ -45,6 +45,7 @@
 #include "gc/shared/modRefBarrierSet.hpp"
 #include "gc/shared/referencePolicy.hpp"
 #include "gc/shared/referenceProcessorPhaseTimes.hpp"
+#include "gc/shared/slidingForwarding.hpp"
 #include "gc/shared/space.hpp"
 #include "gc/shared/strongRootsScope.hpp"
 #include "gc/shared/weakProcessor.hpp"
@@ -87,6 +88,8 @@ void GenMarkSweep::invoke_at_safepoint(bool clear_all_softrefs) {
 
   mark_sweep_phase1(clear_all_softrefs);
 
+  SlidingForwarding::begin();
+
   mark_sweep_phase2();
 
   // Don't add any more derived pointers during phase3
@@ -104,6 +107,8 @@ void GenMarkSweep::invoke_at_safepoint(bool clear_all_softrefs) {
   // Set saved marks for allocation profiler (and other things? -- dld)
   // (Should this be in general part?)
   gch->save_marks();
+
+  SlidingForwarding::end();
 
   deallocate_stacks();
 
@@ -239,15 +244,27 @@ void GenMarkSweep::mark_sweep_phase3() {
 
   ClassLoaderDataGraph::verify_claimed_marks_cleared(ClassLoaderData::_claim_stw_fullgc_adjust);
 
-  CodeBlobToOopClosure code_closure(&adjust_pointer_closure, CodeBlobToOopClosure::FixRelocations);
-  gch->process_roots(GenCollectedHeap::SO_AllCodeCache,
-                     &adjust_pointer_closure,
-                     &adjust_cld_closure,
-                     &adjust_cld_closure,
-                     &code_closure);
-
-  gch->gen_process_weak_roots(&adjust_pointer_closure);
-
+  if (UseAltGCForwarding) {
+    AdjustPointerClosure<true> adjust_pointer_closure;
+    CLDToOopClosure adjust_cld_closure(&adjust_pointer_closure, ClassLoaderData::_claim_stw_fullgc_adjust);
+    CodeBlobToOopClosure code_closure(&adjust_pointer_closure, CodeBlobToOopClosure::FixRelocations);
+    gch->process_roots(GenCollectedHeap::SO_AllCodeCache,
+                       &adjust_pointer_closure,
+                       &adjust_cld_closure,
+                       &adjust_cld_closure,
+                       &code_closure);
+    gch->gen_process_weak_roots(&adjust_pointer_closure);
+  } else {
+    AdjustPointerClosure<false> adjust_pointer_closure;
+    CLDToOopClosure adjust_cld_closure(&adjust_pointer_closure, ClassLoaderData::_claim_stw_fullgc_adjust);
+    CodeBlobToOopClosure code_closure(&adjust_pointer_closure, CodeBlobToOopClosure::FixRelocations);
+    gch->process_roots(GenCollectedHeap::SO_AllCodeCache,
+                       &adjust_pointer_closure,
+                       &adjust_cld_closure,
+                       &adjust_cld_closure,
+                       &code_closure);
+    gch->gen_process_weak_roots(&adjust_pointer_closure);
+  }
   adjust_marks();
   GenAdjustPointersClosure blk;
   gch->generation_iterate(&blk, true);
