@@ -46,7 +46,26 @@ class arrayOopDesc : public oopDesc {
 
   // Interpreter/Compiler offsets
 
-public:
+private:
+  // Returns the address of the length "field".  See length_offset_in_bytes().
+  static int* length_addr_impl(void* obj_ptr) {
+    char* ptr = static_cast<char*>(obj_ptr);
+    return reinterpret_cast<int*>(ptr + length_offset_in_bytes());
+  }
+
+  // Check whether an element of an arrayOop with the given type must be
+  // aligned 0 mod 8.  The arrayOop itself must be aligned at least this
+  // strongly.
+  static bool element_type_should_be_aligned(BasicType type) {
+#ifdef _LP64
+    if (type == T_OBJECT || type == T_ARRAY) {
+      return !UseCompressedOops;
+    }
+#endif
+    return type == T_DOUBLE || type == T_LONG;
+  }
+
+ public:
   // Header size computation.
   // The header is considered the oop part of this type plus the length.
   // This is not equivalent to sizeof(arrayOopDesc) which should not appear in the code.
@@ -61,26 +80,6 @@ public:
     return (int)hs;
   }
 
-private:
-  // Returns the address of the length "field".  See length_offset_in_bytes().
-  static int* length_addr_impl(void* obj_ptr) {
-    char* ptr = static_cast<char*>(obj_ptr);
-    return reinterpret_cast<int*>(ptr + length_offset_in_bytes());
-  }
-
-  // Check whether an element of a typeArrayOop with the given type must be
-  // aligned 0 mod 8.  The typeArrayOop itself must be aligned at least this
-  // strongly.
-  static bool element_type_should_be_aligned(BasicType type) {
-#ifdef _LP64
-    if (type == T_OBJECT || type == T_ARRAY) {
-      return !UseCompressedOops;
-    }
-#endif
-    return type == T_DOUBLE || type == T_LONG;
-  }
-
- public:
   // The _length field is not declared in C++.  It is allocated after the
   // declared nonstatic fields in arrayOopDesc if not compressed, otherwise
   // it occupies the second half of the _klass field in oopDesc.
@@ -129,18 +128,7 @@ private:
     *length_addr_impl(mem) = length;
   }
 
-  // Should only be called with constants as argument
-  // (will not constant fold otherwise)
-  // Returns the header size in words aligned to the requirements of the
-  // array object type.
-  static int header_size(BasicType type) {
-    size_t typesize_in_bytes = header_size_in_bytes();
-    return (int)(element_type_should_be_aligned(type)
-      ? align_object_offset(typesize_in_bytes/HeapWordSize)
-      : align_up(typesize_in_bytes, HeapWordSize)/HeapWordSize);
-  }
-
-  // Return the maximum length of an array of BasicType.  The length can passed
+  // Return the maximum length of an array of BasicType.  The length can be passed
   // to typeArrayOop::object_size(scale, length, header_size) without causing an
   // overflow. We also need to make sure that this will not overflow a size_t on
   // 32 bit platforms when we convert it to a byte size.
@@ -148,8 +136,12 @@ private:
     assert(type >= 0 && type < T_CONFLICT, "wrong type");
     assert(type2aelembytes(type) != 0, "wrong type");
 
+    size_t hdr_size_in_bytes = header_size_in_bytes();
+    // This is rounded-up and may overlap with the first array elements.
+    size_t hdr_size_in_words = align_up(hdr_size_in_bytes, HeapWordSize) / HeapWordSize;
+
     const size_t max_element_words_per_size_t =
-      align_down((SIZE_MAX/HeapWordSize - header_size(type)), MinObjAlignment);
+      align_down((SIZE_MAX/HeapWordSize - hdr_size_in_words), MinObjAlignment);
     const size_t max_elements_per_size_t =
       HeapWordSize * max_element_words_per_size_t / type2aelembytes(type);
     if ((size_t)max_jint < max_elements_per_size_t) {
@@ -157,7 +149,7 @@ private:
       // (CollectedHeap, Klass::oop_oop_iterate(), and more) uses an int for
       // passing around the size (in words) of an object. So, we need to avoid
       // overflowing an int when we add the header. See CRs 4718400 and 7110613.
-      return align_down(max_jint - header_size(type), MinObjAlignment);
+      return align_down(max_jint - hdr_size_in_words, MinObjAlignment);
     }
     return (int32_t)max_elements_per_size_t;
   }

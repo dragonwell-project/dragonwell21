@@ -70,7 +70,7 @@
     Register obj,                      // result: Pointer to object after successful allocation.
     Register t1,                       // temp register
     Register t2,                       // temp register
-    int      hdr_size,                 // object header size in words
+    int      base_offset_in_bytes,     // elements offset in bytes
     int      obj_size,                 // object size in words
     Register klass,                    // object klass
     Label&   slow_case                 // Continuation point if fast allocation fails.
