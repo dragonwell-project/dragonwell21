@@ -26,3 +26,15 @@
 # The test exclusions are for the cases when we are sure the tests would fail
 # for the known and innocuous implementation reasons.
 #
+
+
+compiler/ciReplay/TestInlining.java 8316441 generic-all
+compiler/ciReplay/TestInliningProtectionDomain.java 8316441 generic-all
+compiler/ciReplay/TestServerVM.java 8316441 generic-all
+compiler/ciReplay/TestUnresolvedClasses.java 8316441 generic-all
+compiler/ciReplay/TestLambdas.java 8316441 generic-all
+compiler/ciReplay/TestDumpReplay.java 8316441 generic-all
+compiler/ciReplay/TestDumpReplayCommandLine.java 8316441 generic-all
+compiler/ciReplay/TestIncrementalInlining.java 8316441 generic-all
+compiler/ciReplay/TestInvalidReplayFile.java 8316441 generic-all
+compiler/ciReplay/TestNoClassFile.java 8316441 generic-all
