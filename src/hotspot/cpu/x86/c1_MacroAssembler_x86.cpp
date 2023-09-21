@@ -184,6 +184,8 @@ void C1_MacroAssembler::initialize_header(Register obj, Register klass, Register
     movl(Address(obj, arrayOopDesc::length_offset_in_bytes()), len);
 #ifdef _LP64
     int base_offset = arrayOopDesc::length_offset_in_bytes() + BytesPerInt;
+    // With compact headers, arrays have a 32-bit alignment gap after the length.
+    assert(!UseCompactObjectHeaders || arrayOopDesc::length_offset_in_bytes() == 8, "check length offset");
     if (!is_aligned(base_offset, BytesPerWord)) {
       assert(is_aligned(base_offset, BytesPerInt), "must be 4-byte aligned");
       // Clear gap/first 4 bytes following the length field.
@@ -227,9 +229,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
   assert((con_size_in_bytes & MinObjAlignmentInBytesMask) == 0,
          "con_size_in_bytes is not multiple of alignment");
   const int hdr_size_in_bytes = instanceOopDesc::header_size() * HeapWordSize;
-  if (UseCompactObjectHeaders) {
-    assert(hdr_size_in_bytes == 8, "check object headers size");
-  }
+  assert(!UseCompactObjectHeaders || hdr_size_in_bytes == 8, "check object headers size");
   initialize_header(obj, klass, noreg, t1, t2);
 
   if (!(UseTLAB && ZeroTLAB && is_tlab_allocated)) {

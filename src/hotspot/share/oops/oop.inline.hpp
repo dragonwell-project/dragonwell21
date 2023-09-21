@@ -102,7 +102,7 @@ markWord oopDesc::prototype_mark() const {
 
 void oopDesc::init_mark() {
   if (UseCompactObjectHeaders) {
-    set_mark(prototype_mark());
+    set_mark(klass()->prototype_header());
   } else {
     set_mark(markWord::prototype());
   }
