@@ -345,7 +345,9 @@ public:
       return mark_offset_in_bytes() + markWord::klass_shift / 8;
     } else
 #endif
-    return (int)offset_of(oopDesc, _metadata._klass);
+    {
+      return (int)offset_of(oopDesc, _metadata._klass);
+    }
   }
   static int klass_gap_offset_in_bytes() {
     assert(has_klass_gap(), "only applicable to compressed klass pointers");

@@ -4340,7 +4340,7 @@ void MacroAssembler::load_nklass_compact(Register dst, Register src) {
   // Fetch displaced header
   ldr(dst, Address(dst, OM_OFFSET_NO_MONITOR_VALUE_TAG(header)));
 
-  // Fast-path: shift and decode Klass*.
+  // Fast-path: shift to get narrowKlass.
   bind(fast);
   lsr(dst, dst, markWord::klass_shift);
 }

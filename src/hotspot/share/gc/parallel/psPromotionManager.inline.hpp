@@ -259,6 +259,8 @@ inline oop PSPromotionManager::copy_unmarked_to_survivor_space(oop o,
   // Copy obj
   Copy::aligned_disjoint_words(cast_from_oop<HeapWord*>(o), cast_from_oop<HeapWord*>(new_obj), new_obj_size);
 
+  // Parallel GC claims with a release - so other threads might access this object
+  // after claiming and they should see the "completed" object.
   if (UseCompactObjectHeaders) {
     // The copy above is not atomic. Make sure we have seen the proper mark
     // and re-install it into the copy, so that Klass* is guaranteed to be correct.
