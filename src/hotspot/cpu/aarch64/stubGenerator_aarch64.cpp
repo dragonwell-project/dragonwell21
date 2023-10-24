@@ -41,6 +41,7 @@
 #include "oops/objArrayKlass.hpp"
 #include "oops/oop.inline.hpp"
 #include "prims/methodHandles.hpp"
+#include "prims/upcallLinker.hpp"
 #include "runtime/atomic.hpp"
 #include "runtime/continuation.hpp"
 #include "runtime/continuationEntry.inline.hpp"
@@ -7692,6 +7693,44 @@ class StubGenerator: public StubCodeGenerator {
 
 #endif // INCLUDE_JFR
 
+  // exception handler for upcall stubs
+  address generate_upcall_stub_exception_handler() {
+    StubCodeMark mark(this, "StubRoutines", "upcall stub exception handler");
+    address start = __ pc();
+
+    // Native caller has no idea how to handle exceptions,
+    // so we just crash here. Up to callee to catch exceptions.
+    __ verify_oop(r0);
+    __ movptr(rscratch1, CAST_FROM_FN_PTR(uint64_t, UpcallLinker::handle_uncaught_exception));
+    __ blr(rscratch1);
+    __ should_not_reach_here();
+
+    return start;
+  }
+
+  // load Method* target of MethodHandle
+  // j_rarg0 = jobject receiver
+  // rmethod = result
+  address generate_upcall_stub_load_target() {
+    StubCodeMark mark(this, "StubRoutines", "upcall_stub_load_target");
+    address start = __ pc();
+
+    __ resolve_global_jobject(j_rarg0, rscratch1, rscratch2);
+      // Load target method from receiver
+    __ load_heap_oop(rmethod, Address(j_rarg0, java_lang_invoke_MethodHandle::form_offset()), rscratch1, rscratch2);
+    __ load_heap_oop(rmethod, Address(rmethod, java_lang_invoke_LambdaForm::vmentry_offset()), rscratch1, rscratch2);
+    __ load_heap_oop(rmethod, Address(rmethod, java_lang_invoke_MemberName::method_offset()), rscratch1, rscratch2);
+    __ access_load_at(T_ADDRESS, IN_HEAP, rmethod,
+                      Address(rmethod, java_lang_invoke_ResolvedMethodName::vmtarget_offset()),
+                      noreg, noreg);
+    __ str(rmethod, Address(rthread, JavaThread::callee_target_offset())); // just in case callee is deoptimized
+
+    __ ret(lr);
+
+    return start;
+  }
+
+
   // Continuation point for throwing of implicit exceptions that are
   // not handled in the current activation. Fabricates an exception
   // oop and initiates normal exception dispatching in this
@@ -8752,6 +8791,8 @@ class StubGenerator: public StubCodeGenerator {
         }
       }
     }
+    StubRoutines::_upcall_stub_exception_handler = generate_upcall_stub_exception_handler();
+    StubRoutines::_upcall_stub_load_target = generate_upcall_stub_load_target();
 
     StubRoutines::aarch64::set_completed(); // Inidicate that arraycopy and zero_blocks stubs are generated
   }

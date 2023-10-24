@@ -23,6 +23,7 @@
 
 #include "precompiled.hpp"
 #include "asm/macroAssembler.inline.hpp"
+#include "classfile/javaClasses.hpp"
 #include "logging/logStream.hpp"
 #include "memory/resourceArea.hpp"
 #include "prims/upcallLinker.hpp"
@@ -114,9 +115,9 @@ static void restore_callee_saved_registers(MacroAssembler* _masm, const ABIDescr
   __ block_comment("} restore_callee_saved_regs");
 }
 
-static const int upcall_stub_code_base_size = 1024; // depends on GC (resolve_jobject)
+static const int upcall_stub_code_base_size = 1024;
 static const int upcall_stub_size_per_arg = 16; // arg save & restore + move
-address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
+address UpcallLinker::make_upcall_stub(jobject receiver, Symbol* signature,
                                        BasicType* in_sig_bt, int total_in_args,
                                        BasicType* out_sig_bt, int total_out_args,
                                        BasicType ret_type,
@@ -211,13 +212,11 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
   arg_shuffle.generate(_masm, shuffle_reg, abi._shadow_space_bytes, frame::z_jit_out_preserve_size, locs);
   __ block_comment("} argument_shuffle");
 
-  __ block_comment("receiver {");
+  __ block_comment("load_target {");
   __ load_const_optimized(Z_ARG1, (intptr_t)receiver);
-  __ resolve_jobject(Z_ARG1, Z_tmp_1, Z_tmp_2);
-  __ block_comment("} receiver");
-
-  __ load_const_optimized(Z_method, (intptr_t)entry);
-  __ z_stg(Z_method, Address(Z_thread, in_bytes(JavaThread::callee_target_offset())));
+  __ load_const_optimized(call_target_address, StubRoutines::upcall_stub_load_target());
+  __ call(call_target_address); // load taget Method* into Z_method
+  __ block_comment("} load_target");
 
   __ z_lg(call_target_address, Address(Z_method, in_bytes(Method::from_compiled_offset())));
   __ call(call_target_address);
@@ -266,24 +265,11 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
 
   //////////////////////////////////////////////////////////////////////////////
 
-  __ block_comment("exception_handler {");
-
-  intptr_t exception_handler_offset = __ pc() - start;
-
-  // Native caller has no idea how to handle exceptions,
-  // so we just crash here. Up to callee to catch exceptions.
-  __ verify_oop(Z_ARG1);
-  __ load_const_optimized(call_target_address, CAST_FROM_FN_PTR(uint64_t, UpcallLinker::handle_uncaught_exception));
-  __ call_c(call_target_address);
-  __ should_not_reach_here();
-
-  __ block_comment("} exception_handler");
-
   _masm->flush();
 
 #ifndef PRODUCT
   stringStream ss;
-  ss.print("upcall_stub_%s", entry->signature()->as_C_string());
+  ss.print("upcall_stub_%s", signature->as_C_string());
   const char* name = _masm->code_string(ss.as_string());
 #else // PRODUCT
   const char* name = "upcall_stub";
@@ -293,7 +279,6 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
   UpcallStub* blob
     = UpcallStub::create(name,
                          &buffer,
-                         exception_handler_offset,
                          receiver,
                          in_ByteSize(frame_data_offset));
 #ifndef PRODUCT

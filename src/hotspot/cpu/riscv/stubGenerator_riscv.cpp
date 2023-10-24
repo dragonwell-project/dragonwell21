@@ -38,6 +38,7 @@
 #include "oops/objArrayKlass.hpp"
 #include "oops/oop.inline.hpp"
 #include "prims/methodHandles.hpp"
+#include "prims/upcallLinker.hpp"
 #include "runtime/continuation.hpp"
 #include "runtime/continuationEntry.inline.hpp"
 #include "runtime/frame.inline.hpp"
@@ -4430,6 +4431,43 @@ class StubGenerator: public StubCodeGenerator {
 
 #endif // INCLUDE_JFR
 
+  // exception handler for upcall stubs
+  address generate_upcall_stub_exception_handler() {
+    StubCodeMark mark(this, "StubRoutines", "upcall stub exception handler");
+    address start = __ pc();
+
+    // Native caller has no idea how to handle exceptions,
+    // so we just crash here. Up to callee to catch exceptions.
+    __ verify_oop(x10); // return a exception oop in a0
+    __ rt_call(CAST_FROM_FN_PTR(address, UpcallLinker::handle_uncaught_exception));
+    __ should_not_reach_here();
+
+    return start;
+  }
+
+  // load Method* target of MethodHandle
+  // j_rarg0 = jobject receiver
+  // xmethod = Method* result
+  address generate_upcall_stub_load_target() {
+
+    StubCodeMark mark(this, "StubRoutines", "upcall_stub_load_target");
+    address start = __ pc();
+
+    __ resolve_global_jobject(j_rarg0, t0, t1);
+      // Load target method from receiver
+    __ load_heap_oop(xmethod, Address(j_rarg0, java_lang_invoke_MethodHandle::form_offset()), t0, t1);
+    __ load_heap_oop(xmethod, Address(xmethod, java_lang_invoke_LambdaForm::vmentry_offset()), t0, t1);
+    __ load_heap_oop(xmethod, Address(xmethod, java_lang_invoke_MemberName::method_offset()), t0, t1);
+    __ access_load_at(T_ADDRESS, IN_HEAP, xmethod,
+                      Address(xmethod, java_lang_invoke_ResolvedMethodName::vmtarget_offset()),
+                      noreg, noreg);
+    __ sd(xmethod, Address(xthread, JavaThread::callee_target_offset())); // just in case callee is deoptimized
+
+    __ ret();
+
+    return start;
+  }
+
 #undef __
 
   // Initialization
@@ -4513,6 +4551,9 @@ class StubGenerator: public StubCodeGenerator {
     if (bs_nm != nullptr) {
       StubRoutines::riscv::_method_entry_barrier = generate_method_entry_barrier();
     }
+
+    StubRoutines::_upcall_stub_exception_handler = generate_upcall_stub_exception_handler();
+    StubRoutines::_upcall_stub_load_target = generate_upcall_stub_load_target();
 
     StubRoutines::riscv::set_completed();
   }
