@@ -37,6 +37,7 @@
 #include "oops/objArrayKlass.hpp"
 #include "oops/oop.inline.hpp"
 #include "prims/methodHandles.hpp"
+#include "prims/upcallLinker.hpp"
 #include "runtime/frame.inline.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/javaThread.hpp"
@@ -3094,6 +3095,44 @@ class StubGenerator: public StubCodeGenerator {
 
   #endif // INCLUDE_JFR
 
+  // exception handler for upcall stubs
+  address generate_upcall_stub_exception_handler() {
+    StubCodeMark mark(this, "StubRoutines", "upcall stub exception handler");
+    address start = __ pc();
+
+    // Native caller has no idea how to handle exceptions,
+    // so we just crash here. Up to callee to catch exceptions.
+    __ verify_oop(Z_ARG1);
+    __ load_const_optimized(Z_R1_scratch, CAST_FROM_FN_PTR(uint64_t, UpcallLinker::handle_uncaught_exception));
+    __ call_c(Z_R1_scratch);
+    __ should_not_reach_here();
+
+    return start;
+  }
+
+  // load Method* target of MethodHandle
+  // Z_ARG1 = jobject receiver
+  // Z_method = Method* result
+  address generate_upcall_stub_load_target() {
+    StubCodeMark mark(this, "StubRoutines", "upcall_stub_load_target");
+    address start = __ pc();
+
+    __ resolve_global_jobject(Z_ARG1, Z_tmp_1, Z_tmp_2);
+      // Load target method from receiver
+    __ load_heap_oop(Z_method, Address(Z_ARG1, java_lang_invoke_MethodHandle::form_offset()),
+                    noreg, noreg, IS_NOT_NULL);
+    __ load_heap_oop(Z_method, Address(Z_method, java_lang_invoke_LambdaForm::vmentry_offset()),
+                    noreg, noreg, IS_NOT_NULL);
+    __ load_heap_oop(Z_method, Address(Z_method, java_lang_invoke_MemberName::method_offset()),
+                    noreg, noreg, IS_NOT_NULL);
+    __ z_lg(Z_method, Address(Z_method, java_lang_invoke_ResolvedMethodName::vmtarget_offset()));
+    __ z_stg(Z_method, Address(Z_thread, JavaThread::callee_target_offset())); // just in case callee is deoptimized
+
+    __ z_br(Z_R14);
+
+    return start;
+  }
+
   void generate_initial_stubs() {
     // Generates all stubs and initializes the entry points.
 
@@ -3174,6 +3213,8 @@ class StubGenerator: public StubCodeGenerator {
       StubRoutines::zarch::_nmethod_entry_barrier = generate_nmethod_entry_barrier();
     }
 
+    StubRoutines::_upcall_stub_exception_handler = generate_upcall_stub_exception_handler();
+    StubRoutines::_upcall_stub_load_target = generate_upcall_stub_load_target();
   }
 
   void generate_compiler_stubs() {

@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "asm/macroAssembler.hpp"
+#include "classfile/javaClasses.hpp"
 #include "classfile/vmIntrinsics.hpp"
 #include "compiler/oopMap.hpp"
 #include "gc/shared/barrierSet.hpp"
@@ -32,6 +33,7 @@
 #include "gc/shared/gc_globals.hpp"
 #include "memory/universe.hpp"
 #include "prims/jvmtiExport.hpp"
+#include "prims/upcallLinker.hpp"
 #include "runtime/arguments.hpp"
 #include "runtime/javaThread.hpp"
 #include "runtime/sharedRuntime.hpp"
@@ -3944,6 +3946,46 @@ address StubGenerator::generate_lookup_secondary_supers_table_slow_path_stub() {
   return start;
 }
 
+// exception handler for upcall stubs
+address StubGenerator::generate_upcall_stub_exception_handler() {
+  StubCodeMark mark(this, "StubRoutines", "upcall stub exception handler");
+  address start = __ pc();
+
+  // native caller has no idea how to handle exceptions
+  // we just crash here. Up to callee to catch exceptions.
+  __ verify_oop(rax);
+  __ vzeroupper();
+  __ mov(c_rarg0, rax);
+  __ andptr(rsp, -StackAlignmentInBytes); // align stack as required by ABI
+  __ subptr(rsp, frame::arg_reg_save_area_bytes); // windows
+  __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, UpcallLinker::handle_uncaught_exception)));
+  __ should_not_reach_here();
+
+  return start;
+}
+
+// load Method* target of MethodHandle
+// j_rarg0 = jobject receiver
+// rbx = result
+address StubGenerator::generate_upcall_stub_load_target() {
+  StubCodeMark mark(this, "StubRoutines", "upcall_stub_load_target");
+  address start = __ pc();
+
+  __ resolve_global_jobject(j_rarg0, r15_thread, rscratch1);
+    // Load target method from receiver
+  __ load_heap_oop(rbx, Address(j_rarg0, java_lang_invoke_MethodHandle::form_offset()), rscratch1);
+  __ load_heap_oop(rbx, Address(rbx, java_lang_invoke_LambdaForm::vmentry_offset()), rscratch1);
+  __ load_heap_oop(rbx, Address(rbx, java_lang_invoke_MemberName::method_offset()), rscratch1);
+  __ access_load_at(T_ADDRESS, IN_HEAP, rbx,
+                    Address(rbx, java_lang_invoke_ResolvedMethodName::vmtarget_offset()),
+                    noreg, noreg);
+  __ movptr(Address(r15_thread, JavaThread::callee_target_offset()), rbx); // just in case callee is deoptimized
+
+  __ ret(0);
+
+  return start;
+}
+
 void StubGenerator::create_control_words() {
   // Round to nearest, 64-bit mode, exceptions masked
   StubRoutines::x86::_mxcsr_std = 0x1F80;
@@ -4096,6 +4138,9 @@ void StubGenerator::generate_final_stubs() {
   if (UseVectorizedMismatchIntrinsic) {
     StubRoutines::_vectorizedMismatch = generate_vectorizedMismatch();
   }
+
+  StubRoutines::_upcall_stub_exception_handler = generate_upcall_stub_exception_handler();
+  StubRoutines::_upcall_stub_load_target = generate_upcall_stub_load_target();
 }
 
 void StubGenerator::generate_compiler_stubs() {

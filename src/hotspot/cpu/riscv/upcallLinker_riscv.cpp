@@ -25,6 +25,7 @@
 
 #include "precompiled.hpp"
 #include "asm/macroAssembler.hpp"
+#include "classfile/javaClasses.hpp"
 #include "logging/logStream.hpp"
 #include "memory/resourceArea.hpp"
 #include "prims/upcallLinker.hpp"
@@ -114,10 +115,10 @@ static void restore_callee_saved_registers(MacroAssembler* _masm, const ABIDescr
   __ block_comment("} restore_callee_saved_regs ");
 }
 
-static const int upcall_stub_code_base_size = 2048;
+static const int upcall_stub_code_base_size = 1024;
 static const int upcall_stub_size_per_arg = 16;
 
-address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
+address UpcallLinker::make_upcall_stub(jobject receiver, Symbol* signature,
                                        BasicType* in_sig_bt, int total_in_args,
                                        BasicType* out_sig_bt, int total_out_args,
                                        BasicType ret_type,
@@ -254,14 +255,10 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
   arg_shuffle.generate(_masm, as_VMStorage(shuffle_reg), abi._shadow_space_bytes, 0, locs);
   __ block_comment("} argument shuffle");
 
-  __ block_comment("{ receiver ");
-  __ movptr(shuffle_reg, (intptr_t) receiver);
-  __ resolve_jobject(shuffle_reg, t0, t1);
-  __ mv(j_rarg0, shuffle_reg);
-  __ block_comment("} receiver ");
-
-  __ mov_metadata(xmethod, entry);
-  __ sd(xmethod, Address(xthread, JavaThread::callee_target_offset())); // just in case callee is deoptimized
+  __ block_comment("{ load target ");
+  __ movptr(j_rarg0, (address) receiver);
+  __ far_call(RuntimeAddress(StubRoutines::upcall_stub_load_target())); // loads Method* into xmethod
+  __ block_comment("} load target ");
 
   __ push_cont_fastpath(xthread);
 
@@ -330,22 +327,11 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
 
   //////////////////////////////////////////////////////////////////////////////
 
-  __ block_comment("{ exception handler");
-
-  intptr_t exception_handler_offset = __ pc() - start;
-
-  // Native caller has no idea how to handle exceptions,
-  // so we just crash here. Up to callee to catch exceptions.
-  __ verify_oop(x10); // return a exception oop in a0
-  __ rt_call(CAST_FROM_FN_PTR(address, UpcallLinker::handle_uncaught_exception));
-  __ should_not_reach_here();
-
-  __ block_comment("} exception handler");
   __ flush();
 
 #ifndef PRODUCT
   stringStream ss;
-  ss.print("upcall_stub_%s", entry->signature()->as_C_string());
+  ss.print("upcall_stub_%s", signature->as_C_string());
   const char *name = _masm->code_string(ss.as_string());
 #else // PRODUCT
   const char* name = "upcall_stub";
@@ -356,7 +342,6 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Method* entry,
   UpcallStub* blob
     = UpcallStub::create(name,
                          &buffer,
-                         exception_handler_offset,
                          receiver,
                          in_ByteSize(frame_data_offset));
 #ifndef PRODUCT

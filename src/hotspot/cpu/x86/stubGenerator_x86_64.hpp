@@ -556,6 +556,10 @@ class StubGenerator: public StubCodeGenerator {
   // Slow path implementation for UseSecondarySupersTable.
   address generate_lookup_secondary_supers_table_slow_path_stub();
 
+  // shared exception handler for FFM upcall stubs
+  address generate_upcall_stub_exception_handler();
+  address generate_upcall_stub_load_target();
+
   void create_control_words();
 
   // Initialization
