@@ -36,9 +36,9 @@
 AC_DEFUN([JDKVER_CHECK_AND_SET_NUMBER],
 [
   # Additional [] needed to keep m4 from mangling shell constructs.
-  if [ ! [[ "$2" =~ ^0*([1-9][0-9]*)$|^0*(0)$ ]] ] ; then
-    AC_MSG_ERROR(["$2" is not a valid numerical value for $1])
-  fi
+  #if [ ! [[ "$2" =~ ^0*([1-9][0-9]*)$|^0*(0)$ ]] ] ; then
+  #  AC_MSG_ERROR(["$2" is not a valid numerical value for $1])
+  #fi
   # Extract the version number without leading zeros.
   cleaned_value=${BASH_REMATCH[[1]]}
   if test "x$cleaned_value" = x; then
@@ -486,11 +486,11 @@ AC_DEFUN_ONCE([JDKVER_SETUP_JDK_VERSION_NUMBERS],
     DESC: [Set vendor version string],
     DEFAULT_DESC: [not specified])
 
-  if test "x$VENDOR_VERSION_STRING_ENABLED" = xtrue; then
-    if [ ! [[ $VENDOR_VERSION_STRING =~ ^[[:graph:]]*$ ]] ]; then
-      AC_MSG_ERROR([--with--vendor-version-string contains non-graphical characters: $VENDOR_VERSION_STRING])
-    fi
-  fi
+  #if test "x$VENDOR_VERSION_STRING_ENABLED" = xtrue; then
+  #  if [ ! [[ $VENDOR_VERSION_STRING =~ ^[[:graph:]]*$ ]] ]; then
+  #    AC_MSG_ERROR([--with--vendor-version-string contains non-graphical characters: $VENDOR_VERSION_STRING])
+  #  fi
+  #fi
 
   # Set the MACOSX Bundle Name base
   UTIL_ARG_WITH(NAME: macosx-bundle-name-base, TYPE: string,
