@@ -887,6 +887,12 @@ void InterpreterMacroAssembler::remove_activation(TosState state,
     // Test if reserved zone needs to be enabled.
     Label no_reserved_zone_enabling;
 
+    // check if already enabled - if so no re-enabling needed
+    assert(sizeof(StackOverflow::StackGuardState) == 4, "unexpected size");
+    lwz(R0, in_bytes(JavaThread::stack_guard_state_offset()), R16_thread);
+    cmpwi(CCR0, R0, StackOverflow::stack_guard_enabled);
+    beq_predict_taken(CCR0, no_reserved_zone_enabling);
+
     // Compare frame pointers. There is no good stack pointer, as with stack
     // frame compression we can get different SPs when we do calls. A subsequent
     // call could have a smaller SP, so that this compare succeeds for an
@@ -1777,7 +1783,7 @@ void InterpreterMacroAssembler::profile_obj_type(Register obj, Register mdo_addr
   // Klass seen before, nothing to do (regardless of unknown bit).
   //beq(CCR1, do_nothing);
 
-  andi_(R0, klass, TypeEntries::type_unknown);
+  andi_(R0, tmp, TypeEntries::type_unknown);
   // Already unknown. Nothing to do anymore.
   //bne(CCR0, do_nothing);
   crorc(CCR0, Assembler::equal, CCR1, Assembler::equal); // cr0 eq = cr1 eq or cr0 ne
@@ -1976,7 +1982,7 @@ void InterpreterMacroAssembler::profile_parameters_type(Register tmp1, Register 
   }
 }
 
-// Add a InterpMonitorElem to stack (see frame_sparc.hpp).
+// Add a monitor (see frame_ppc.hpp).
 void InterpreterMacroAssembler::add_monitor_to_stack(bool stack_is_empty, Register Rtemp1, Register Rtemp2) {
 
   // Very-local scratch registers.

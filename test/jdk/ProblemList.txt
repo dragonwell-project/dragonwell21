@@ -481,7 +481,7 @@ java/beans/XMLEncoder/Test6570354.java 8015593 macosx-all
 java/lang/ProcessHandle/InfoTest.java                           8211847 aix-ppc64
 java/lang/invoke/LFCaching/LFMultiThreadCachingTest.java        8151492 generic-all
 java/lang/invoke/LFCaching/LFGarbageCollectedTest.java          8078602 generic-all
-java/lang/invoke/lambda/LambdaFileEncodingSerialization.java    8249079 linux-x64
+java/lang/invoke/lambda/LambdaFileEncodingSerialization.java    8249079 linux-all
 java/lang/invoke/RicochetTest.java                              8251969 generic-all
 
 ############################################################################
@@ -597,8 +597,6 @@ com/sun/nio/sctp/SctpChannel/SocketOptionTests.java             8141694 linux-al
 ############################################################################
 
 # jdk_security
-
-sun/security/pkcs11/sslecc/ClientJSSEServerJSSE.java            8161536 generic-all
 
 sun/security/smartcardio/TestChannel.java                       8039280 generic-all
 sun/security/smartcardio/TestConnect.java                       8039280 generic-all
@@ -727,7 +725,6 @@ java/util/Locale/LocaleProvidersRun.java                        8268379 macosx-x
 sun/util/locale/provider/CalendarDataRegression.java            8268379 macosx-x64
 java/util/concurrent/forkjoin/AsyncShutdownNow.java             8286352 linux-all,windows-x64
 java/util/concurrent/ExecutorService/CloseTest.java             8288899 macosx-aarch64
-java/util/concurrent/SynchronousQueue/Fairness.java             8300663 generic-x64
 
 ############################################################################
 

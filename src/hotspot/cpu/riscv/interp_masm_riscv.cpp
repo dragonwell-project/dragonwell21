@@ -690,7 +690,7 @@ void InterpreterMacroAssembler::remove_activation(
   // Check that all monitors are unlocked
   {
     Label loop, exception, entry, restart;
-    const int entry_size = frame::interpreter_frame_monitor_size() * wordSize;
+    const int entry_size = frame::interpreter_frame_monitor_size_in_bytes();
     const Address monitor_block_top(
       fp, frame::interpreter_frame_monitor_block_top_offset * wordSize);
     const Address monitor_block_bot(
@@ -763,6 +763,12 @@ void InterpreterMacroAssembler::remove_activation(
     // testing if reserved zone needs to be re-enabled
     Label no_reserved_zone_enabling;
 
+    // check if already enabled - if so no re-enabling needed
+    assert(sizeof(StackOverflow::StackGuardState) == 4, "unexpected size");
+    lw(t0, Address(xthread, JavaThread::stack_guard_state_offset()));
+    subw(t0, t0, StackOverflow::stack_guard_enabled);
+    beqz(t0, no_reserved_zone_enabling);
+
     ld(t0, Address(xthread, JavaThread::reserved_stack_activation_offset()));
     ble(t1, t0, no_reserved_zone_enabling);
 
@@ -794,7 +800,7 @@ void InterpreterMacroAssembler::remove_activation(
 //
 // Kills:
 //      x10
-//      c_rarg0, c_rarg1, c_rarg2, c_rarg3, .. (param regs)
+//      c_rarg0, c_rarg1, c_rarg2, c_rarg3, c_rarg4, c_rarg5, .. (param regs)
 //      t0, t1 (temp regs)
 void InterpreterMacroAssembler::lock_object(Register lock_reg)
 {
@@ -809,6 +815,8 @@ void InterpreterMacroAssembler::lock_object(Register lock_reg)
     const Register swap_reg = x10;
     const Register tmp = c_rarg2;
     const Register obj_reg = c_rarg3; // Will contain the oop
+    const Register tmp2 = c_rarg4;
+    const Register tmp3 = c_rarg5;
 
     const int obj_offset = in_bytes(BasicObjectLock::obj_offset());
     const int lock_offset = in_bytes(BasicObjectLock::lock_offset());
@@ -829,7 +837,7 @@ void InterpreterMacroAssembler::lock_object(Register lock_reg)
 
     if (LockingMode == LM_LIGHTWEIGHT) {
       ld(tmp, Address(obj_reg, oopDesc::mark_offset_in_bytes()));
-      lightweight_lock(obj_reg, tmp, t0, t1, slow_case);
+      lightweight_lock(obj_reg, tmp, tmp2, tmp3, slow_case);
       j(count);
     } else if (LockingMode == LM_LEGACY) {
       // Load (object->mark() | 1) into swap_reg
@@ -893,7 +901,7 @@ void InterpreterMacroAssembler::lock_object(Register lock_reg)
 //
 // Kills:
 //      x10
-//      c_rarg0, c_rarg1, c_rarg2, c_rarg3, ... (param regs)
+//      c_rarg0, c_rarg1, c_rarg2, c_rarg3, c_rarg4, ... (param regs)
 //      t0, t1 (temp regs)
 void InterpreterMacroAssembler::unlock_object(Register lock_reg)
 {
@@ -907,6 +915,7 @@ void InterpreterMacroAssembler::unlock_object(Register lock_reg)
     const Register swap_reg   = x10;
     const Register header_reg = c_rarg2;  // Will contain the old oopMark
     const Register obj_reg    = c_rarg3;  // Will contain the oop
+    const Register tmp_reg    = c_rarg4;  // Temporary used by lightweight_unlock
 
     save_bcp(); // Save in case of exception
 
@@ -942,7 +951,7 @@ void InterpreterMacroAssembler::unlock_object(Register lock_reg)
       ld(header_reg, Address(obj_reg, oopDesc::mark_offset_in_bytes()));
       test_bit(t0, header_reg, exact_log2(markWord::monitor_value));
       bnez(t0, slow_case);
-      lightweight_unlock(obj_reg, header_reg, swap_reg, t0, slow_case);
+      lightweight_unlock(obj_reg, header_reg, swap_reg, tmp_reg, slow_case);
       j(count);
 
       bind(slow_case);
