@@ -23,7 +23,7 @@
 
 /*
  * @test
- * @bug 8013852 8031744
+ * @bug 8013852 8031744 8225377
  * @summary Annotations on types
  * @library /tools/javac/lib
  * @modules jdk.compiler/com.sun.tools.javac.api
