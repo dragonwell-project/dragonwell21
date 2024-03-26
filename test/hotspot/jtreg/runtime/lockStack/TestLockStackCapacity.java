@@ -30,7 +30,7 @@
  * @library /testlibrary /test/lib
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
- * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -Xint -XX:LockingMode=2 TestLockStackCapacity
+ * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -Xint -XX:LockingMode=2 TestLockStackCapacity
  */
 
 import jdk.test.lib.Asserts;

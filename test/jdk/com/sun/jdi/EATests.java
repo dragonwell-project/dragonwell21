@@ -132,7 +132,7 @@
  *                 -XX:+WhiteBoxAPI
  *                 -Xbatch
  *                 -XX:+DoEscapeAnalysis -XX:+EliminateAllocations -XX:+EliminateLocks -XX:+EliminateNestedLocks
- *                 -XX:LockingMode=1
+ *                 -XX:+UnlockExperimentalVMOptions -XX:LockingMode=1
  *                 -XX:DiagnoseSyncOnValueBasedClasses=2
  *
  * @comment Re-lock may inflate monitors when re-locking, which cause monitorinflation trace logging.
@@ -144,7 +144,7 @@
  *                 -XX:+WhiteBoxAPI
  *                 -Xbatch
  *                 -XX:+DoEscapeAnalysis -XX:+EliminateAllocations -XX:+EliminateLocks -XX:+EliminateNestedLocks
- *                 -XX:LockingMode=2
+ *                 -XX:+UnlockExperimentalVMOptions -XX:LockingMode=2
  *                 -Xlog:monitorinflation=trace:file=monitorinflation.log
  *
  * @comment Re-lock may race with deflation.
@@ -156,7 +156,7 @@
  *                 -XX:+WhiteBoxAPI
  *                 -Xbatch
  *                 -XX:+DoEscapeAnalysis -XX:+EliminateAllocations -XX:+EliminateLocks -XX:+EliminateNestedLocks
- *                 -XX:LockingMode=0
+ *                 -XX:+UnlockExperimentalVMOptions -XX:LockingMode=0
  *                 -XX:GuaranteedAsyncDeflationInterval=1000
  */
 
@@ -1999,7 +1999,7 @@ class EARelockingNestedInflated_03Target extends EATestCaseBaseTarget {
         // Use new lock. lockInflatedByContention might have been inflated because of recursion.
         lockInflatedByContention = new XYVal(1, 1);
         // Start thread that tries to enter lockInflatedByContention while the main thread owns it -> inflation
-        DebuggeeWrapper.newThread(() -> {
+        TestScaffold.newThread(() -> {
             while (true) {
                 synchronized (testCase) {
                     try {
