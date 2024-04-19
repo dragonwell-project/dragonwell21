@@ -22,6 +22,17 @@
 
 ###############################################################################
 #
+# All tests
+#
+
+all = \
+    :jdk_all
+
+jdk_all = \
+    /
+
+###############################################################################
+#
 # Tiered testing definitions
 #
 
@@ -586,7 +597,6 @@ jdk_core_manual_no_input = \
     java/net/httpclient/BodyProcessorInputStreamTest.java \
     java/net/httpclient/HttpInputStreamTest.java \
     java/util/zip/ZipFile/TestZipFile.java \
-    java/util/zip/ZipFile/TestTooManyEntries.java \
     javax/net/ssl/compatibility/AlpnTest.java \
     javax/net/ssl/compatibility/BasicConnectTest.java \
     javax/net/ssl/compatibility/HrrTest.java \

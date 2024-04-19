@@ -237,7 +237,11 @@ bool PhaseIdealLoop::cannot_split_division(const Node* n, const Node* region) co
       return false;
   }
 
-  assert(n->in(0) == nullptr, "divisions with zero check should already have bailed out earlier in split-if");
+  if (n->in(0) != nullptr) {
+    // Cannot split through phi if Div or Mod node has a control dependency to a zero check.
+    return true;
+  }
+
   Node* divisor = n->in(2);
   return is_divisor_counted_loop_phi(divisor, region) &&
          loop_phi_backedge_type_contains_zero(divisor, zero);
@@ -4234,6 +4238,12 @@ void PhaseIdealLoop::move_unordered_reduction_out_of_loop(IdealLoopTree* loop) {
       if (ctrl != nullptr || get_ctrl(vector_input) != cl) {
         DEBUG_ONLY( current->dump(1); )
         assert(false, "reduction has ctrl or bad vector_input");
+        break; // Chain traversal fails.
+      }
+
+      assert(current->vect_type() != nullptr, "must have vector type");
+      if (current->vect_type() != last_ur->vect_type()) {
+        // Reductions do not have the same vector type (length and element type).
         break; // Chain traversal fails.
       }
 
