@@ -244,7 +244,7 @@ inline bool ShenandoahHeap::cancelled_gc() const {
 }
 
 inline bool ShenandoahHeap::check_cancelled_gc_and_yield(bool sts_active) {
-  if (sts_active && ShenandoahSuspendibleWorkers && !cancelled_gc()) {
+  if (sts_active && !cancelled_gc()) {
     if (SuspendibleThreadSet::should_yield()) {
       SuspendibleThreadSet::yield();
     }
@@ -381,10 +381,6 @@ inline bool ShenandoahHeap::is_concurrent_mark_in_progress() const {
 
 inline bool ShenandoahHeap::is_evacuation_in_progress() const {
   return _gc_state.is_set(EVACUATION);
-}
-
-inline bool ShenandoahHeap::is_gc_in_progress_mask(uint mask) const {
-  return _gc_state.is_set(mask);
 }
 
 inline bool ShenandoahHeap::is_degenerated_gc_in_progress() const {

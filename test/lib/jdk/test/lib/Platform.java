@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Platform {
@@ -348,6 +349,20 @@ public class Platform {
                       .matches();
     }
 
+    public static boolean isOracleLinux7() {
+        if (System.getProperty("os.name").toLowerCase().contains("linux") &&
+                System.getProperty("os.version").toLowerCase().contains("el")) {
+            Pattern p = Pattern.compile("el(\\d+)");
+            Matcher m = p.matcher(System.getProperty("os.version"));
+            if (m.find()) {
+                try {
+                    return Integer.parseInt(m.group(1)) <= 7;
+                } catch (NumberFormatException nfe) {}
+            }
+        }
+        return false;
+    }
+
     /**
      * Returns file extension of shared library, e.g. "so" on linux, "dll" on windows.
      * @return file extension
@@ -360,6 +375,27 @@ public class Platform {
         } else {
             return "so";
         }
+    }
+
+    /**
+     * Returns the usual file prefix of a shared library, e.g. "lib" on linux, empty on windows.
+     * @return file name prefix
+     */
+    public static String sharedLibraryPrefix() {
+        if (isWindows()) {
+            return "";
+        } else {
+            return "lib";
+        }
+    }
+
+    /**
+     * Returns the usual full shared lib name of a name without prefix and extension, e.g. for jsig
+     * "libjsig.so" on linux, "jsig.dll" on windows.
+     * @return the full shared lib name
+     */
+    public static String buildSharedLibraryName(String name) {
+        return sharedLibraryPrefix() + name + "." + sharedLibraryExt();
     }
 
     /*
