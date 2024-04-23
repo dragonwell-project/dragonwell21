@@ -663,6 +663,8 @@ class os: AllStatic {
   static const char*    get_temp_directory();
   static const char*    get_current_directory(char *buf, size_t buflen);
 
+  static void           prepare_native_symbols();
+
   // Builds the platform-specific name of a library.
   // Returns false if the buffer is too small.
   static bool           dll_build_name(char* buffer, size_t size,
@@ -1053,6 +1055,7 @@ class os: AllStatic {
                                 char pathSep);
   static bool set_boot_path(char fileSep, char pathSep);
 
+  static bool pd_dll_unload(void* libhandle, char* ebuf, int ebuflen);
 };
 
 // Note that "PAUSE" is almost always used with synchronization

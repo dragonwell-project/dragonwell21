@@ -1,4 +1,4 @@
-.\" Copyright (c) 1994, 2022, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 1994, 2024, Oracle and/or its affiliates. All rights reserved.
 .\" DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 .\"
 .\" This code is free software; you can redistribute it and/or modify it
@@ -1446,6 +1446,17 @@ usage by individual \f[V]CallSite\f[R], individual virtual memory region
 and its committed regions.
 .RE
 .TP
+\f[V]-XX:TrimNativeHeapInterval=\f[R]\f[I]millis\f[R]
+Interval, in ms, at which the JVM will trim the native heap.
+Lower values will reclaim memory more eagerly at the cost of higher
+overhead.
+A value of 0 (default) disables native heap trimming.
+Native heap trimming is performed in a dedicated thread.
+.RS
+.PP
+This option is only supported on Linux with GNU C Library (glibc).
+.RE
+.TP
 \f[V]-XX:+NeverActAsServerClassMachine\f[R]
 Enable the \[dq]Client VM emulation\[dq] mode which only uses the C1 JIT
 compiler, a 32Mb CodeCache and the Serial GC.
@@ -1564,6 +1575,15 @@ Specifies the path and name of the class data sharing (CDS) archive file
 .PP
 See \f[B]Application Class Data Sharing\f[R].
 .RE
+.TP
+\f[V]-XX:+VerifySharedSpaces\f[R]
+If this option is specified, the JVM will load a CDS archive file only
+if it passes an integrity check based on CRC32 checksums.
+The purpose of this flag is to check for unintentional damage to CDS
+archive files in transmission or storage.
+To guarantee the security and proper operation of CDS, the user must
+ensure that the CDS archive files used by Java applications cannot be
+modified without proper authorization.
 .TP
 \f[V]-XX:SharedArchiveConfigFile=\f[R]\f[I]shared_config_file\f[R]
 Specifies additional shared data added to the archive file.
