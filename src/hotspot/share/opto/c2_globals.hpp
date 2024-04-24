@@ -774,6 +774,10 @@
                                                                             \
   product(bool, VerifyReceiverTypes, trueInDebug, DIAGNOSTIC,               \
           "Verify receiver types at runtime")                               \
+                                                                            \
+  product(bool, UseStoreStoreForCtor, true, DIAGNOSTIC,                     \
+          "Use StoreStore barrier instead of Release barrier at the end of" \
+          "constructors")                                                   \
 
 // end of C2_FLAGS
 
