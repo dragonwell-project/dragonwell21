@@ -50,23 +50,11 @@
 #include "runtime/mutexLocker.hpp"
 #include "runtime/sharedRuntime.hpp"
 
-CompiledMethod::CompiledMethod(Method* method, const char* name, CompilerType type, const CodeBlobLayout& layout,
-                               int frame_complete_offset, int frame_size, ImmutableOopMapSet* oop_maps,
-                               bool caller_must_gc_arguments, bool compiled)
-  : CodeBlob(name, type, layout, frame_complete_offset, frame_size, oop_maps, caller_must_gc_arguments, compiled),
-    _deoptimization_status(not_marked),
-    _deoptimization_generation(0),
-    _method(method),
-    _gc_data(nullptr)
-{
-  init_defaults();
-}
-
 CompiledMethod::CompiledMethod(Method* method, const char* name, CompilerType type, int size,
                                int header_size, CodeBuffer* cb, int frame_complete_offset, int frame_size,
-                               OopMapSet* oop_maps, bool caller_must_gc_arguments, bool compiled)
-  : CodeBlob(name, type, CodeBlobLayout((address) this, size, header_size, cb), cb,
-             frame_complete_offset, frame_size, oop_maps, caller_must_gc_arguments, compiled),
+                               OopMapSet* oop_maps, bool caller_must_gc_arguments)
+  : CodeBlob(name, CodeBlobKind::Nmethod, type, cb, size, header_size,
+             frame_complete_offset, frame_size, oop_maps, caller_must_gc_arguments),
     _deoptimization_status(not_marked),
     _deoptimization_generation(0),
     _method(method),
