@@ -638,14 +638,13 @@ nmethod::nmethod(
   ByteSize basic_lock_owner_sp_offset,
   ByteSize basic_lock_sp_offset,
   OopMapSet* oop_maps )
-  : CompiledMethod(method, "native nmethod", type, nmethod_size, sizeof(nmethod), code_buffer, offsets->value(CodeOffsets::Frame_Complete), frame_size, oop_maps, false, true),
+  : CompiledMethod(method, "native nmethod", type, nmethod_size, sizeof(nmethod), code_buffer, offsets->value(CodeOffsets::Frame_Complete), frame_size, oop_maps, false),
   _unlinked_next(nullptr),
   _native_receiver_sp_offset(basic_lock_owner_sp_offset),
   _native_basic_lock_sp_offset(basic_lock_sp_offset),
   _is_unloading_state(0)
 {
   {
-    int scopes_data_offset   = 0;
     int deoptimize_offset    = 0;
     int deoptimize_mh_offset = 0;
 
@@ -665,8 +664,8 @@ nmethod::nmethod(
     _stub_offset             = content_offset()      + code_buffer->total_offset_of(code_buffer->stubs());
     _oops_offset             = data_offset();
     _metadata_offset         = _oops_offset          + align_up(code_buffer->total_oop_size(), oopSize);
-    scopes_data_offset       = _metadata_offset      + align_up(code_buffer->total_metadata_size(), wordSize);
-    _scopes_pcs_offset       = scopes_data_offset;
+    _scopes_data_offset      = _metadata_offset      + align_up(code_buffer->total_metadata_size(), wordSize);
+    _scopes_pcs_offset       = _scopes_data_offset;
     _dependencies_offset     = _scopes_pcs_offset;
     _handler_table_offset    = _dependencies_offset;
     _nul_chk_table_offset    = _handler_table_offset;
@@ -687,7 +686,7 @@ nmethod::nmethod(
 
     _exception_offset        = code_offset()         + offsets->value(CodeOffsets::Exceptions);
 
-    _scopes_data_begin = (address) this + scopes_data_offset;
+    _scopes_data_begin = (address) this + _scopes_data_offset;
     _deopt_handler_begin = (address) this + deoptimize_offset;
     _deopt_mh_handler_begin = (address) this + deoptimize_mh_offset;
 
@@ -782,7 +781,7 @@ nmethod::nmethod(
   JVMCINMethodData* jvmci_data
 #endif
   )
-  : CompiledMethod(method, "nmethod", type, nmethod_size, sizeof(nmethod), code_buffer, offsets->value(CodeOffsets::Frame_Complete), frame_size, oop_maps, false, true),
+  : CompiledMethod(method, "nmethod", type, nmethod_size, sizeof(nmethod), code_buffer, offsets->value(CodeOffsets::Frame_Complete), frame_size, oop_maps, false),
   _unlinked_next(nullptr),
   _native_receiver_sp_offset(in_ByteSize(-1)),
   _native_basic_lock_sp_offset(in_ByteSize(-1)),
@@ -850,9 +849,9 @@ nmethod::nmethod(
 
     _oops_offset             = data_offset();
     _metadata_offset         = _oops_offset          + align_up(code_buffer->total_oop_size(), oopSize);
-    int scopes_data_offset   = _metadata_offset      + align_up(code_buffer->total_metadata_size(), wordSize);
+    _scopes_data_offset      = _metadata_offset      + align_up(code_buffer->total_metadata_size(), wordSize);
 
-    _scopes_pcs_offset       = scopes_data_offset    + align_up(debug_info->data_size       (), oopSize);
+    _scopes_pcs_offset       = _scopes_data_offset   + align_up(debug_info->data_size       (), oopSize);
     _dependencies_offset     = _scopes_pcs_offset    + adjust_pcs_size(debug_info->pcs_size());
     _handler_table_offset    = _dependencies_offset  + align_up((int)dependencies->size_in_bytes(), oopSize);
     _nul_chk_table_offset    = _handler_table_offset + align_up(handler_table->size_in_bytes(), oopSize);
@@ -868,7 +867,7 @@ nmethod::nmethod(
     _verified_entry_point    = code_begin()          + offsets->value(CodeOffsets::Verified_Entry);
     _osr_entry_point         = code_begin()          + offsets->value(CodeOffsets::OSR_Entry);
     _exception_cache         = nullptr;
-    _scopes_data_begin       = (address) this + scopes_data_offset;
+    _scopes_data_begin       = (address) this + _scopes_data_offset;
 
     _pc_desc_container.reset_to(scopes_pcs_begin());
 

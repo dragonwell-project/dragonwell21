@@ -320,12 +320,6 @@ class nmethod : public CompiledMethod {
   // Initialize fields to their default values
   void init_defaults();
 
-  // Offsets
-  int content_offset() const                  { return content_begin() - header_begin(); }
-  int data_offset() const                     { return _data_offset; }
-
-  address header_end() const                  { return (address)    header_begin() + header_size(); }
-
  public:
   // create nmethod with entry_bci
   static nmethod* new_nmethod(const methodHandle& method,
@@ -373,67 +367,84 @@ class nmethod : public CompiledMethod {
   bool is_osr_method() const                      { return _entry_bci != InvocationEntryBci; }
 
   // boundaries for different parts
-  address consts_begin          () const          { return           header_begin() + _consts_offset        ; }
-  address consts_end            () const          { return           code_begin()                           ; }
-  address stub_begin            () const          { return           header_begin() + _stub_offset          ; }
-  address stub_end              () const          { return           header_begin() + _oops_offset          ; }
-  address exception_begin       () const          { return           header_begin() + _exception_offset     ; }
-  address unwind_handler_begin  () const          { return _unwind_handler_offset != -1 ? (header_begin() + _unwind_handler_offset) : nullptr; }
-  oop*    oops_begin            () const          { return (oop*)   (header_begin() + _oops_offset)         ; }
-  oop*    oops_end              () const          { return (oop*)   (header_begin() + _metadata_offset)     ; }
+  address consts_begin          () const { return           header_begin() + _consts_offset           ; }
+  address consts_end            () const { return           header_begin() +  code_offset()           ; }
+  address insts_begin           () const { return           header_begin() +  code_offset()           ; }
+  address insts_end             () const { return           header_begin() + _stub_offset             ; }
+  address stub_begin            () const { return           header_begin() + _stub_offset             ; }
+  address stub_end              () const { return           header_begin() + _oops_offset             ; }
+  address exception_begin       () const { return           header_begin() + _exception_offset        ; }
+  address unwind_handler_begin  () const { return _unwind_handler_offset != -1 ? (header_begin() + _unwind_handler_offset) : nullptr; }
+  oop*    oops_begin            () const { return (oop*)   (header_begin() + _oops_offset)            ; }
+  oop*    oops_end              () const { return (oop*)   (header_begin() + _metadata_offset)        ; }
 
-  Metadata** metadata_begin   () const            { return (Metadata**)  (header_begin() + _metadata_offset)     ; }
-  Metadata** metadata_end     () const            { return (Metadata**)  _scopes_data_begin; }
+  Metadata** metadata_begin     () const { return (Metadata**) (header_begin() + _metadata_offset)    ; }
+  Metadata** metadata_end       () const { return (Metadata**) (header_begin() + _scopes_data_offset) ; }
 
-  address scopes_data_end       () const          { return           header_begin() + _scopes_pcs_offset    ; }
-  PcDesc* scopes_pcs_begin      () const          { return (PcDesc*)(header_begin() + _scopes_pcs_offset   ); }
-  PcDesc* scopes_pcs_end        () const          { return (PcDesc*)(header_begin() + _dependencies_offset) ; }
-  address dependencies_begin    () const          { return           header_begin() + _dependencies_offset  ; }
-  address dependencies_end      () const          { return           header_begin() + _handler_table_offset ; }
-  address handler_table_begin   () const          { return           header_begin() + _handler_table_offset ; }
-  address handler_table_end     () const          { return           header_begin() + _nul_chk_table_offset ; }
-  address nul_chk_table_begin   () const          { return           header_begin() + _nul_chk_table_offset ; }
-
-  int skipped_instructions_size () const          { return           _skipped_instructions_size             ; }
+  address scopes_data_begin     () const { return           header_begin() + _scopes_data_offset      ; }
+  address scopes_data_end       () const { return           header_begin() + _scopes_pcs_offset       ; }
+  PcDesc* scopes_pcs_begin      () const { return (PcDesc*)(header_begin() + _scopes_pcs_offset)      ; }
+  PcDesc* scopes_pcs_end        () const { return (PcDesc*)(header_begin() + _dependencies_offset)    ; }
+  address dependencies_begin    () const { return           header_begin() + _dependencies_offset     ; }
+  address dependencies_end      () const { return           header_begin() + _handler_table_offset    ; }
+  address handler_table_begin   () const { return           header_begin() + _handler_table_offset    ; }
+  address handler_table_end     () const { return           header_begin() + _nul_chk_table_offset    ; }
+  address nul_chk_table_begin   () const { return           header_begin() + _nul_chk_table_offset    ; }
 
 #if INCLUDE_JVMCI
-  address nul_chk_table_end     () const          { return           header_begin() + _speculations_offset  ; }
-  address speculations_begin    () const          { return           header_begin() + _speculations_offset  ; }
-  address speculations_end      () const          { return           header_begin() + _jvmci_data_offset   ; }
-  address jvmci_data_begin      () const          { return           header_begin() + _jvmci_data_offset    ; }
-  address jvmci_data_end        () const          { return           header_begin() + _nmethod_end_offset   ; }
+  address nul_chk_table_end     () const { return           header_begin() + _speculations_offset     ; }
+  address speculations_begin    () const { return           header_begin() + _speculations_offset     ; }
+  address speculations_end      () const { return           header_begin() + _jvmci_data_offset       ; }
+  address jvmci_data_begin      () const { return           header_begin() + _jvmci_data_offset       ; }
+  address jvmci_data_end        () const { return           header_begin() + _nmethod_end_offset      ; }
 #else
-  address nul_chk_table_end     () const          { return           header_begin() + _nmethod_end_offset   ; }
+  address nul_chk_table_end     () const { return           header_begin() + _nmethod_end_offset      ; }
 #endif
 
   // Sizes
-  int oops_size         () const                  { return (address)  oops_end         () - (address)  oops_begin         (); }
-  int metadata_size     () const                  { return (address)  metadata_end     () - (address)  metadata_begin     (); }
-  int dependencies_size () const                  { return            dependencies_end () -            dependencies_begin (); }
+  int consts_size       () const { return int(          consts_end       () -           consts_begin       ()); }
+  int insts_size        () const { return int(          insts_end        () -           insts_begin        ()); }
+  int stub_size         () const { return int(          stub_end         () -           stub_begin         ()); }
+  int oops_size         () const { return int((address) oops_end         () - (address) oops_begin         ()); }
+  int metadata_size     () const { return int((address) metadata_end     () - (address) metadata_begin     ()); }
+  int scopes_data_size  () const { return int(          scopes_data_end  () -           scopes_data_begin  ()); }
+  int scopes_pcs_size   () const { return int((intptr_t)scopes_pcs_end   () - (intptr_t)scopes_pcs_begin   ()); }
+  int dependencies_size () const { return int(          dependencies_end () -           dependencies_begin ()); }
+  int handler_table_size() const { return int(          handler_table_end() -           handler_table_begin()); }
+  int nul_chk_table_size() const { return int(          nul_chk_table_end() -           nul_chk_table_begin()); }
 #if INCLUDE_JVMCI
-  int speculations_size () const                  { return            speculations_end () -            speculations_begin (); }
-  int jvmci_data_size   () const                  { return            jvmci_data_end   () -            jvmci_data_begin   (); }
+  int speculations_size () const { return int(          speculations_end () -           speculations_begin ()); }
+  int jvmci_data_size   () const { return int(          jvmci_data_end   () -           jvmci_data_begin   ()); }
 #endif
 
   int     oops_count() const { assert(oops_size() % oopSize == 0, "");  return (oops_size() / oopSize) + 1; }
   int metadata_count() const { assert(metadata_size() % wordSize == 0, ""); return (metadata_size() / wordSize) + 1; }
 
+  int skipped_instructions_size () const { return _skipped_instructions_size; }
   int total_size        () const;
 
   // Containment
-  bool oops_contains         (oop*    addr) const { return oops_begin         () <= addr && addr < oops_end         (); }
-  bool metadata_contains     (Metadata** addr) const   { return metadata_begin     () <= addr && addr < metadata_end     (); }
-  bool scopes_data_contains  (address addr) const { return scopes_data_begin  () <= addr && addr < scopes_data_end  (); }
-  bool scopes_pcs_contains   (PcDesc* addr) const { return scopes_pcs_begin   () <= addr && addr < scopes_pcs_end   (); }
+  bool consts_contains         (address addr) const { return consts_begin       () <= addr && addr < consts_end       (); }
+  // Returns true if a given address is in the 'insts' section. The method
+  // insts_contains_inclusive() is end-inclusive.
+  bool insts_contains          (address addr) const { return insts_begin        () <= addr && addr < insts_end        (); }
+  bool insts_contains_inclusive(address addr) const { return insts_begin        () <= addr && addr <= insts_end       (); }
+  bool stub_contains           (address addr) const { return stub_begin         () <= addr && addr < stub_end         (); }
+  bool oops_contains           (oop*    addr) const { return oops_begin         () <= addr && addr < oops_end         (); }
+  bool metadata_contains       (Metadata** addr) const { return metadata_begin  () <= addr && addr < metadata_end     (); }
+  bool scopes_data_contains    (address addr) const { return scopes_data_begin  () <= addr && addr < scopes_data_end  (); }
+  bool scopes_pcs_contains     (PcDesc* addr) const { return scopes_pcs_begin   () <= addr && addr < scopes_pcs_end   (); }
+  bool handler_table_contains  (address addr) const { return handler_table_begin() <= addr && addr < handler_table_end(); }
+  bool nul_chk_table_contains  (address addr) const { return nul_chk_table_begin() <= addr && addr < nul_chk_table_end(); }
 
   // entry points
   address entry_point() const                     { return _entry_point;             } // normal entry point
   address verified_entry_point() const            { return _verified_entry_point;    } // if klass is correct
 
   // flag accessing and manipulation
-  bool  is_not_installed() const                  { return _state == not_installed; }
-  bool  is_in_use() const                         { return _state <= in_use; }
-  bool  is_not_entrant() const                    { return _state == not_entrant; }
+  bool is_not_installed() const        { return _state == not_installed; }
+  bool is_in_use() const               { return _state <= in_use; }
+  bool is_not_entrant() const          { return _state == not_entrant; }
 
   void clear_unloading_state();
   // Heuristically deduce an nmethod isn't worth keeping around

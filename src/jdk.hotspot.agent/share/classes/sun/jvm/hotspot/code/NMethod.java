@@ -47,6 +47,7 @@ public class NMethod extends CompiledMethod {
   private static CIntegerField stubOffsetField;
   private static CIntegerField oopsOffsetField;
   private static CIntegerField metadataOffsetField;
+  private static CIntegerField scopesDataOffsetField;
   private static CIntegerField scopesPCsOffsetField;
   private static CIntegerField dependenciesOffsetField;
   private static CIntegerField handlerTableOffsetField;
@@ -84,6 +85,7 @@ public class NMethod extends CompiledMethod {
     stubOffsetField             = type.getCIntegerField("_stub_offset");
     oopsOffsetField             = type.getCIntegerField("_oops_offset");
     metadataOffsetField         = type.getCIntegerField("_metadata_offset");
+    scopesDataOffsetField       = type.getCIntegerField("_scopes_data_offset");
     scopesPCsOffsetField        = type.getCIntegerField("_scopes_pcs_offset");
     dependenciesOffsetField     = type.getCIntegerField("_dependencies_offset");
     handlerTableOffsetField     = type.getCIntegerField("_handler_table_offset");
@@ -122,7 +124,8 @@ public class NMethod extends CompiledMethod {
   public Address oopsBegin()            { return headerBegin().addOffsetTo(getOopsOffset());         }
   public Address oopsEnd()              { return headerBegin().addOffsetTo(getMetadataOffset());     }
   public Address metadataBegin()        { return headerBegin().addOffsetTo(getMetadataOffset());     }
-  public Address metadataEnd()          { return scopesDataBegin();                                  }
+  public Address metadataEnd()          { return headerBegin().addOffsetTo(getScopesDataOffset());   }
+  public Address scopesDataBegin()      { return headerBegin().addOffsetTo(getScopesDataOffset());   }
   public Address scopesDataEnd()        { return headerBegin().addOffsetTo(getScopesPCsOffset());    }
   public Address scopesPCsBegin()       { return headerBegin().addOffsetTo(getScopesPCsOffset());    }
   public Address scopesPCsEnd()         { return headerBegin().addOffsetTo(getDependenciesOffset()); }
@@ -500,6 +503,7 @@ public class NMethod extends CompiledMethod {
   private int getStubOffset()         { return (int) stubOffsetField        .getValue(addr); }
   private int getOopsOffset()         { return (int) oopsOffsetField        .getValue(addr); }
   private int getMetadataOffset()     { return (int) metadataOffsetField    .getValue(addr); }
+  private int getScopesDataOffset()   { return (int) scopesDataOffsetField  .getValue(addr); }
   private int getScopesPCsOffset()    { return (int) scopesPCsOffsetField   .getValue(addr); }
   private int getDependenciesOffset() { return (int) dependenciesOffsetField.getValue(addr); }
   private int getHandlerTableOffset() { return (int) handlerTableOffsetField.getValue(addr); }

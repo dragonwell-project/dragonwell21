@@ -78,86 +78,98 @@ unsigned int CodeBlob::allocation_size(CodeBuffer* cb, int header_size) {
   return size;
 }
 
-CodeBlob::CodeBlob(const char* name, CompilerType type, const CodeBlobLayout& layout, int frame_complete_offset, int frame_size, ImmutableOopMapSet* oop_maps, bool caller_must_gc_arguments, bool compiled) :
-  _code_begin(layout.code_begin()),
-  _code_end(layout.code_end()),
-  _content_begin(layout.content_begin()),
-  _data_end(layout.data_end()),
-  _relocation_begin(layout.relocation_begin()),
-  _relocation_end(layout.relocation_end()),
+#ifdef ASSERT
+void CodeBlob::verify_parameters() {
+  assert(is_aligned(_size,            oopSize), "unaligned size");
+  assert(is_aligned(_header_size,     oopSize), "unaligned size");
+  assert(is_aligned(_relocation_size, oopSize), "unaligned size");
+  assert(_data_offset <= size(), "codeBlob is too small");
+  assert(code_end() == content_end(), "must be the same - see code_end()");
+#ifdef COMPILER1
+  // probably wrong for tiered
+  assert(frame_size() >= -1, "must use frame size or -1 for runtime stubs");
+#endif // COMPILER1
+}
+#endif
+
+CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, CompilerType type, int size, int header_size, int relocation_size,
+                   int content_offset, int code_offset, int frame_complete_offset, int data_offset,
+                   int frame_size, ImmutableOopMapSet* oop_maps, bool caller_must_gc_arguments) :
   _oop_maps(oop_maps),
   _name(name),
-  _size(layout.size()),
-  _header_size(layout.header_size()),
+  _size(size),
+  _header_size(header_size),
+  _relocation_size(relocation_size),
+  _content_offset(content_offset),
+  _code_offset(code_offset),
   _frame_complete_offset(frame_complete_offset),
-  _data_offset(layout.data_offset()),
+  _data_offset(data_offset),
   _frame_size(frame_size),
-  _caller_must_gc_arguments(caller_must_gc_arguments),
-  _is_compiled(compiled),
-  _type(type)
+  S390_ONLY(_ctable_offset(0) COMMA)
+  _kind(kind),
+  _type(type),
+  _caller_must_gc_arguments(caller_must_gc_arguments)
 {
-  assert(is_aligned(layout.size(),            oopSize), "unaligned size");
-  assert(is_aligned(layout.header_size(),     oopSize), "unaligned size");
-  assert(is_aligned(layout.relocation_size(), oopSize), "unaligned size");
-  assert(layout.code_end() == layout.content_end(), "must be the same - see code_end()");
-#ifdef COMPILER1
-  // probably wrong for tiered
-  assert(_frame_size >= -1, "must use frame size or -1 for runtime stubs");
-#endif // COMPILER1
-  S390_ONLY(_ctable_offset = 0;) // avoid uninitialized fields
+  DEBUG_ONLY( verify_parameters(); )
 }
 
-CodeBlob::CodeBlob(const char* name, CompilerType type, const CodeBlobLayout& layout, CodeBuffer* cb /*UNUSED*/, int frame_complete_offset, int frame_size, OopMapSet* oop_maps, bool caller_must_gc_arguments, bool compiled) :
-  _code_begin(layout.code_begin()),
-  _code_end(layout.code_end()),
-  _content_begin(layout.content_begin()),
-  _data_end(layout.data_end()),
-  _relocation_begin(layout.relocation_begin()),
-  _relocation_end(layout.relocation_end()),
+CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, CompilerType type, CodeBuffer* cb, int size, int header_size,
+                   int frame_complete_offset, int frame_size, OopMapSet* oop_maps, bool caller_must_gc_arguments) :
+  _oop_maps(nullptr), // will be set by set_oop_maps() call
   _name(name),
-  _size(layout.size()),
-  _header_size(layout.header_size()),
+  _size(size),
+  _header_size(header_size),
+  _relocation_size(align_up(cb->total_relocation_size(), oopSize)),
+  _content_offset(CodeBlob::align_code_offset(_header_size + _relocation_size)),
+  _code_offset(_content_offset + cb->total_offset_of(cb->insts())),
   _frame_complete_offset(frame_complete_offset),
-  _data_offset(layout.data_offset()),
+  _data_offset(_content_offset + align_up(cb->total_content_size(), oopSize)),
   _frame_size(frame_size),
-  _caller_must_gc_arguments(caller_must_gc_arguments),
-  _is_compiled(compiled),
-  _type(type)
+  S390_ONLY(_ctable_offset(0) COMMA)
+  _kind(kind),
+  _type(type),
+  _caller_must_gc_arguments(caller_must_gc_arguments)
 {
-  assert(is_aligned(_size,        oopSize), "unaligned size");
-  assert(is_aligned(_header_size, oopSize), "unaligned size");
-  assert(_data_offset <= _size, "codeBlob is too small");
-  assert(layout.code_end() == layout.content_end(), "must be the same - see code_end()");
-
+  DEBUG_ONLY( verify_parameters(); )
+ 
   set_oop_maps(oop_maps);
-#ifdef COMPILER1
-  // probably wrong for tiered
-  assert(_frame_size >= -1, "must use frame size or -1 for runtime stubs");
-#endif // COMPILER1
-  S390_ONLY(_ctable_offset = 0;) // avoid uninitialized fields
 }
 
-
-// Creates a simple CodeBlob. Sets up the size of the different regions.
-RuntimeBlob::RuntimeBlob(const char* name, int header_size, int size, int frame_complete, int locs_size)
-  : CodeBlob(name, compiler_none, CodeBlobLayout((address) this, size, header_size, locs_size, size), frame_complete, 0, nullptr, false /* caller_must_gc_arguments */)
+// Simple CodeBlob used for simple BufferBlob.
+CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, int size, int header_size) :
+  _oop_maps(nullptr),
+  _name(name),
+  _size(size),
+  _header_size(header_size),
+  _relocation_size(0),
+  _content_offset(CodeBlob::align_code_offset(header_size)),
+  _code_offset(_content_offset),
+  _frame_complete_offset(CodeOffsets::frame_never_safe),
+  _data_offset(size),
+  _frame_size(0),
+  S390_ONLY(_ctable_offset(0) COMMA)
+  _kind(kind),
+  _type(compiler_none),
+  _caller_must_gc_arguments(false)
 {
-  assert(is_aligned(locs_size, oopSize), "unaligned size");
+  assert(is_aligned(size,            oopSize), "unaligned size");
+  assert(is_aligned(header_size,     oopSize), "unaligned size");
 }
-
 
 // Creates a RuntimeBlob from a CodeBuffer
 // and copy code and relocation info.
 RuntimeBlob::RuntimeBlob(
   const char* name,
+  CodeBlobKind kind,
   CodeBuffer* cb,
-  int         header_size,
   int         size,
+  int         header_size,
   int         frame_complete,
   int         frame_size,
   OopMapSet*  oop_maps,
   bool        caller_must_gc_arguments
-) : CodeBlob(name, compiler_none, CodeBlobLayout((address) this, size, header_size, cb), cb, frame_complete, frame_size, oop_maps, caller_must_gc_arguments) {
+) : CodeBlob(name, kind, compiler_none, cb, size, header_size, frame_complete, frame_size, oop_maps, caller_must_gc_arguments)
+{
   cb->copy_code_and_locs_to(this);
 }
 
@@ -244,8 +256,8 @@ void CodeBlob::print_code() {
 // Implementation of BufferBlob
 
 
-BufferBlob::BufferBlob(const char* name, int size)
-: RuntimeBlob(name, sizeof(BufferBlob), size, CodeOffsets::frame_never_safe, /*locs_size:*/ 0)
+BufferBlob::BufferBlob(const char* name, CodeBlobKind kind, int size)
+: RuntimeBlob(name, kind, size, sizeof(BufferBlob))
 {}
 
 BufferBlob* BufferBlob::create(const char* name, int buffer_size) {
@@ -259,7 +271,7 @@ BufferBlob* BufferBlob::create(const char* name, int buffer_size) {
   assert(name != nullptr, "must provide a name");
   {
     MutexLocker mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
-    blob = new (size) BufferBlob(name, size);
+    blob = new (size) BufferBlob(name, CodeBlobKind::Buffer, size);
   }
   // Track memory usage statistic after releasing CodeCache_lock
   MemoryService::track_code_cache_memory_usage();
@@ -268,10 +280,11 @@ BufferBlob* BufferBlob::create(const char* name, int buffer_size) {
 }
 
 
-BufferBlob::BufferBlob(const char* name, int size, CodeBuffer* cb)
-  : RuntimeBlob(name, cb, sizeof(BufferBlob), size, CodeOffsets::frame_never_safe, 0, nullptr)
+BufferBlob::BufferBlob(const char* name, CodeBlobKind kind, CodeBuffer* cb, int size)
+  : RuntimeBlob(name, kind, cb, size, sizeof(BufferBlob), CodeOffsets::frame_never_safe, 0, nullptr)
 {}
 
+// Used by gtest
 BufferBlob* BufferBlob::create(const char* name, CodeBuffer* cb) {
   ThreadInVMfromUnknown __tiv;  // get to VM state in case we block on CodeCache_lock
 
@@ -280,7 +293,7 @@ BufferBlob* BufferBlob::create(const char* name, CodeBuffer* cb) {
   assert(name != nullptr, "must provide a name");
   {
     MutexLocker mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
-    blob = new (size) BufferBlob(name, size, cb);
+    blob = new (size) BufferBlob(name, CodeBlobKind::Buffer, cb, size);
   }
   // Track memory usage statistic after releasing CodeCache_lock
   MemoryService::track_code_cache_memory_usage();
@@ -301,7 +314,7 @@ void BufferBlob::free(BufferBlob *blob) {
 // Implementation of AdapterBlob
 
 AdapterBlob::AdapterBlob(int size, CodeBuffer* cb) :
-  BufferBlob("I2C/C2I adapters", size, cb) {
+  BufferBlob("I2C/C2I adapters", CodeBlobKind::Adapter, cb, size) {
   CodeCache::commit(this);
 }
 
@@ -333,7 +346,7 @@ void* VtableBlob::operator new(size_t s, unsigned size) throw() {
 }
 
 VtableBlob::VtableBlob(const char* name, int size) :
-  BufferBlob(name, size) {
+  BufferBlob(name, CodeBlobKind::Vtable, size) {
 }
 
 VtableBlob* VtableBlob::create(const char* name, int buffer_size) {
@@ -404,7 +417,8 @@ RuntimeStub::RuntimeStub(
   OopMapSet*  oop_maps,
   bool        caller_must_gc_arguments
 )
-: RuntimeBlob(name, cb, sizeof(RuntimeStub), size, frame_complete, frame_size, oop_maps, caller_must_gc_arguments)
+: RuntimeBlob(name, CodeBlobKind::Runtime_Stub, cb, size, sizeof(RuntimeStub),
+              frame_complete, frame_size, oop_maps, caller_must_gc_arguments)
 {
 }
 
@@ -455,7 +469,8 @@ DeoptimizationBlob::DeoptimizationBlob(
   int         unpack_with_reexecution_offset,
   int         frame_size
 )
-: SingletonBlob("DeoptimizationBlob", cb, sizeof(DeoptimizationBlob), size, frame_size, oop_maps)
+: SingletonBlob("DeoptimizationBlob", CodeBlobKind::Deoptimization, cb,
+                size, sizeof(DeoptimizationBlob), frame_size, oop_maps)
 {
   _unpack_offset           = unpack_offset;
   _unpack_with_exception   = unpack_with_exception_offset;
@@ -504,7 +519,8 @@ UncommonTrapBlob::UncommonTrapBlob(
   OopMapSet*  oop_maps,
   int         frame_size
 )
-: SingletonBlob("UncommonTrapBlob", cb, sizeof(UncommonTrapBlob), size, frame_size, oop_maps)
+: SingletonBlob("UncommonTrapBlob", CodeBlobKind::Uncommon_Trap, cb,
+                size, sizeof(UncommonTrapBlob), frame_size, oop_maps)
 {}
 
 
@@ -540,7 +556,8 @@ ExceptionBlob::ExceptionBlob(
   OopMapSet*  oop_maps,
   int         frame_size
 )
-: SingletonBlob("ExceptionBlob", cb, sizeof(ExceptionBlob), size, frame_size, oop_maps)
+: SingletonBlob("ExceptionBlob", CodeBlobKind::Exception, cb,
+                size, sizeof(ExceptionBlob), frame_size, oop_maps)
 {}
 
 
@@ -575,7 +592,8 @@ SafepointBlob::SafepointBlob(
   OopMapSet*  oop_maps,
   int         frame_size
 )
-: SingletonBlob("SafepointBlob", cb, sizeof(SafepointBlob), size, frame_size, oop_maps)
+: SingletonBlob("SafepointBlob", CodeBlobKind::Safepoint, cb,
+                size, sizeof(SafepointBlob), frame_size, oop_maps)
 {}
 
 
@@ -735,7 +753,8 @@ void DeoptimizationBlob::print_value_on(outputStream* st) const {
 UpcallStub::UpcallStub(const char* name, CodeBuffer* cb, int size,
                        intptr_t exception_handler_offset,
                        jobject receiver, ByteSize frame_data_offset) :
-  RuntimeBlob(name, cb, sizeof(UpcallStub), size, CodeOffsets::frame_never_safe, 0 /* no frame size */,
+  RuntimeBlob(name, CodeBlobKind::Upcall, cb, size, sizeof(UpcallStub),
+              CodeOffsets::frame_never_safe, 0 /* no frame size */,
               /* oop maps = */ nullptr, /* caller must gc arguments = */ false),
   _exception_handler_offset(exception_handler_offset),
   _receiver(receiver),

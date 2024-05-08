@@ -613,18 +613,17 @@
   nonstatic_field(CodeBlob,                 _name,                                   const char*)                                    \
   nonstatic_field(CodeBlob,                 _size,                                   int)                                            \
   nonstatic_field(CodeBlob,                 _header_size,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _relocation_size,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _content_offset,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _code_offset,                            int)                                            \
   nonstatic_field(CodeBlob,                 _frame_complete_offset,                  int)                                            \
   nonstatic_field(CodeBlob,                 _data_offset,                            int)                                            \
   nonstatic_field(CodeBlob,                 _frame_size,                             int)                                            \
   nonstatic_field(CodeBlob,                 _oop_maps,                               ImmutableOopMapSet*)                            \
-  nonstatic_field(CodeBlob,                 _code_begin,                             address)                                        \
-  nonstatic_field(CodeBlob,                 _code_end,                               address)                                        \
-  nonstatic_field(CodeBlob,                 _content_begin,                          address)                                        \
-  nonstatic_field(CodeBlob,                 _data_end,                               address)                                        \
+  nonstatic_field(CodeBlob,                 _caller_must_gc_arguments,                     bool)                                  \
                                                                                                                                      \
   nonstatic_field(DeoptimizationBlob,          _unpack_offset,                                int)                                   \
                                                                                                                                      \
-  nonstatic_field(RuntimeStub,                 _caller_must_gc_arguments,                     bool)                                  \
                                                                                                                                      \
   /********************************************************/                                                                         \
   /* CompiledMethod (NOTE: incomplete, but only a little) */                                                                         \
