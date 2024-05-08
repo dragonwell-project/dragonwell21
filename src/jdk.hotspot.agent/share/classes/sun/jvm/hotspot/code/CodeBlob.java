@@ -25,10 +25,12 @@ package sun.jvm.hotspot.code;
 import sun.jvm.hotspot.compiler.ImmutableOopMap;
 import sun.jvm.hotspot.compiler.ImmutableOopMapSet;
 import sun.jvm.hotspot.debugger.Address;
+import sun.jvm.hotspot.oops.CIntField;
 import sun.jvm.hotspot.runtime.VM;
 import sun.jvm.hotspot.runtime.VMObject;
 import sun.jvm.hotspot.types.AddressField;
 import sun.jvm.hotspot.types.CIntegerField;
+import sun.jvm.hotspot.types.JShortField;
 import sun.jvm.hotspot.types.Type;
 import sun.jvm.hotspot.types.TypeDataBase;
 import sun.jvm.hotspot.utilities.Assert;
@@ -41,12 +43,11 @@ import sun.jvm.hotspot.utilities.Observer;
 public class CodeBlob extends VMObject {
   private static AddressField nameField;
   private static CIntegerField sizeField;
-  private static CIntegerField headerSizeField;
-  private static AddressField  contentBeginField;
-  private static AddressField  codeBeginField;
-  private static AddressField  codeEndField;
-  private static AddressField  dataEndField;
-  private static CIntegerField frameCompleteOffsetField;
+  private static CIntegerField relocationSizeField;
+  private static CIntField     headerSizeField;
+  private static CIntegerField contentOffsetField;
+  private static CIntegerField codeOffsetField;
+  private static CIntField     frameCompleteOffsetField;
   private static CIntegerField dataOffsetField;
   private static CIntegerField frameSizeField;
   private static AddressField  oopMapsField;
@@ -62,12 +63,11 @@ public class CodeBlob extends VMObject {
 
     nameField                = type.getAddressField("_name");
     sizeField                = type.getCIntegerField("_size");
-    headerSizeField          = type.getCIntegerField("_header_size");
-    frameCompleteOffsetField = type.getCIntegerField("_frame_complete_offset");
-    contentBeginField        = type.getAddressField("_content_begin");
-    codeBeginField           = type.getAddressField("_code_begin");
-    codeEndField             = type.getAddressField("_code_end");
-    dataEndField             = type.getAddressField("_data_end");
+    relocationSizeField      = type.getCIntegerField("_relocation_size");
+    headerSizeField          = new CIntField(type.getCIntegerField("_header_size"), 0);
+    contentOffsetField       = type.getCIntegerField("_content_offset");
+    codeOffsetField          = type.getCIntegerField("_code_offset");
+    frameCompleteOffsetField = new CIntField(type.getCIntegerField("_frame_complete_offset"), 0);
     dataOffsetField          = type.getCIntegerField("_data_offset");
     frameSizeField           = type.getCIntegerField("_frame_size");
     oopMapsField             = type.getAddressField("_oop_maps");
@@ -90,17 +90,22 @@ public class CodeBlob extends VMObject {
 
   public Address headerEnd() { return getAddress().addOffsetTo(getHeaderSize()); }
 
-  public Address contentBegin() { return contentBeginField.getValue(addr); }
+  public Address contentBegin()   { return headerBegin().addOffsetTo(getContentOffset()); }
 
   public Address contentEnd() { return headerBegin().addOffsetTo(getDataOffset()); }
 
-  public Address codeBegin() { return codeBeginField.getValue(addr); }
+  public Address codeBegin()      { return headerBegin().addOffsetTo(getCodeOffset()); }
 
-  public Address codeEnd() { return codeEndField.getValue(addr); }
+  public Address codeEnd()        { return headerBegin().addOffsetTo(getDataOffset()); }
 
   public Address dataBegin() { return headerBegin().addOffsetTo(getDataOffset()); }
 
-  public Address dataEnd() { return dataEndField.getValue(addr); }
+  public Address dataEnd()        { return headerBegin().addOffsetTo(getSize()); }
+
+  // Offsets
+  public int getContentOffset()   { return (int) contentOffsetField.getValue(addr); }
+
+  public int getCodeOffset()      { return (int) codeOffsetField.getValue(addr); }
 
   public long getFrameCompleteOffset() { return frameCompleteOffsetField.getValue(addr); }
 

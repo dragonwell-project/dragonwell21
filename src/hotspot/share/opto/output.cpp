@@ -1269,7 +1269,7 @@ CodeBuffer* PhaseOutput::init_buffer() {
           deopt_handler_req;               // deopt handler
 
   if (C->has_method_handle_invokes())
-    total_req += deopt_handler_req;  // deopt MH handler
+    total_req += deopt_handler_req;        // deopt MH handler
 
   CodeBuffer* cb = code_buffer();
   cb->initialize(total_req, _buf_sizes._reloc);
