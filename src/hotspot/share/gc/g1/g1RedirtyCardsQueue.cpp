@@ -118,6 +118,17 @@ BufferNodeList G1RedirtyCardsQueueSet::take_all_completed_buffers() {
   return result;
 }
 
+void G1RedirtyCardsQueueSet::abandon_completed_buffers() {
+  BufferNodeList list = take_all_completed_buffers();
+  BufferNode* buffers_to_delete = list._head;
+  while (buffers_to_delete != nullptr) {
+    BufferNode* bn = buffers_to_delete;
+    buffers_to_delete = bn->next();
+    bn->set_next(nullptr);
+    deallocate_buffer(bn);
+  }
+}
+
 void G1RedirtyCardsQueueSet::update_tail(BufferNode* node) {
   // Node is the tail of a (possibly single element) list just prepended to
   // _list.  If, after that prepend, node's follower is null, then node is

@@ -1253,6 +1253,27 @@ class G1MergeHeapRootsTask : public WorkerTask {
     size_t cards_skipped() const { return _cards_skipped; }
   };
 
+  class G1MergeSimpleDirtyCardsRegionClosure : public HeapRegionClosure {
+  private:
+    G1RemSetScanState* _scan_state;
+    G1CardTable* _ct;
+
+  public:
+    G1MergeSimpleDirtyCardsRegionClosure(G1CollectedHeap* g1h, G1RemSetScanState* scan_state) :
+      _scan_state(scan_state),
+      _ct(g1h->card_table())
+    {}
+
+    bool do_heap_region(HeapRegion* r) {
+      if (r->is_old_or_humongous() && !r->in_collection_set()) {
+        uint region_index = r->hrm_index();
+        _scan_state->add_dirty_region(region_index);
+        _scan_state->set_chunk_range_dirty(region_index << HeapRegion::LogCardsPerRegion, HeapRegion::CardsPerRegion);
+      }
+      return false;
+    }
+  };
+
   HeapRegionClaimer _hr_claimer;
   G1RemSetScanState* _scan_state;
   BufferNode::Stack _dirty_card_buffers;
@@ -1278,7 +1299,7 @@ public:
     _initial_evacuation(initial_evacuation),
     _fast_reclaim_handled(false)
   {
-    if (initial_evacuation) {
+    if (initial_evacuation && !G1BarrierSimple) {
       G1DirtyCardQueueSet& dcqs = G1BarrierSet::dirty_card_queue_set();
       BufferNodeList buffers = dcqs.take_all_completed_buffers();
       if (buffers._entry_count != 0) {
@@ -1338,11 +1359,19 @@ public:
       assert(merge_remset_phase == G1GCPhaseTimes::MergeRS, "Wrong merge phase");
       G1GCParPhaseTimesTracker x(p, G1GCPhaseTimes::MergeLB, worker_id);
 
-      G1MergeLogBufferCardsClosure cl(g1h, _scan_state);
-      apply_closure_to_dirty_card_buffers(&cl, worker_id);
+      if (G1BarrierSimple) {
+        G1MergeSimpleDirtyCardsRegionClosure cl(g1h, _scan_state);
+        G1CollectedHeap::heap()->heap_region_par_iterate_from_worker_offset(&cl, &_hr_claimer, worker_id);
+        p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, 0, G1GCPhaseTimes::MergeLBDirtyCards);
+        p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, 0, G1GCPhaseTimes::MergeLBSkippedCards);
+      } else {
+        G1MergeLogBufferCardsClosure cl(g1h, _scan_state);
+        apply_closure_to_dirty_card_buffers(&cl, worker_id);
 
-      p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, cl.cards_dirty(), G1GCPhaseTimes::MergeLBDirtyCards);
-      p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, cl.cards_skipped(), G1GCPhaseTimes::MergeLBSkippedCards);
+        p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, cl.cards_dirty(), G1GCPhaseTimes::MergeLBDirtyCards);
+        p->record_thread_work_item(G1GCPhaseTimes::MergeLB, worker_id, cl.cards_skipped(), G1GCPhaseTimes::MergeLBSkippedCards);
+      }
+
     }
   }
 };

@@ -29,6 +29,9 @@
 #include "logging/log.hpp"
 
 void G1CardTable::g1_mark_as_young(const MemRegion& mr) {
+  if (G1BarrierSimple) {
+    return;
+  }
   CardValue *const first = byte_for(mr.start());
   CardValue *const last = byte_after(mr.last());
 
@@ -37,7 +40,9 @@ void G1CardTable::g1_mark_as_young(const MemRegion& mr) {
 
 #ifndef PRODUCT
 void G1CardTable::verify_g1_young_region(MemRegion mr) {
-  verify_region(mr, g1_young_gen,  true);
+  if (!G1BarrierSimple) {
+    verify_region(mr, g1_young_gen,  true);
+  }
 }
 #endif
 
@@ -69,6 +74,9 @@ void G1CardTable::initialize(G1RegionToSpaceMapper* mapper) {
 }
 
 bool G1CardTable::is_in_young(const void* p) const {
+  if (G1BarrierSimple) {
+    return G1CollectedHeap::heap()->heap_region_containing(p)->is_young();
+  }
   volatile CardValue* card = byte_for(p);
   return *card == G1CardTable::g1_young_card_val();
 }
