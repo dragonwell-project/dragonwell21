@@ -323,6 +323,9 @@
           "related prediction sample. That sample must involve the same or "\
           "more than that number of cards to be used.")                     \
                                                                             \
+  product(bool, G1BarrierSimple, false,                                     \
+          "Use simple G1 post barrier")                                     \
+                                                                            \
   GC_G1_EVACUATION_FAILURE_FLAGS(develop,                                   \
                     develop_pd,                                             \
                     product,                                                \

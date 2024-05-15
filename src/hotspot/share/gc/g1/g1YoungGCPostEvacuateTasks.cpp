@@ -386,7 +386,11 @@ public:
 
   virtual ~RedirtyLoggedCardsTask() {
     G1DirtyCardQueueSet& dcq = G1BarrierSet::dirty_card_queue_set();
-    dcq.merge_bufferlists(_rdcqs);
+    if (G1BarrierSimple) {
+      _rdcqs->abandon_completed_buffers();
+    } else {
+      dcq.merge_bufferlists(_rdcqs);
+    }
     _rdcqs->verify_empty();
   }
 

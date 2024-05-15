@@ -107,6 +107,12 @@ void G1BarrierSet::invalidate(JavaThread* thread, MemRegion mr) {
   }
   volatile CardValue* byte = _card_table->byte_for(mr.start());
   CardValue* last_byte = _card_table->byte_for(mr.last());
+  if (G1BarrierSimple) {
+    for (; byte <= last_byte; byte++) {
+      *byte = G1CardTable::dirty_card_val();
+    }
+    return;
+  }
 
   // skip young gen cards
   if (*byte == G1CardTable::g1_young_card_val()) {

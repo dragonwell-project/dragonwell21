@@ -90,6 +90,8 @@ public:
   // precondition: Must not be concurrent with buffer collection.
   BufferNode* all_completed_buffers() const;
   BufferNodeList take_all_completed_buffers();
+
+  void abandon_completed_buffers();
 };
 
 #endif // SHARE_GC_G1_G1REDIRTYCARDSQUEUE_HPP
