@@ -27,6 +27,7 @@ package gc.arguments;
  * @test TestG1ConcRefinementThreads
  * @bug 8047976
  * @requires vm.gc.G1 & vm.opt.G1ConcRefinementThreads == null
+ * @requires vm.opt.G1BarrierSimple == null
  * @summary Tests argument processing for G1ConcRefinementThreads
  * @library /test/lib
  * @library /

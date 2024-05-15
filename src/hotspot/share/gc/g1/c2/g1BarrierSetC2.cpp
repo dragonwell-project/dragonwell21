@@ -446,6 +446,13 @@ void G1BarrierSetC2::post_barrier(GraphKit* kit,
   // Combine card table base and card offset
   Node* card_adr = __ AddP(no_base, byte_map_base_node(kit), card_offset );
 
+  if (G1BarrierSimple) {
+    __ store(__ ctrl(), card_adr, dirty_card, T_BYTE, Compile::AliasIdxRaw, MemNode::unordered);
+    // Final sync IdealKit and GraphKit.
+    kit->final_sync(ideal);
+    return;
+  }
+
   // If we know the value being stored does it cross regions?
 
   if (val != nullptr) {
@@ -715,6 +722,10 @@ void G1BarrierSetC2::eliminate_gc_barrier(PhaseMacroExpand* macro, Node* node) c
     macro->replace_node(node, macro->zerocon(node->as_Load()->bottom_type()->basic_type()));
   } else {
     assert(node->Opcode() == Op_CastP2X, "ConvP2XNode required");
+    if (G1BarrierSimple) {
+      CardTableBarrierSetC2::eliminate_gc_barrier(macro, node);
+      return;
+    }
     assert(node->outcnt() <= 2, "expects 1 or 2 users: Xor and URShift nodes");
     // It could be only one user, URShift node, in Object.clone() intrinsic
     // but the new allocation is passed to arraycopy stub and it could not

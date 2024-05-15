@@ -177,6 +177,25 @@ void G1Arguments::initialize() {
     FLAG_SET_ERGO(ParallelGCThreads, 1);
   }
 
+  if (G1BarrierSimple) {
+#if !defined(_LP64) || !(defined(X86) || defined(AARCH64))
+    warning("G1BarrierSimple is not supported with current platform"
+            "; ignoring G1BarrierSimple flag.");
+    FLAG_SET_DEFAULT(G1BarrierSimple, false);
+#else
+#if INCLUDE_JVMCI
+    if (EnableJVMCI) {
+      warning("G1BarrierSimple is incompatible with JVMCI"
+              "; ignoring G1BarrierSimple flag.");
+      FLAG_SET_DEFAULT(G1BarrierSimple, false);
+    } else
+#endif
+    {
+      FLAG_SET_DEFAULT(G1UseConcRefinement, false);
+    }
+#endif
+  }
+
   if (!G1UseConcRefinement) {
     if (!FLAG_IS_DEFAULT(G1ConcRefinementThreads)) {
       log_warning(gc, ergo)("Ignoring -XX:G1ConcRefinementThreads "
