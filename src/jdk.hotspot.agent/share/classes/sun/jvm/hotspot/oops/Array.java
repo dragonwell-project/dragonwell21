@@ -110,7 +110,7 @@ public class Array extends Oop {
 
   public static long baseOffsetInBytes(BasicType type) {
     long typeSizeInBytes = headerSizeInBytes();
-    if (elementTypeShouldBeAligned(type)) {
+    if (!VM.getVM().isCompactObjectHeadersEnabled() || elementTypeShouldBeAligned(type)) {
       VM vm = VM.getVM();
       return vm.alignUp(typeSizeInBytes, vm.getVM().getHeapWordSize());
     } else {

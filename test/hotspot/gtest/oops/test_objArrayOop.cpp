@@ -32,16 +32,16 @@ TEST_VM(objArrayOop, osize) {
   } x[] = {
 //    ObjAligInB, UseCCP, UseCoops, UseCOH, object size in heap words
 #ifdef _LP64
-    { 8,          false,  false,    false,  4 },  // 20 byte header, 8 byte oops
-    { 8,          false,  true,     false,  3 },  // 20 byte header, 4 byte oops
+    { 8,          false,  false,    false,  4 },  // 24 byte header, 8 byte oops
+    { 8,          false,  true,     false,  4 },  // 24 byte header, 4 byte oops
     { 8,          true,   false,    false,  3 },  // 16 byte header, 8 byte oops
     { 8,          true,   true,     false,  3 },  // 16 byte header, 4 byte oops
-    { 16,         false,  false,    false,  4 },  // 20 byte header, 8 byte oops, 16-byte align
-    { 16,         false,  true,     false,  4 },  // 20 byte header, 4 byte oops, 16-byte align
+    { 16,         false,  false,    false,  4 },  // 24 byte header, 8 byte oops, 16-byte align
+    { 16,         false,  true,     false,  4 },  // 24 byte header, 4 byte oops, 16-byte align
     { 16,         true,   false,    false,  4 },  // 16 byte header, 8 byte oops, 16-byte align
     { 16,         true,   true,     false,  4 },  // 16 byte header, 4 byte oops, 16-byte align
-    { 256,        false,  false,    false,  32 }, // 20 byte header, 8 byte oops, 256-byte align
-    { 256,        false,  true,     false,  32 }, // 20 byte header, 4 byte oops, 256-byte align
+    { 256,        false,  false,    false,  32 }, // 24 byte header, 8 byte oops, 256-byte align
+    { 256,        false,  true,     false,  32 }, // 24 byte header, 4 byte oops, 256-byte align
     { 256,        true,   false,    false,  32 }, // 16 byte header, 8 byte oops, 256-byte align
     { 256,        true,   true,     false,  32 }, // 16 byte header, 4 byte oops, 256-byte align
     { 8,          false,  false,    true,   3 },  // 16 byte header, 8 byte oops

@@ -96,7 +96,7 @@ public class BaseOffsets {
             LONG_ARRAY_OFFSET = 16;
         } else {
             INT_OFFSET = 16;
-            INT_ARRAY_OFFSET = 20;
+            INT_ARRAY_OFFSET = 24;
             LONG_ARRAY_OFFSET = 24;
         }
     }

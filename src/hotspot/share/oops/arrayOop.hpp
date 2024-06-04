@@ -96,7 +96,8 @@ private:
   // Returns the offset of the first element.
   static int base_offset_in_bytes(BasicType type) {
     size_t hs = header_size_in_bytes();
-    return (int)(element_type_should_be_aligned(type) ? align_up(hs, BytesPerLong) : hs);
+    // When we are not using UseCompactObjectHeaders, revert back to a more conservative alignment.
+    return (int)((!UseCompactObjectHeaders || element_type_should_be_aligned(type)) ? align_up(hs, BytesPerLong) : hs);
   }
 
   // Returns the address of the first element. The elements in the array will not
