@@ -26,6 +26,9 @@
 name: 'OpenJDK GHA Sanity Checks'
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches-ignore:
       - master
@@ -118,6 +121,21 @@ jobs:
           echo "windows-x64=$(check_platform windows-x64 windows x64)" >> $GITHUB_OUTPUT
           echo "windows-aarch64=$(check_platform windows-aarch64 windows aarch64)" >> $GITHUB_OUTPUT
           echo "docs=$(check_platform docs)" >> $GITHUB_OUTPUT
+
+  ###
+  ### Check commit
+  ###
+
+  check_commit:
+    name: 'Check Commit Message'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dragonwell-releng/check_commit_action@master
+      - name: If failure and exit
+        if: ${{ failure() }}
+        run: exit 1
+    if: github.event_name == 'pull_request'
 
   ###
   ### Build jobs
