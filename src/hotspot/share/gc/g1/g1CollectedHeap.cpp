@@ -116,6 +116,7 @@
 #include "utilities/globalDefinitions.hpp"
 #include "utilities/stack.inline.hpp"
 
+int dummmy_for_test = 0;
 size_t G1CollectedHeap::_humongous_object_threshold_in_words = 0;
 
 // INVARIANTS/NOTES
