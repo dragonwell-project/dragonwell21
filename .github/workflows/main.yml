@@ -363,7 +363,7 @@ jobs:
   remove-bundles:
     name: 'Remove bundle artifacts'
     runs-on: ubuntu-22.04
-    if: always()
+    # if: always() # remove only when all passed, so that workflow can support rerun failed jobs
     needs:
       - build-linux-x64
       - build-linux-x86
