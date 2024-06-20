@@ -57,7 +57,7 @@ public class Array extends Oop {
   private static long lengthOffsetInBytes=0;
   private static long typeSize;
 
-  // Check whether an element of a arrayOop with the given type must be
+  // Check whether an element of an arrayOop with the given type must be
   // aligned 0 mod 8.  The arrayOop itself must be aligned at least this
   // strongly.
   private static boolean elementTypeShouldBeAligned(BasicType type) {
