@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1999, 2024, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2014, Red Hat Inc. All rights reserved.
  * Copyright (c) 2020, 2022, Huawei Technologies Co., Ltd. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -181,6 +181,12 @@ void C1_MacroAssembler::initialize_header(Register obj, Register klass, Register
 
   if (len->is_valid()) {
     sw(len, Address(obj, arrayOopDesc::length_offset_in_bytes()));
+    int base_offset = arrayOopDesc::length_offset_in_bytes() + BytesPerInt;
+    if (!is_aligned(base_offset, BytesPerWord)) {
+      assert(is_aligned(base_offset, BytesPerInt), "must be 4-byte aligned");
+      // Clear gap/first 4 bytes following the length field.
+      sw(zr, Address(obj, base_offset));
+    }
   } else if (UseCompressedClassPointers) {
     store_klass_gap(obj, zr);
   }
@@ -280,7 +286,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
   verify_oop(obj);
 }
 
-void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1, Register tmp2, int header_size, int f, Register klass, Label& slow_case) {
+void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1, Register tmp2, int base_offset_in_bytes, int f, Register klass, Label& slow_case) {
   assert_different_registers(obj, len, tmp1, tmp2, klass);
 
   // determine alignment mask
@@ -292,7 +298,7 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1
 
   const Register arr_size = tmp2; // okay to be the same
   // align object end
-  mv(arr_size, (int32_t)header_size * BytesPerWord + MinObjAlignmentInBytesMask);
+  mv(arr_size, (int32_t)base_offset_in_bytes + MinObjAlignmentInBytesMask);
   shadd(arr_size, len, arr_size, t0, f);
   andi(arr_size, arr_size, ~(uint)MinObjAlignmentInBytesMask);
 
@@ -300,9 +306,13 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register tmp1
 
   initialize_header(obj, klass, len, tmp1, tmp2);
 
+  // Align-up to word boundary, because we clear the 4 bytes potentially
+  // following the length field in initialize_header().
+  int base_offset = align_up(base_offset_in_bytes, BytesPerWord);
+
   // clear rest of allocated space
   const Register len_zero = len;
-  initialize_body(obj, arr_size, header_size * BytesPerWord, len_zero);
+  initialize_body(obj, arr_size, base_offset, len_zero);
 
   membar(MacroAssembler::StoreStore);
 
