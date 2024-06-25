@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@
 #include "classfile/javaClasses.inline.hpp"
 #include "gc/shared/continuationGCSupport.inline.hpp"
 #include "gc/serial/serialStringDedup.hpp"
+#include "gc/shared/slidingForwarding.inline.hpp"
 #include "memory/universe.hpp"
 #include "oops/markWord.hpp"
 #include "oops/access.inline.hpp"
@@ -39,27 +40,34 @@
 #include "utilities/align.hpp"
 #include "utilities/stack.inline.hpp"
 
-template <class T> inline void MarkSweep::adjust_pointer(T* p) {
+template <bool ALT_FWD, class T>
+inline void MarkSweep::adjust_pointer(T* p) {
   T heap_oop = RawAccess<>::oop_load(p);
   if (!CompressedOops::is_null(heap_oop)) {
     oop obj = CompressedOops::decode_not_null(heap_oop);
     assert(Universe::heap()->is_in(obj), "should be in heap");
 
-    if (obj->is_forwarded()) {
-      oop new_obj = obj->forwardee();
+    if (SlidingForwarding::is_forwarded(obj)) {
+      oop new_obj = SlidingForwarding::forwardee<ALT_FWD>(obj);
       assert(is_object_aligned(new_obj), "oop must be aligned");
       RawAccess<IS_NOT_NULL>::oop_store(p, new_obj);
     }
   }
 }
 
+template <bool ALT_FWD>
 template <typename T>
-void AdjustPointerClosure::do_oop_work(T* p)           { MarkSweep::adjust_pointer(p); }
-inline void AdjustPointerClosure::do_oop(oop* p)       { do_oop_work(p); }
-inline void AdjustPointerClosure::do_oop(narrowOop* p) { do_oop_work(p); }
+void AdjustPointerClosure<ALT_FWD>::do_oop_work(T* p)           { MarkSweep::adjust_pointer<ALT_FWD>(p); }
+template <bool ALT_FWD>
+inline void AdjustPointerClosure<ALT_FWD>::do_oop(oop* p)       { do_oop_work(p); }
 
+template <bool ALT_FWD>
+inline void AdjustPointerClosure<ALT_FWD>::do_oop(narrowOop* p) { do_oop_work(p); }
+
+template <bool ALT_FWD>
 inline size_t MarkSweep::adjust_pointers(oop obj) {
-  return obj->oop_iterate_size(&MarkSweep::adjust_pointer_closure);
+  AdjustPointerClosure<ALT_FWD> adjust_pointer_closure;
+  return obj->oop_iterate_size(&adjust_pointer_closure);
 }
 
 #endif // SHARE_GC_SERIAL_MARKSWEEP_INLINE_HPP

@@ -32,6 +32,7 @@
 #include "gc/g1/g1FullGCCompactionPoint.hpp"
 #include "gc/g1/g1FullGCScope.hpp"
 #include "gc/g1/heapRegion.inline.hpp"
+#include "gc/shared/slidingForwarding.inline.hpp"
 
 void G1DetermineCompactionQueueClosure::free_empty_humongous_region(HeapRegion* hr) {
   _g1h->free_humongous_region(hr, nullptr);
@@ -101,18 +102,19 @@ inline bool G1DetermineCompactionQueueClosure::do_heap_region(HeapRegion* hr) {
   return false;
 }
 
-inline size_t G1SerialRePrepareClosure::apply(oop obj) {
-  if (obj->is_forwarded()) {
+template <bool ALT_FWD>
+inline size_t G1SerialRePrepareClosure<ALT_FWD>::apply(oop obj) {
+  if (SlidingForwarding::is_forwarded(obj)) {
     // We skip objects compiled into the first region or
     // into regions not part of the serial compaction point.
-    if (cast_from_oop<HeapWord*>(obj->forwardee()) < _dense_prefix_top) {
+    if (cast_from_oop<HeapWord*>(SlidingForwarding::forwardee<ALT_FWD>(obj)) < _dense_prefix_top) {
       return obj->size();
     }
   }
 
   // Get size and forward.
   size_t size = obj->size();
-  _cp->forward(obj, size);
+  _cp->forward<ALT_FWD>(obj, size);
 
   return size;
 }
