@@ -27,6 +27,7 @@
 #include "classfile/vmSymbols.hpp"
 #include "gc/shared/collectedHeap.inline.hpp"
 #include "gc/shared/genCollectedHeap.hpp"
+#include "gc/shared/slidingForwarding.inline.hpp"
 #include "gc/shared/space.hpp"
 #include "gc/shared/space.inline.hpp"
 #include "gc/shared/spaceDecorator.inline.hpp"
@@ -244,7 +245,7 @@ void ContiguousSpace::mangle_unused_area_complete() {
 }
 #endif  // NOT_PRODUCT
 
-
+template <bool ALT_FWD>
 HeapWord* ContiguousSpace::forward(oop q, size_t size,
                                     CompactPoint* cp, HeapWord* compact_top) {
   // q is alive
@@ -269,13 +270,13 @@ HeapWord* ContiguousSpace::forward(oop q, size_t size,
 
   // store the forwarding pointer into the mark word
   if (cast_from_oop<HeapWord*>(q) != compact_top) {
-    q->forward_to(cast_to_oop(compact_top));
+    SlidingForwarding::forward_to<ALT_FWD>(q, cast_to_oop(compact_top));
     assert(q->is_gc_marked(), "encoding the pointer should preserve the mark");
   } else {
     // if the object isn't moving we can just set the mark to the default
     // mark and handle it specially later on.
     q->init_mark();
-    assert(!q->is_forwarded(), "should not be forwarded");
+    assert(SlidingForwarding::is_not_forwarded(q), "should not be forwarded");
   }
 
   compact_top += size;
@@ -289,7 +290,8 @@ HeapWord* ContiguousSpace::forward(oop q, size_t size,
 
 #if INCLUDE_SERIALGC
 
-void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
+template <bool ALT_FWD>
+void ContiguousSpace::prepare_for_compaction_impl(CompactPoint* cp) {
   // Compute the new addresses for the live objects and store it in the mark
   // Used by universe::mark_sweep_phase2()
 
@@ -322,7 +324,7 @@ void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
       // prefetch beyond cur_obj
       Prefetch::write(cur_obj, interval);
       size_t size = cast_to_oop(cur_obj)->size();
-      compact_top = cp->space->forward(cast_to_oop(cur_obj), size, cp, compact_top);
+      compact_top = cp->space->forward<ALT_FWD>(cast_to_oop(cur_obj), size, cp, compact_top);
       cur_obj += size;
       end_of_live = cur_obj;
     } else {
@@ -338,7 +340,7 @@ void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
       // we don't have to compact quite as often.
       if (cur_obj == compact_top && dead_spacer.insert_deadspace(cur_obj, end)) {
         oop obj = cast_to_oop(cur_obj);
-        compact_top = cp->space->forward(obj, obj->size(), cp, compact_top);
+        compact_top = cp->space->forward<ALT_FWD>(obj, obj->size(), cp, compact_top);
         end_of_live = end;
       } else {
         // otherwise, it really is a free region.
@@ -369,7 +371,16 @@ void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
   cp->space->set_compaction_top(compact_top);
 }
 
-void ContiguousSpace::adjust_pointers() {
+void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
+  if (UseAltGCForwarding) {
+    prepare_for_compaction_impl<true>(cp);
+  } else {
+    prepare_for_compaction_impl<false>(cp);
+  }
+}
+
+template <bool ALT_FWD>
+void ContiguousSpace::adjust_pointers_impl() {
   // Check first is there is any work to do.
   if (used() == 0) {
     return;   // Nothing to do.
@@ -392,7 +403,7 @@ void ContiguousSpace::adjust_pointers() {
     if (cur_obj < first_dead || cast_to_oop(cur_obj)->is_gc_marked()) {
       // cur_obj is alive
       // point all the oops to the new location
-      size_t size = MarkSweep::adjust_pointers(cast_to_oop(cur_obj));
+      size_t size = MarkSweep::adjust_pointers<ALT_FWD>(cast_to_oop(cur_obj));
       debug_only(prev_obj = cur_obj);
       cur_obj += size;
     } else {
@@ -406,7 +417,16 @@ void ContiguousSpace::adjust_pointers() {
   assert(cur_obj == end_of_live, "just checking");
 }
 
-void ContiguousSpace::compact() {
+void ContiguousSpace::adjust_pointers() {
+  if (UseAltGCForwarding) {
+    adjust_pointers_impl<true>();
+  } else {
+    adjust_pointers_impl<false>();
+  }
+}
+
+template <bool ALT_FWD>
+void ContiguousSpace::compact_impl() {
   // Copy all live objects to their new location
   // Used by MarkSweep::mark_sweep_phase4()
 
@@ -435,7 +455,7 @@ void ContiguousSpace::compact() {
 
   debug_only(HeapWord* prev_obj = nullptr);
   while (cur_obj < end_of_live) {
-    if (!cast_to_oop(cur_obj)->is_forwarded()) {
+    if (SlidingForwarding::is_not_forwarded(cast_to_oop(cur_obj))) {
       debug_only(prev_obj = cur_obj);
       // The first word of the dead object contains a pointer to the next live object or end of space.
       cur_obj = *(HeapWord**)cur_obj;
@@ -446,7 +466,7 @@ void ContiguousSpace::compact() {
 
       // size and destination
       size_t size = cast_to_oop(cur_obj)->size();
-      HeapWord* compaction_top = cast_from_oop<HeapWord*>(cast_to_oop(cur_obj)->forwardee());
+      HeapWord* compaction_top = cast_from_oop<HeapWord*>(SlidingForwarding::forwardee<ALT_FWD>(cast_to_oop(cur_obj)));
 
       // prefetch beyond compaction_top
       Prefetch::write(compaction_top, copy_interval);
@@ -467,6 +487,14 @@ void ContiguousSpace::compact() {
   }
 
   clear_empty_region(this);
+}
+
+void ContiguousSpace::compact() {
+  if (UseAltGCForwarding) {
+    compact_impl<true>();
+  } else {
+    compact_impl<false>();
+  }
 }
 
 #endif // INCLUDE_SERIALGC

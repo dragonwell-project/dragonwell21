@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "gc/shared/preservedMarks.inline.hpp"
+#include "gc/shared/slidingForwarding.inline.hpp"
 #include "gc/shared/workerThread.hpp"
 #include "gc/shared/workerUtils.hpp"
 #include "memory/allocation.inline.hpp"
@@ -40,15 +41,24 @@ void PreservedMarks::restore() {
   assert_empty();
 }
 
-void PreservedMarks::adjust_during_full_gc() {
+template <bool ALT_FWD>
+void PreservedMarks::adjust_during_full_gc_impl() {
   StackIterator<OopAndMarkWord, mtGC> iter(_stack);
   while (!iter.is_empty()) {
     OopAndMarkWord* elem = iter.next_addr();
 
     oop obj = elem->get_oop();
     if (obj->is_forwarded()) {
-      elem->set_oop(obj->forwardee());
+      elem->set_oop(SlidingForwarding::forwardee<ALT_FWD>(obj));
     }
+  }
+}
+
+void PreservedMarks::adjust_during_full_gc() {
+  if (UseAltGCForwarding) {
+    adjust_during_full_gc_impl<true>();
+  } else {
+    adjust_during_full_gc_impl<false>();
   }
 }
 

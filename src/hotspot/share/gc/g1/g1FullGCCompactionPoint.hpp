@@ -54,7 +54,9 @@ public:
   bool is_initialized();
   void initialize(HeapRegion* hr);
   void update();
+  template <bool ALT_FWD>
   void forward(oop object, size_t size);
+  template <bool ALT_FWD>
   uint forward_humongous(HeapRegion* hr);
   void add(HeapRegion* hr);
   void add_humongous(HeapRegion* hr);

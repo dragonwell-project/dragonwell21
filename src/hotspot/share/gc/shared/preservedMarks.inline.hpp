@@ -26,6 +26,7 @@
 #define SHARE_GC_SHARED_PRESERVEDMARKS_INLINE_HPP
 
 #include "gc/shared/preservedMarks.hpp"
+#include "gc/shared/slidingForwarding.inline.hpp"
 
 #include "logging/log.hpp"
 #include "oops/oop.inline.hpp"
