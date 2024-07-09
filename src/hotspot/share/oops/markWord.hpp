@@ -46,7 +46,7 @@
 //
 //  64 bits (with compact headers):
 //  -------------------------------
-//  nklass:32 hash:25 -->| unused_gap:1  age:4  self-fwded:1  lock:2 (normal object)
+//  nklass:32 hash:25               -->| age:4  self-fwded:1  lock:2 (normal object)
 //
 //  - hash contains the identity hash value: largest value is
 //    31 bits, see os::random().  Also, 64-bit vm's require
