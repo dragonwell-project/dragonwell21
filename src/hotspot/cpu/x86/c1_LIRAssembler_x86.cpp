@@ -3200,6 +3200,8 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
 
   Address src_length_addr = Address(src, arrayOopDesc::length_offset_in_bytes());
   Address dst_length_addr = Address(dst, arrayOopDesc::length_offset_in_bytes());
+  Address src_klass_addr = Address(src, oopDesc::klass_offset_in_bytes());
+  Address dst_klass_addr = Address(dst, oopDesc::klass_offset_in_bytes());
 
   // length and pos's are all sign extended at this point on 64bit
 
@@ -3265,7 +3267,18 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
     // We don't know the array types are compatible
     if (basic_type != T_OBJECT) {
       // Simple test for basic type arrays
-      __ cmp_klass(src, dst, tmp, tmp2);
+#ifdef _LP64
+      if (UseCompactObjectHeaders) {
+        __ cmp_klass(src, dst, tmp, tmp2);
+      } else
+#endif
+      if (UseCompressedClassPointers) {
+        __ movl(tmp, src_klass_addr);
+        __ cmpl(tmp, dst_klass_addr);
+      } else {
+        __ movptr(tmp, src_klass_addr);
+        __ cmpptr(tmp, dst_klass_addr);
+      }
       __ jcc(Assembler::notEqual, *stub->entry());
     } else {
       // For object arrays, if src is a sub class of dst then we can
@@ -3324,7 +3337,6 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
        store_parameter(src, 4);
 
 #ifndef _LP64
-       Address dst_klass_addr = Address(dst, oopDesc::klass_offset_in_bytes());
         __ movptr(tmp, dst_klass_addr);
         __ movptr(tmp, Address(tmp, ObjArrayKlass::element_klass_offset()));
         __ push(tmp);
@@ -3428,12 +3440,19 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
 #endif
 
     if (basic_type != T_OBJECT) {
-      __ cmp_klass(tmp, dst, tmp2);
+
+      LP64_ONLY(if (UseCompactObjectHeaders) __ cmp_klass(tmp, dst, tmp2); else)
+      if (UseCompressedClassPointers)          __ cmpl(tmp, dst_klass_addr);
+      else                   __ cmpptr(tmp, dst_klass_addr);
       __ jcc(Assembler::notEqual, halt);
-      __ cmp_klass(tmp, src, tmp2);
+      LP64_ONLY(if (UseCompactObjectHeaders) __ cmp_klass(tmp, src, tmp2); else)
+      if (UseCompressedClassPointers)          __ cmpl(tmp, src_klass_addr);
+      else                   __ cmpptr(tmp, src_klass_addr);
       __ jcc(Assembler::equal, known_ok);
     } else {
-      __ cmp_klass(tmp, dst, tmp2);
+      LP64_ONLY(if (UseCompactObjectHeaders) __ cmp_klass(tmp, dst, tmp2); else)
+      if (UseCompressedClassPointers)          __ cmpl(tmp, dst_klass_addr);
+      else                   __ cmpptr(tmp, dst_klass_addr);
       __ jcc(Assembler::equal, known_ok);
       __ cmpptr(src, dst);
       __ jcc(Assembler::equal, known_ok);

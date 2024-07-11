@@ -199,7 +199,6 @@ void C1_MacroAssembler::initialize_header(Register obj, Register klass, Register
   if (len->is_valid()) {
     strw(len, Address(obj, arrayOopDesc::length_offset_in_bytes()));
     int base_offset = arrayOopDesc::length_offset_in_bytes() + BytesPerInt;
-    // With compact headers, arrays have a 32-bit alignment gap after the length.
     assert(!UseCompactObjectHeaders || arrayOopDesc::length_offset_in_bytes() == 8, "check length offset");
     if (!is_aligned(base_offset, BytesPerWord)) {
       assert(is_aligned(base_offset, BytesPerInt), "must be 4-byte aligned");
@@ -328,7 +327,9 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
 void C1_MacroAssembler::inline_cache_check(Register receiver, Register iCache) {
   verify_oop(receiver);
   // explicit null check not needed since load from [klass_offset] causes a trap
-  // check against inline cache. This is checked in Universe::genesis()..
+  // check against inline cache
+  assert(UseCompactObjectHeaders || !MacroAssembler::needs_explicit_null_check(oopDesc::klass_offset_in_bytes()), "must add explicit null check");
+
   cmp_klass(receiver, iCache, rscratch1);
 }
 
