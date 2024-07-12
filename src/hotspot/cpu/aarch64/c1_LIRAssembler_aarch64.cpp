@@ -2354,7 +2354,7 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
       // Simple test for basic type arrays
       if (UseCompactObjectHeaders) {
         __ cmp_klass(src, dst, tmp, rscratch1);
-      } if (UseCompressedClassPointers) {
+      } else if (UseCompressedClassPointers) {
         __ ldrw(tmp, src_klass_addr);
         __ ldrw(rscratch1, dst_klass_addr);
         __ cmpw(tmp, rscratch1);
