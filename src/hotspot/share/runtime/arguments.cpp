@@ -3092,6 +3092,12 @@ jint Arguments::finalize_vm_init_args(bool patch_mod_javabase) {
     }
     FLAG_SET_DEFAULT(UseCompactObjectHeaders, false);
   }
+#if INCLUDE_JVMCI
+  if (UseCompactObjectHeaders && EnableJVMCI) {
+    warning("JVMCI does not work with compact object headers, disabling UseCompactObjectHeaders");
+    FLAG_SET_DEFAULT(UseCompactObjectHeaders, false);
+  }
+#endif
   if (UseCompactObjectHeaders && FLAG_IS_CMDLINE(UseCompressedClassPointers) && !UseCompressedClassPointers) {
     warning("Compact object headers require compressed class pointers. Disabling compact object headers.");
     FLAG_SET_DEFAULT(UseCompactObjectHeaders, false);
