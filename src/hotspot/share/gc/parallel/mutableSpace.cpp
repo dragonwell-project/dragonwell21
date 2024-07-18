@@ -120,11 +120,12 @@ void MutableSpace::initialize(MemRegion mr,
     }
 
     if (AlwaysPreTouch) {
+      size_t pretouch_page_size = UseLargePages ? page_size : os::vm_page_size();
       PretouchTask::pretouch("ParallelGC PreTouch head", (char*)head.start(), (char*)head.end(),
-                             page_size, pretouch_workers);
+                             pretouch_page_size, pretouch_workers);
 
       PretouchTask::pretouch("ParallelGC PreTouch tail", (char*)tail.start(), (char*)tail.end(),
-                             page_size, pretouch_workers);
+                             pretouch_page_size, pretouch_workers);
     }
 
     // Remember where we stopped so that we can continue later.
@@ -242,6 +243,7 @@ void MutableSpace::object_iterate_impl(ObjectClosure* cl) {
     // They are essentially dead, so skipping them
     if (!obj->is_forwarded()) {
       cl->do_object(obj);
+<<<<<<< HEAD
       p += obj->size();
     } else {
       assert(obj->forwardee() != obj, "must not be self-forwarded");
@@ -262,6 +264,15 @@ void MutableSpace::object_iterate(ObjectClosure* cl) {
     object_iterate_impl<true>(cl);
   } else {
     object_iterate_impl<false>(cl);
+=======
+    }
+#ifdef ASSERT
+    else {
+      assert(obj->forwardee() != obj, "must not be self-forwarded");
+    }
+#endif
+    p += cast_to_oop(p)->size();
+>>>>>>> jdk-21.0.4+7
   }
 }
 

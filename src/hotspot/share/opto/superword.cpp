@@ -4032,20 +4032,39 @@ void SuperWord::align_initial_loop_index(MemNode* align_to_ref) {
   _igvn.register_new_node_with_optimizer(N);
   _phase->set_ctrl(N, pre_ctrl);
 
+  // The computation of the new pre-loop limit could overflow or underflow the int range. This is problematic in
+  // combination with Range Check Elimination (RCE), which determines a "safe" range where a RangeCheck will always
+  // succeed. RCE adjusts the pre-loop limit such that we only enter the main-loop once we have reached the "safe"
+  // range, and adjusts the main-loop limit so that we exit the main-loop before we leave the "safe" range. After RCE,
+  // the range of the main-loop can only be safely narrowed, and should never be widened. Hence, the pre-loop limit
+  // can only be increased (for stride > 0), but an add overflow might decrease it, or decreased (for stride < 0), but
+  // a sub underflow might increase it. To prevent that, we perform the Sub / Add and Max / Min with long operations.
+  lim0       = new ConvI2LNode(lim0);
+  N          = new ConvI2LNode(N);
+  orig_limit = new ConvI2LNode(orig_limit);
+  _igvn.register_new_node_with_optimizer(lim0);
+  _igvn.register_new_node_with_optimizer(N);
+  _igvn.register_new_node_with_optimizer(orig_limit);
+
   //   substitute back into (1), so that new limit
   //     lim = lim0 + N
   Node* lim;
   if (stride < 0) {
-    lim = new SubINode(lim0, N);
+    lim = new SubLNode(lim0, N);
   } else {
-    lim = new AddINode(lim0, N);
+    lim = new AddLNode(lim0, N);
   }
   _igvn.register_new_node_with_optimizer(lim);
   _phase->set_ctrl(lim, pre_ctrl);
   Node* constrained =
-    (stride > 0) ? (Node*) new MinINode(lim, orig_limit)
-                 : (Node*) new MaxINode(lim, orig_limit);
+    (stride > 0) ? (Node*) new MinLNode(_phase->C, lim, orig_limit)
+                 : (Node*) new MaxLNode(_phase->C, lim, orig_limit);
   _igvn.register_new_node_with_optimizer(constrained);
+
+  // We know that the result is in the int range, there is never truncation
+  constrained = new ConvL2INode(constrained);
+  _igvn.register_new_node_with_optimizer(constrained);
+
   _phase->set_ctrl(constrained, pre_ctrl);
   _igvn.replace_input_of(pre_opaq, 1, constrained);
 }
@@ -4199,6 +4218,25 @@ SWPointer::SWPointer(MemNode* mem, SuperWord* slp, Node_Stack *nstack, bool anal
 
   NOT_PRODUCT(if(_slp->is_trace_alignment()) _tracer.restore_depth();)
   NOT_PRODUCT(_tracer.ctor_6(mem);)
+
+  // In the pointer analysis, and especially the AlignVector, analysis we assume that
+  // stride and scale are not too large. For example, we multiply "scale * stride",
+  // and assume that this does not overflow the int range. We also take "abs(scale)"
+  // and "abs(stride)", which would overflow for min_int = -(2^31). Still, we want
+  // to at least allow small and moderately large stride and scale. Therefore, we
+  // allow values up to 2^30, which is only a factor 2 smaller than the max/min int.
+  // Normal performance relevant code will have much lower values. And the restriction
+  // allows us to keep the rest of the autovectorization code much simpler, since we
+  // do not have to deal with overflows.
+  jlong long_scale  = _scale;
+  jlong long_stride = slp->lp()->stride_is_con() ? slp->iv_stride() : 0;
+  jlong max_val = 1 << 30;
+  if (abs(long_scale) >= max_val ||
+      abs(long_stride) >= max_val ||
+      abs(long_scale * long_stride) >= max_val) {
+    assert(!valid(), "adr stride*scale is too large");
+    return;
+  }
 
   _base = base;
   _adr  = adr;
