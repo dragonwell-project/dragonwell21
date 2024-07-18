@@ -823,10 +823,10 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
 // Threads::destroy_vm() is normally called from jni_DestroyJavaVM() when
 // the program falls off the end of main(). Another VM exit path is through
-// vm_exit() when the program calls System.exit() to return a value or when
-// there is a serious error in VM. The two shutdown paths are not exactly
-// the same, but they share Shutdown.shutdown() at Java level and before_exit()
-// and VM_Exit op at VM level.
+// vm_exit(), when the program calls System.exit() to return a value, or when
+// there is a serious error in VM.
+// These two separate shutdown paths are not exactly the same, but they share
+// Shutdown.shutdown() at Java level and before_exit() and VM_Exit op at VM level.
 //
 // Shutdown sequence:
 //   + Shutdown native memory tracking if it is on
@@ -1008,7 +1008,7 @@ void Threads::add(JavaThread* p, bool force_daemon) {
   ObjectSynchronizer::inc_in_use_list_ceiling();
 
   // Possible GC point.
-  Events::log(p, "Thread added: " INTPTR_FORMAT, p2i(p));
+  Events::log(Thread::current(), "Thread added: " INTPTR_FORMAT, p2i(p));
 
   // Make new thread known to active EscapeBarrier
   EscapeBarrier::thread_added(p);
@@ -1071,7 +1071,7 @@ void Threads::remove(JavaThread* p, bool is_daemon) {
   ObjectSynchronizer::dec_in_use_list_ceiling();
 
   // Since Events::log uses a lock, we grab it outside the Threads_lock
-  Events::log(p, "Thread exited: " INTPTR_FORMAT, p2i(p));
+  Events::log(Thread::current(), "Thread exited: " INTPTR_FORMAT, p2i(p));
 }
 
 // Operations on the Threads list for GC.  These are not explicitly locked,
@@ -1317,10 +1317,7 @@ void Threads::print_on(outputStream* st, bool print_stacks,
   }
 
   PrintOnClosure cl(st);
-  cl.do_thread(VMThread::vm_thread());
-  Universe::heap()->gc_threads_do(&cl);
-  cl.do_thread(WatcherThread::watcher_thread());
-  cl.do_thread(AsyncLogWriter::instance());
+  non_java_threads_do(&cl);
 
   st->flush();
 }
