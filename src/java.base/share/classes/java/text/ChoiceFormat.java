@@ -384,7 +384,13 @@ public class ChoiceFormat extends NumberFormat {
      */
     public StringBuffer format(long number, StringBuffer toAppendTo,
                                FieldPosition status) {
-        return format((double)number, toAppendTo, status);
+        return format((double) number, StringBufFactory.of(toAppendTo), status).asStringBuffer();
+    }
+
+    @Override
+    StringBuf format(long number, StringBuf toAppendTo,
+                     FieldPosition status) {
+        return format((double) number, toAppendTo, status);
     }
 
     /**
@@ -397,6 +403,12 @@ public class ChoiceFormat extends NumberFormat {
      */
    public StringBuffer format(double number, StringBuffer toAppendTo,
                                FieldPosition status) {
+        return format(number, StringBufFactory.of(toAppendTo), status).asStringBuffer();
+    }
+
+    @Override
+    StringBuf format(double number, StringBuf toAppendTo,
+                         FieldPosition status) {
         // find the number
         int i;
         for (i = 0; i < choiceLimits.length; ++i) {
