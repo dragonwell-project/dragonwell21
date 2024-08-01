@@ -33,6 +33,7 @@
 #include CPU_HEADER(globals)
 #include OS_HEADER(globals)
 #include OS_CPU_HEADER(globals)
+#include "runtime/globals_ext.hpp"
 
 // develop flags are settable / visible only during development and are constant in the PRODUCT version
 // product flags are always settable / visible
@@ -1997,5 +1998,6 @@ DECLARE_FLAGS(LP64_RUNTIME_FLAGS)
 DECLARE_ARCH_FLAGS(ARCH_FLAGS)
 DECLARE_FLAGS(RUNTIME_FLAGS)
 DECLARE_FLAGS(RUNTIME_OS_FLAGS)
+DECLARE_FLAGS(DRAGONWELL_FLAGS)
 
 #endif // SHARE_RUNTIME_GLOBALS_HPP

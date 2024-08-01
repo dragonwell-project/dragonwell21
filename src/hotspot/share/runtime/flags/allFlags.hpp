@@ -148,6 +148,15 @@
     product_pd,               \
     notproduct,               \
     range,                    \
+    constraint)               \
+                              \
+  DRAGONWELL_FLAGS(           \
+    develop,                  \
+    develop_pd,               \
+    product,                  \
+    product_pd,               \
+    notproduct,               \
+    range,                    \
     constraint)
 
 #define ALL_CONSTRAINTS(f) \
