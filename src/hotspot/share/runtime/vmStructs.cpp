@@ -501,7 +501,7 @@
   nonstatic_field(CodeHeap,                    _segmap,                                       VirtualSpace)                          \
   nonstatic_field(CodeHeap,                    _log2_segment_size,                            int)                                   \
   nonstatic_field(HeapBlock,                   _header,                                       HeapBlock::Header)                     \
-  nonstatic_field(HeapBlock::Header,           _length,                                       size_t)                                \
+  nonstatic_field(HeapBlock::Header,           _length,                                       uint32_t)                              \
   nonstatic_field(HeapBlock::Header,           _used,                                         bool)                                  \
                                                                                                                                      \
   /**********************************/                                                                                               \
@@ -612,19 +612,18 @@
                                                                                                                                      \
   nonstatic_field(CodeBlob,                 _name,                                   const char*)                                    \
   nonstatic_field(CodeBlob,                 _size,                                   int)                                            \
-  nonstatic_field(CodeBlob,                 _header_size,                            int)                                            \
-  nonstatic_field(CodeBlob,                 _frame_complete_offset,                  int)                                            \
+  nonstatic_field(CodeBlob,                 _header_size,                                  u2)                                             \
+  nonstatic_field(CodeBlob,                 _relocation_size,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _content_offset,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _code_offset,                            int)                                            \
+  nonstatic_field(CodeBlob,                 _frame_complete_offset,                        int16_t)                                        \
   nonstatic_field(CodeBlob,                 _data_offset,                            int)                                            \
   nonstatic_field(CodeBlob,                 _frame_size,                             int)                                            \
   nonstatic_field(CodeBlob,                 _oop_maps,                               ImmutableOopMapSet*)                            \
-  nonstatic_field(CodeBlob,                 _code_begin,                             address)                                        \
-  nonstatic_field(CodeBlob,                 _code_end,                               address)                                        \
-  nonstatic_field(CodeBlob,                 _content_begin,                          address)                                        \
-  nonstatic_field(CodeBlob,                 _data_end,                               address)                                        \
+  nonstatic_field(CodeBlob,                 _caller_must_gc_arguments,                     bool)                                  \
                                                                                                                                      \
   nonstatic_field(DeoptimizationBlob,          _unpack_offset,                                int)                                   \
                                                                                                                                      \
-  nonstatic_field(RuntimeStub,                 _caller_must_gc_arguments,                     bool)                                  \
                                                                                                                                      \
   /********************************************************/                                                                         \
   /* CompiledMethod (NOTE: incomplete, but only a little) */                                                                         \
@@ -646,17 +645,16 @@
   nonstatic_field(nmethod,                     _exception_offset,                             int)                                   \
   nonstatic_field(nmethod,                     _orig_pc_offset,                               int)                                   \
   nonstatic_field(nmethod,                     _stub_offset,                                  int)                                   \
-  nonstatic_field(nmethod,                     _consts_offset,                                int)                                   \
-  nonstatic_field(nmethod,                     _oops_offset,                                  int)                                   \
-  nonstatic_field(nmethod,                     _metadata_offset,                              int)                                   \
-  nonstatic_field(nmethod,                     _scopes_pcs_offset,                            int)                                   \
-  nonstatic_field(nmethod,                     _dependencies_offset,                          int)                                   \
-  nonstatic_field(nmethod,                     _handler_table_offset,                         int)                                   \
-  nonstatic_field(nmethod,                     _nul_chk_table_offset,                         int)                                   \
-  nonstatic_field(nmethod,                     _nmethod_end_offset,                           int)                                   \
-  nonstatic_field(nmethod,                     _entry_point,                                  address)                               \
-  nonstatic_field(nmethod,                     _verified_entry_point,                         address)                               \
+  nonstatic_field(nmethod,                     _metadata_offset,                              u2)                                    \
+  nonstatic_field(nmethod,                     _scopes_pcs_offset,                            int)                                    \
+  nonstatic_field(nmethod,                     _scopes_data_offset,                           int)                                   \
+  nonstatic_field(nmethod,                     _handler_table_offset,                         u2)                                    \
+  nonstatic_field(nmethod,                     _nul_chk_table_offset,                         u2)                                    \
+  nonstatic_field(nmethod,                     _entry_offset,                                 u2)                                    \
+  nonstatic_field(nmethod,                     _verified_entry_offset,                        u2)                                    \
   nonstatic_field(nmethod,                     _osr_entry_point,                              address)                               \
+  nonstatic_field(nmethod,                     _immutable_data,                               address)                               \
+  nonstatic_field(nmethod,                     _immutable_data_size,                          int)                                   \
   nonstatic_field(nmethod,                     _compile_id,                                   int)                                   \
   nonstatic_field(nmethod,                     _comp_level,                                   CompLevel)                             \
                                                                                                                                      \
@@ -1199,6 +1197,7 @@
   declare_integer_type(ssize_t)                                           \
   declare_integer_type(intx)                                              \
   declare_integer_type(intptr_t)                                          \
+  declare_integer_type(int16_t)                                           \
   declare_integer_type(int64_t)                                           \
   declare_unsigned_integer_type(uintx)                                    \
   declare_unsigned_integer_type(uintptr_t)                                \
