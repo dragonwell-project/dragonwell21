@@ -4272,11 +4272,15 @@ bool LibraryCallKit::inline_array_copyOf(bool is_copyOfRange) {
       length = _gvn.transform(new SubINode(end, start));
     }
 
-    // Bail out if length is negative.
+    // Bail out if length is negative (i.e., if start > end).
     // Without this the new_array would throw
     // NegativeArraySizeException but IllegalArgumentException is what
     // should be thrown
     generate_negative_guard(length, bailout, &length);
+
+    // Bail out if start is larger than the original length
+    Node* orig_tail = _gvn.transform(new SubINode(orig_length, start));
+    generate_negative_guard(orig_tail, bailout, &orig_tail);
 
     if (bailout->req() > 1) {
       PreserveJVMState pjvms(this);
@@ -4287,8 +4291,7 @@ bool LibraryCallKit::inline_array_copyOf(bool is_copyOfRange) {
 
     if (!stopped()) {
       // How many elements will we copy from the original?
-      // The answer is MinI(orig_length - start, length).
-      Node* orig_tail = _gvn.transform(new SubINode(orig_length, start));
+      // The answer is MinI(orig_tail, length).
       Node* moved = generate_min_max(vmIntrinsics::_min, orig_tail, length);
 
       // Generate a direct call to the right arraycopy function(s).
@@ -4336,7 +4339,7 @@ bool LibraryCallKit::inline_array_copyOf(bool is_copyOfRange) {
       if (!stopped()) {
         newcopy = new_array(klass_node, length, 0);  // no arguments to push
 
-        ArrayCopyNode* ac = ArrayCopyNode::make(this, true, original, start, newcopy, intcon(0), moved, true, false,
+        ArrayCopyNode* ac = ArrayCopyNode::make(this, true, original, start, newcopy, intcon(0), moved, true, true,
                                                 load_object_klass(original), klass_node);
         if (!is_copyOfRange) {
           ac->set_copyof(validated);
@@ -4900,7 +4903,13 @@ void LibraryCallKit::copy_to_clone(Node* obj, Node* alloc_obj, Node* obj_size, b
   assert(alloc_obj->is_CheckCastPP() && raw_obj->is_Proj() && raw_obj->in(0)->is_Allocate(), "");
 
   AllocateNode* alloc = nullptr;
-  if (ReduceBulkZeroing) {
+  if (ReduceBulkZeroing &&
+      // If we are implementing an array clone without knowing its source type
+      // (can happen when compiling the array-guarded branch of a reflective
+      // Object.clone() invocation), initialize the array within the allocation.
+      // This is needed because some GCs (e.g. ZGC) might fall back in this case
+      // to a runtime clone call that assumes fully initialized source arrays.
+      (!is_array || obj->get_ptr_type()->isa_aryptr() != nullptr)) {
     // We will be completely responsible for initializing this object -
     // mark Initialize node as complete.
     alloc = AllocateNode::Ideal_allocation(alloc_obj, &_gvn);
