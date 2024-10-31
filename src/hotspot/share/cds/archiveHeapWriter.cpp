@@ -194,8 +194,7 @@ void ArchiveHeapWriter::copy_roots_to_buffer(GrowableArrayCHeap<oop, mtClassShar
   {
     // This is copied from MemAllocator::finish
     if (UseCompactObjectHeaders) {
-      narrowKlass nk = ArchiveBuilder::current()->get_requested_narrow_klass(k);
-      oopDesc::release_set_mark(mem, markWord::prototype().set_narrow_klass(nk));
+      oopDesc::release_set_mark(mem, k->prototype_header());
     } else {
       oopDesc::set_mark(mem, markWord::prototype());
       oopDesc::release_set_klass(mem, k);
@@ -431,7 +430,9 @@ void ArchiveHeapWriter::update_header_for_requested_obj(oop requested_obj, oop s
   address buffered_addr = requested_addr_to_buffered_addr(cast_from_oop<address>(requested_obj));
 
   oop fake_oop = cast_to_oop(buffered_addr);
-  if (!UseCompactObjectHeaders) {
+  if (UseCompactObjectHeaders) {
+    fake_oop->set_mark(fake_oop->mark().set_narrow_klass(nk));
+  } else {
     fake_oop->set_narrow_klass(nk);
   }
 
