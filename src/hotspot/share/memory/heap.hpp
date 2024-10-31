@@ -38,8 +38,8 @@ class HeapBlock {
 
  public:
   struct Header {
-    size_t  _length;                             // the length in segments
-    bool    _used;                               // Used bit
+    uint32_t  _length;                           // the length in segments
+    bool      _used;                             // Used bit
   };
 
  protected:
@@ -51,9 +51,11 @@ class HeapBlock {
 
  public:
   // Initialization
-  void initialize(size_t length)                 { _header._length = length; set_used(); }
+  void initialize(size_t length)                 { set_length(length); set_used(); }
   // Merging/splitting
-  void set_length(size_t length)                 { _header._length = length; }
+  void set_length(size_t length)                 {
+    _header._length = checked_cast<uint32_t>(length);
+  }
 
   // Accessors
   void* allocated_space() const                  { return (void*)(this + 1); }
