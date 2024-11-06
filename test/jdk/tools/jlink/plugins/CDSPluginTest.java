@@ -36,6 +36,7 @@ import jtreg.SkippedException;
  * @bug 8264322
  * @summary Test the --generate-cds-archive plugin
  * @requires vm.cds
+ * @requires vm.flagless
  * @library ../../lib
  * @library /test/lib
  * @modules java.base/jdk.internal.jimage
@@ -78,8 +79,12 @@ public class CDSPluginTest {
         }
         subDir += "server" + sep;
 
-        boolean COMPACT_HEADERS =
-                Platform.is64bit() && WhiteBox.getWhiteBox().getBooleanVMFlag("UseCompactObjectHeaders");
+        // Check if COH is on by default, which means the plugin would have created an archive
+        // using COH. Note the @requires vm.flagless
+        WhiteBox wb = WhiteBox.getWhiteBox();
+        boolean COMPACT_HEADERS = Platform.is64bit() &&
+                                  wb.getBooleanVMFlag("UseCompactObjectHeaders") &&
+                                  wb.isDefaultVMFlag("UseCompactObjectHeaders");
 
         String suffix = COMPACT_HEADERS ? "_coh.jsa" : ".jsa";
 
