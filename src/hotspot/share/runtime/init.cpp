@@ -184,6 +184,10 @@ jint init_globals2() {
     JVMFlag::printFlags(tty, false, PrintFlagsRanges);
   }
 
+  if (VerifyFlagConstraints){
+    vm_exit(0);
+  }
+
   return JNI_OK;
 }
 

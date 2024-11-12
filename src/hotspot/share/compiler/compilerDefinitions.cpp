@@ -477,10 +477,17 @@ bool CompilerConfig::check_args_consistency(bool status) {
   // Template Interpreter code is approximately 3X larger in debug builds.
   uint min_code_cache_size = CodeCacheMinimumUseSpace DEBUG_ONLY(* 3);
   if (ReservedCodeCacheSize < InitialCodeCacheSize) {
-    jio_fprintf(defaultStream::error_stream(),
-                "Invalid ReservedCodeCacheSize: %dK. Must be at least InitialCodeCacheSize=%dK.\n",
-                ReservedCodeCacheSize/K, InitialCodeCacheSize/K);
-    status = false;
+    if (VerifyFlagConstraints) {
+      ReservedCodeCacheSize = InitialCodeCacheSize;
+      jio_fprintf(defaultStream::error_stream(), "ReservedCodeCacheSize:%d\n", ReservedCodeCacheSize);
+      status = true;
+    } else {
+      jio_fprintf(defaultStream::error_stream(),
+                  "Invalid ReservedCodeCacheSize: %dK. Must be at least InitialCodeCacheSize=%dK.\n",
+                  ReservedCodeCacheSize/K, InitialCodeCacheSize/K);
+      status = false;
+    }
+    
   } else if (ReservedCodeCacheSize < min_code_cache_size) {
     jio_fprintf(defaultStream::error_stream(),
                 "Invalid ReservedCodeCacheSize=%dK. Must be at least %uK.\n", ReservedCodeCacheSize/K,
