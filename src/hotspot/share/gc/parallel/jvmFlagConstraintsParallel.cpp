@@ -35,7 +35,7 @@ JVMFlag::Error ParallelGCThreadsConstraintFuncParallel(uint value, bool verbose)
   if (UseParallelGC && (value > (uint)max_jint)) {
     if (VerifyFlagConstraints) {
       ParallelGCThreads = max_jint;
-      JVMFlag::printError(true, "ParallelGCThreads:"UINT32_FORMAT"\n", ParallelGCThreads);
+      JVMFlag::printError(true, "ParallelGCThreads:" UINT32_FORMAT "\n", ParallelGCThreads);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -52,7 +52,7 @@ JVMFlag::Error InitialTenuringThresholdConstraintFuncParallel(uintx value, bool 
   if (UseParallelGC && (value > MaxTenuringThreshold)) {
       if (VerifyFlagConstraints) {
         InitialTenuringThreshold = MaxTenuringThreshold;
-        JVMFlag::printError(true, "InitialTenuringThreshold"UINTX_FORMAT"\n", InitialTenuringThreshold);
+        JVMFlag::printError(true, "InitialTenuringThreshold" UINTX_FORMAT "\n", InitialTenuringThreshold);
         return JVMFlag::SUCCESS;
       }
       JVMFlag::printError(verbose,
@@ -70,7 +70,7 @@ JVMFlag::Error MaxTenuringThresholdConstraintFuncParallel(uintx value, bool verb
   if (UseParallelGC && (value < InitialTenuringThreshold)) {
     if (VerifyFlagConstraints) {
       MaxTenuringThreshold = InitialTenuringThreshold;
-      JVMFlag::printError(true, "MaxTenuringThreshold"UINTX_FORMAT"\n", InitialTenuringThreshold);
+      JVMFlag::printError(true, "MaxTenuringThreshold" UINTX_FORMAT "\n", InitialTenuringThreshold);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,

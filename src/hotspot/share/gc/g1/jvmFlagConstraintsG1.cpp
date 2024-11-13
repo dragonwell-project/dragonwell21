@@ -164,9 +164,9 @@ JVMFlag::Error MaxGCPauseMillisConstraintFuncG1(uintx value, bool verbose) {
     if (VerifyFlagConstraints) {
       if (GCPauseIntervalMillis <= 1) {
         GCPauseIntervalMillis = 2;
-        JVMFlag::printError(true, "GCPauseIntervalMillis:"UINTX_FORMAT"\n", GCPauseIntervalMillis);
+        JVMFlag::printError(true, "GCPauseIntervalMillis:" UINTX_FORMAT "\n", GCPauseIntervalMillis);
       }
-      JVMFlag::printError(true, "MaxGCPauseMillis:"UINTX_FORMAT"\n", (GCPauseIntervalMillis - 1));
+      JVMFlag::printError(true, "MaxGCPauseMillis:" UINTX_FORMAT "\n", (GCPauseIntervalMillis - 1));
       MaxGCPauseMillis = GCPauseIntervalMillis - 1;
       return JVMFlag::SUCCESS;
     }
@@ -237,7 +237,7 @@ JVMFlag::Error NewSizeConstraintFuncG1(size_t value, bool verbose) {
   if (UseG1GC && (value > (max_juint * 1 * M))) {
     if (VerifyFlagConstraints) {
       NewSize = max_juint * 1 * M;
-      JVMFlag::printError(true, "NewSize:"SIZE_FORMAT"\n", (max_juint * 1 * M));
+      JVMFlag::printError(true, "NewSize:" SIZE_FORMAT "\n", (max_juint * 1 * M));
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,

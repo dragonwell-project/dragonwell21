@@ -27,6 +27,7 @@
 #include "runtime/flags/jvmFlagLimit.hpp"
 #include "runtime/flags/jvmFlagConstraintsRuntime.hpp"
 #include "runtime/globals.hpp"
+#include "runtime/globals_extension.hpp"
 #include "runtime/os.hpp"
 #include "runtime/safepointMechanism.hpp"
 #include "runtime/task.hpp"
@@ -40,7 +41,7 @@ JVMFlag::Error ObjectAlignmentInBytesConstraintFunc(int value, bool verbose) {
       value = round_down_power_of_2(value);
     } else {
       JVMFlag::printError(verbose,
-                          "ObjectAlignmentInBytes (" INTX_FORMAT ") must be "
+                          "ObjectAlignmentInBytes (%d) must be "
                           "power of 2\n",
                           value);
       return JVMFlag::VIOLATES_CONSTRAINT;
@@ -53,15 +54,15 @@ JVMFlag::Error ObjectAlignmentInBytesConstraintFunc(int value, bool verbose) {
       value = (intx)(os::vm_page_size()/2);
     } else {
       JVMFlag::printError(verbose,
-                        "ObjectAlignmentInBytes (" INTX_FORMAT ") must be "
-                        "less than page size (" INTX_FORMAT ")\n",
+                        "ObjectAlignmentInBytes (%d) must be "
+                        "less than page size (" SIZE_FORMAT ")\n",
                         value, (intx)os::vm_page_size());
       return JVMFlag::VIOLATES_CONSTRAINT;
     }
   }
   if (verifyFailed) {
     ObjectAlignmentInBytes = value;
-    JVMFlag::printError(true, "ObjectAlignmentInBytes:" INTX_FORMAT "\n", value);
+    JVMFlag::printError(true, "ObjectAlignmentInBytes:%d\n", value);
   }
   return JVMFlag::SUCCESS;
 }
@@ -108,8 +109,9 @@ JVMFlag::Error VMPageSizeConstraintFunc(uintx value, bool verbose) {
   uintx min = (uintx)os::vm_page_size();
   if (value < min) {
     if (VerifyFlagConstraints) {
-      JVMFlagLimit::last_checked_flag()->write(min);
-      JVMFlag::printError(true, "%s:" UINTX_FORMAT "\n", JVMFlagLimit::last_checked_flag()->name(), JVMFlagLimit::last_checked_flag()->read());
+      JVMFlagAccess::set_uintx(const_cast<JVMFlag*>(JVMFlagLimit::last_checked_flag()), &value, JVMFlagOrigin::ERGONOMIC);
+      // JVMFlagLimit::last_checked_flag()->write(min);
+      JVMFlag::printError(true, "%s:" UINTX_FORMAT "\n", JVMFlagLimit::last_checked_flag()->name(), JVMFlagLimit::last_checked_flag()->read<uintx>());
       return JVMFlag::SUCCESS;
     }
 

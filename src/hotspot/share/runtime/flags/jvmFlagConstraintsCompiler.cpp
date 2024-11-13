@@ -64,7 +64,7 @@ JVMFlag::Error CICompilerCountConstraintFunc(intx value, bool verbose) {
   if (value < (intx)min_number_of_compiler_threads) {
     if (VerifyFlagConstraints) {
       CICompilerCount = min_number_of_compiler_threads;
-      JVMFlag::printError(true, "CICompilerCount:" INTX_FORMAT "\n", min_number_of_compiler_threads);
+      JVMFlag::printError(true, "CICompilerCount:%d\n", min_number_of_compiler_threads);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -285,30 +285,52 @@ JVMFlag::Error CodeEntryAlignmentConstraintFunc(intx value, bool verbose) {
 }
 
 JVMFlag::Error OptoLoopAlignmentConstraintFunc(intx value, bool verbose) {
+  bool verifyFailed = false;
   if (!is_power_of_2(value)) {
-    JVMFlag::printError(verbose,
-                        "OptoLoopAlignment (" INTX_FORMAT ") "
-                        "must be a power of two\n",
-                        value);
-    return JVMFlag::VIOLATES_CONSTRAINT;
+    if (VerifyFlagConstraints) {
+      verifyFailed = true;
+      value = round_down_power_of_2(value);
+    } else {
+      JVMFlag::printError(verbose,
+                          "OptoLoopAlignment (" INTX_FORMAT ") "
+                          "must be a power of two\n",
+                          value);
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
   }
 
   // Relevant on ppc, s390. Will be optimized where
   // addr_unit() == 1.
-  if (OptoLoopAlignment % relocInfo::addr_unit() != 0) {
-    JVMFlag::printError(verbose,
-                        "OptoLoopAlignment (" INTX_FORMAT ") must be "
-                        "multiple of NOP size (%d)\n",
-                        value, relocInfo::addr_unit());
-    return JVMFlag::VIOLATES_CONSTRAINT;
+  if (value % relocInfo::addr_unit() != 0) {
+    if (VerifyFlagConstraints) {
+      verifyFailed = true;
+      int remainder = value % relocInfo::addr_unit();
+      value = value - remainder;
+    } else {
+      JVMFlag::printError(verbose,
+                          "OptoLoopAlignment (" INTX_FORMAT ") must be "
+                          "multiple of NOP size (%d)\n",
+                          value, relocInfo::addr_unit());
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
   }
 
-  if (OptoLoopAlignment > CodeEntryAlignment) {
-    JVMFlag::printError(verbose,
-                        "OptoLoopAlignment (" INTX_FORMAT ") must be "
-                        "less or equal to CodeEntryAlignment (" INTX_FORMAT ")\n",
-                        value, CodeEntryAlignment);
-    return JVMFlag::VIOLATES_CONSTRAINT;
+  if (value > CodeEntryAlignment) {
+    if (VerifyFlagConstraints) {
+      verifyFailed = true;
+      value = CodeEntryAlignment;
+    } else {
+      JVMFlag::printError(verbose,
+                          "OptoLoopAlignment (" INTX_FORMAT ") must be "
+                          "less or equal to CodeEntryAlignment (" INTX_FORMAT ")\n",
+                          value, CodeEntryAlignment);
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
+  }
+
+  if (verifyFailed) {
+    OptoLoopAlignment = value;
+    JVMFlag::printError(verbose, "OptoLoopAlignment:" INTX_FORMAT "\n", value);
   }
 
   return JVMFlag::SUCCESS;
@@ -351,6 +373,7 @@ JVMFlag::Error ArraycopySrcPrefetchDistanceConstraintFunc(uintx value, bool verb
 }
 
 JVMFlag::Error TypeProfileLevelConstraintFunc(uint value, bool verbose) {
+  uint original_value = value;
   bool verifyFailed = false;
   int suggested[3];
   for (int i = 0; i < 3; i++) {
@@ -360,7 +383,7 @@ JVMFlag::Error TypeProfileLevelConstraintFunc(uint value, bool verbose) {
         suggested[i] = 2;
       } else {
         JVMFlag::printError(verbose,
-                            "Invalid value (" UINTX_FORMAT ") "
+                            "Invalid value ( %u ) "
                             "in TypeProfileLevel at position %d\n",
                             value, i);
         return JVMFlag::VIOLATES_CONSTRAINT;
@@ -371,6 +394,18 @@ JVMFlag::Error TypeProfileLevelConstraintFunc(uint value, bool verbose) {
     value = value / 10;
   }
 
+  if (value != 0) {
+    if (VerifyFlagConstraints) {
+      // cut the exceeding digits off.
+      verifyFailed = true;
+    } else {
+      JVMFlag::printError(verbose,
+                          "Invalid value (" UINT32_FORMAT ") "
+                          "for TypeProfileLevel: maximal 3 digits\n", original_value);
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
+  }
+
   if (verifyFailed) {
     uintx suggestedValue = suggested[0] + suggested[1]*10 + suggested[2]*100;
     TypeProfileLevel = suggestedValue;
@@ -378,41 +413,20 @@ JVMFlag::Error TypeProfileLevelConstraintFunc(uint value, bool verbose) {
     return JVMFlag::SUCCESS;
   }
 
-  if (value != 0) {
-    JVMFlag::printError(verbose,
-                        "Invalid value (" UINT32_FORMAT ") "
-                        "for TypeProfileLevel: maximal 3 digits\n", original_value);
-    return JVMFlag::VIOLATES_CONSTRAINT;
-  }
   return JVMFlag::SUCCESS;
 }
 
 JVMFlag::Error VerifyIterativeGVNConstraintFunc(uint value, bool verbose) {
-  bool verifyFailed = false;
-  int suggested[2];
+  uint original_value = value;
   for (int i = 0; i < 2; i++) {
     if (value % 10 > 1) {
-      if (VerifyFlagConstraints) {
-        verifyFailed = true;
-        suggested[i] = 1;
-      } else {
-        JVMFlag::printError(verbose,
-                            "Invalid value (" UINTX_FORMAT ") "
-                            "in VerifyIterativeGVN at position %d\n",
-                            value, i);
-        return JVMFlag::VIOLATES_CONSTRAINT;
-      }
-    } else {
-      suggested[i] = value % 10;
+      JVMFlag::printError(verbose,
+                          "Invalid value ( %u ) "
+                          "in VerifyIterativeGVN at position %d\n",
+                          value, i);
+      return JVMFlag::VIOLATES_CONSTRAINT;
     }
     value = value / 10;
-  }
-
-  if (verifyFailed) {
-    uintx suggestedValue = suggested[0] + suggested[1]*10;
-    VerifyIterativeGVN = suggestedValue;
-    JVMFlag::printError(true, "VerifyIterativeGVN:" UINTX_FORMAT "\n", suggestedValue);
-    return JVMFlag::SUCCESS;
   }
 
   if (value != 0) {
@@ -485,7 +499,7 @@ JVMFlag::Error InteriorEntryAlignmentConstraintFunc(intx value, bool verbose) {
 
   if(verifyFailed) {
     InteriorEntryAlignment = value;
-    JVMFlag::printError(true, "InteriorEntryAlignment:"INTX_FORMAT"\n", value);
+    JVMFlag::printError(true, "InteriorEntryAlignment:" INTX_FORMAT "\n", value);
   }
 
   return JVMFlag::SUCCESS;
@@ -496,7 +510,7 @@ JVMFlag::Error NodeLimitFudgeFactorConstraintFunc(intx value, bool verbose) {
     if (VerifyFlagConstraints) {
       intx limit = (value < MaxNodeLimit * 2 / 100)? (MaxNodeLimit * 2 / 100): (MaxNodeLimit * 40 / 100);
       NodeLimitFudgeFactor = limit;
-      JVMFlag::printError(true, "NodeLimitFudgeFactor:"INTX_FORMAT"\n", limit);
+      JVMFlag::printError(true, "NodeLimitFudgeFactor:" INTX_FORMAT "\n", limit);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,

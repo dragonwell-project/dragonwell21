@@ -90,7 +90,7 @@ JVMFlag::Error MaxPLABSizeBounds(const char* name, size_t* value_addr, size_t va
        GCConfig::is_gc_selected(CollectedHeap::Parallel)) && (value > PLAB::max_size())) {
     if (VerifyFlagConstraints) {
       *value_addr = PLAB::max_size();
-      JVMFlag::printError(true, "%s:"SIZE_FORMAT"\n", name, PLAB::max_size());
+      JVMFlag::printError(true, "%s:" SIZE_FORMAT "\n", name, PLAB::max_size());
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -182,7 +182,7 @@ JVMFlag::Error MarkStackSizeConstraintFunc(size_t value, bool verbose) {
   if (value > MarkStackSizeMax) {
     if (VerifyFlagConstraints) {
       MarkStackSize = MarkStackSizeMax;
-      JVMFlag::printError(true, "MarkStackSize:"SIZE_FORMAT"\n", MarkStackSize);
+      JVMFlag::printError(true, "MarkStackSize:" SIZE_FORMAT "\n", MarkStackSize);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -199,7 +199,7 @@ JVMFlag::Error MinMetaspaceFreeRatioConstraintFunc(uintx value, bool verbose) {
   if (value > MaxMetaspaceFreeRatio) {
     if (VerifyFlagConstraints) {
       MinMetaspaceFreeRatio = MaxMetaspaceFreeRatio;
-      JVMFlag::printError(true, "MinMetaspaceFreeRatio:"UINTX_FORMAT"\n", MinMetaspaceFreeRatio);
+      JVMFlag::printError(true, "MinMetaspaceFreeRatio:" UINTX_FORMAT "\n", MinMetaspaceFreeRatio);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -294,7 +294,7 @@ static JVMFlag::Error MaxSizeForAlignment(const char* name, size_t* value_addr, 
   if (value > aligned_max) {
     if (VerifyFlagConstraints) {
       *value_addr = aligned_max;
-      JVMFlag::printError(true, "%s:"SIZE_FORMAT"\n", name, aligned_max);
+      JVMFlag::printError(true, "%s:" SIZE_FORMAT "\n", name, aligned_max);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,
@@ -344,7 +344,7 @@ JVMFlag::Error MaxHeapSizeConstraintFunc(size_t value, bool verbose) {
                           "Desired lifetime of SoftReferences cannot be expressed correctly. "
                           "MaxHeapSize (" SIZE_FORMAT ") or SoftRefLRUPolicyMSPerMB "
                           "(" INTX_FORMAT ") is too large\n",
-                          maxHeap, softRef);
+                          MaxHeapSize, SoftRefLRUPolicyMSPerMB);
       return JVMFlag::VIOLATES_CONSTRAINT;
     } else {
       return JVMFlag::SUCCESS;
@@ -357,7 +357,7 @@ JVMFlag::Error SoftMaxHeapSizeConstraintFunc(size_t value, bool verbose) {
   if (value > MaxHeapSize) {
     if (VerifyFlagConstraints) {
       SoftMaxHeapSize = MaxHeapSize;
-      JVMFlag::printError(true, "SoftMaxHeapSize:"SIZE_FORMAT"\n", SoftMaxHeapSize);
+      JVMFlag::printError(true, "SoftMaxHeapSize:" SIZE_FORMAT "\n", SoftMaxHeapSize);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose, "SoftMaxHeapSize must be less than or equal to the maximum heap size\n");
@@ -547,7 +547,7 @@ JVMFlag::Error GCCardSizeInBytesConstraintFunc(uint value, bool verbose) {
   if (!is_power_of_2(value)) {
     if (VerifyFlagConstraints) {
       GCCardSizeInBytes = round_down_power_of_2(value);
-      JVMFlag::printError(true, "GCCardSizeInBytes:" SIZE_FORMAT "\n", GCCardSizeInBytes);
+      JVMFlag::printError(true, "GCCardSizeInBytes:%u\n", GCCardSizeInBytes);
       return JVMFlag::SUCCESS;
     }
     JVMFlag::printError(verbose,

@@ -2129,7 +2129,7 @@ jint os::set_minimum_stack_sizes() {
     if (VerifyFlagConstraints) {
       ThreadStackSize = _java_thread_min_stack_allowed / K;
       stack_size_in_bytes = ThreadStackSize * K;
-      tty->print_cr("ThreadStackSize:"SIZE_FORMAT"\n", ThreadStackSize);
+      tty->print_cr("ThreadStackSize:" SIZE_FORMAT "\n", ThreadStackSize);
     } else {
       tty->print_cr("\nThe Java thread stack size specified is too small. "
                    "Specify at least " SIZE_FORMAT "k",
@@ -2156,7 +2156,7 @@ jint os::set_minimum_stack_sizes() {
     if (VerifyFlagConstraints) {
       CompilerThreadStackSize = _compiler_thread_min_stack_allowed / K;
       stack_size_in_bytes = CompilerThreadStackSize * K;
-      tty->print_cr("CompilerThreadStackSize:"SIZE_FORMAT"\n", CompilerThreadStackSize);
+      tty->print_cr("CompilerThreadStackSize:" SIZE_FORMAT "\n", CompilerThreadStackSize);
     } else {
       tty->print_cr("\nThe CompilerThreadStackSize specified is too small. "
                    "Specify at least " SIZE_FORMAT "k",
@@ -2174,7 +2174,7 @@ jint os::set_minimum_stack_sizes() {
     if (VerifyFlagConstraints) {
       VMThreadStackSize = _vm_internal_thread_min_stack_allowed / K;
       stack_size_in_bytes = VMThreadStackSize * K;
-      tty->print_cr("VMThreadStackSize:"SIZE_FORMAT"\n", VMThreadStackSize);
+      tty->print_cr("VMThreadStackSize:" SIZE_FORMAT "\n", VMThreadStackSize);
     } else {
       tty->print_cr("\nThe VMThreadStackSize specified is too small. "
                    "Specify at least " SIZE_FORMAT "k",
