@@ -90,10 +90,24 @@ public class VerifyFlagConstraintsTests {
         FlagConstraintTester.create().run("-XX:MarkStackSize=0")
                 //.testEq("ReservedCodeCacheSize", "2555904")
                 .testWithSuggested();
+
+        FlagConstraintTester.create().run("-XX:CompilerThreadPriority=2147483648",
+                                          "-XX:HandshakeTimeout=4294967296",
+                                          "-XX:InlineSmallCode=4294967296",
+                                          "-XX:AdaptiveSizeMajorGCDecayTimeScale=18446744073709551616",
+                                          "-XX:MaxDirectMemorySize=18446744073709551616",
+                                          "-XX:ArrayAllocatorMallocLimit=18446744073709551616")
+                //.testEq("CompilerThreadPriority", "-1")
+                //.testEq("HandshakeTimeout", "0")
+                //.testEq("InlineSmallCode", "2147483647")
+                //.testEq("AdaptiveSizeMajorGCDecayTimeScale", "18446744073709551615")
+                //.testEq("MaxDirectMemorySize", "18446744073709551615")
+                //.testEq("ArrayAllocatorMallocLimit", "18446744073709551615")
+                .testWithSuggested();
     }
 
     static class FlagConstraintTester {
-        private static String[] enableArgs = {"-XX:+UnlockDiagnosticVMOptions", "-XX:+VerifyFlagConstraints"};
+        private static String[] enableArgs = {"-XX:+UnlockExperimentalVMOptions", "-XX:+UnlockDiagnosticVMOptions", "-XX:+VerifyFlagConstraints"};
         private Map<String, String> suggestedArgs = new HashMap<>();
         private Map<String, String> inputArgs = new HashMap<>();
 
@@ -108,11 +122,12 @@ public class VerifyFlagConstraintsTests {
         }
 
         private OutputAnalyzer doRun(String[] flags, boolean updateInputs) throws Exception {
-            String[] cmds = new String[flags.length + 2];
+            String[] cmds = new String[flags.length + 3];
             cmds[0] = enableArgs[0];
             cmds[1] = enableArgs[1];
+            cmds[2] = enableArgs[2];
             for (int i = 0; i < flags.length; i++) {
-                cmds[i + 2] = flags[i];
+                cmds[i + 3] = flags[i];
                 if (updateInputs) {
                     String[] values = flags[i].split("=");
                     String key;
