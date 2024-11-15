@@ -1999,7 +1999,7 @@ class EARelockingNestedInflated_03Target extends EATestCaseBaseTarget {
         // Use new lock. lockInflatedByContention might have been inflated because of recursion.
         lockInflatedByContention = new XYVal(1, 1);
         // Start thread that tries to enter lockInflatedByContention while the main thread owns it -> inflation
-        TestScaffold.newThread(() -> {
+        DebuggeeWrapper.newThread(() -> {
             while (true) {
                 synchronized (testCase) {
                     try {
