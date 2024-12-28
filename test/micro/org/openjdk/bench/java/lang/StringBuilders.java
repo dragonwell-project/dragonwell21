@@ -241,6 +241,70 @@ public class StringBuilders {
 
 
     @Benchmark
+    public int appendWithBool8Latin1() {
+        StringBuilder buf = sbLatin1;
+        buf.setLength(0);
+        buf.append(true);
+        buf.append(false);
+        buf.append(true);
+        buf.append(true);
+        buf.append(false);
+        buf.append(true);
+        buf.append(false);
+        buf.append(false);
+        return buf.length();
+    }
+
+
+    @Benchmark
+    public int appendWithBool8Utf16() {
+        StringBuilder buf = sbUtf16;
+        buf.setLength(0);
+        buf.append(true);
+        buf.append(false);
+        buf.append(true);
+        buf.append(true);
+        buf.append(false);
+        buf.append(true);
+        buf.append(false);
+        buf.append(false);
+        return buf.length();
+    }
+
+
+    @Benchmark
+    public int appendWithNull8Latin1() {
+        StringBuilder buf = sbLatin1;
+        buf.setLength(0);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        return buf.length();
+    }
+
+
+    @Benchmark
+    public int appendWithNull8Utf16() {
+        StringBuilder buf = sbUtf16;
+        buf.setLength(0);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        buf.append((String) null);
+        return buf.length();
+    }
+
+
+    @Benchmark
     public String toStringCharWithFloat8() {
         StringBuilder result = new StringBuilder();
         result.append(113.110F);
