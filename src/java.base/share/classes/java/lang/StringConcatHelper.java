@@ -702,6 +702,19 @@ final class StringConcatHelper {
     }
 
     /**
+     * Allocates an uninitialized byte array based on the length
+     * @param length
+     * @return the newly allocated byte array
+     */
+    @ForceInline
+    static byte[] newArray(int length) {
+        if (length < 0) {
+            throw new OutOfMemoryError("Overflow: String length out of range");
+        }
+        return (byte[]) UNSAFE.allocateUninitializedArray(byte.class, length);
+    }
+
+    /**
      * Provides the initial coder for the String.
      * @return initial coder, adjusted into the upper half
      */
