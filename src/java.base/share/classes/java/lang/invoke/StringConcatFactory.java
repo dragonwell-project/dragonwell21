@@ -396,9 +396,6 @@ public final class StringConcatFactory {
         }
 
         try {
-//            return new ConstantCallSite(
-//                    generateMHInlineCopy(concatType, constantStrings)
-//                            .viewAsType(concatType, true));
             MethodHandle mh = makeSimpleConcat(concatType, constantStrings);
             if (mh == null && concatType.parameterCount() <= HIGH_ARITY_THRESHOLD) {
                 mh = generateMHInlineCopy(concatType, constantStrings);
