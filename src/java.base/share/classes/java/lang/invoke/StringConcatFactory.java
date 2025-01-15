@@ -1771,7 +1771,7 @@ public final class StringConcatFactory {
          *                      length, arg0), arg1), arg2), arg3), arg4), arg5), arg6), arg7);
          *      }
          *
-         *      static int cocder(int coder, char arg3, String str4, String str5, String str6, String str7) {
+         *      static int coder(int coder, char arg3, String str4, String str5, String str6, String str7) {
          *          return coder | stringCoder(arg3) | str4.coder() | str5.coder() | str6.coder() | str7.coder();
          *      }
          *
@@ -2019,7 +2019,7 @@ public final class StringConcatFactory {
          * <blockquote><pre>
          * import static java.lang.StringConcatHelper.stringCoder;
          *
-         * static int cocder(int coder, char arg3, String str4, String str5, String str6, String str7) {
+         * static int coder(int coder, char arg3, String str4, String str5, String str6, String str7) {
          *     return coder | stringCoder(arg3) | str4.coder() | str5.coder() | str6.coder() | str7.coder();
          * }
          * </pre></blockquote>
