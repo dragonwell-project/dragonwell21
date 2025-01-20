@@ -80,7 +80,11 @@ public final class ClassFileDumper {
     private final AtomicInteger counter = new AtomicInteger();
 
     private ClassFileDumper(String key, String path) {
-        String value = GetPropertyAction.privilegedGetProperty(key);
+        /*
+         * GetPropertyAction.privilegedGetProperty cannot be used here, Using VM.getSavedProperty to avoid a bootstrap
+         * circularity issue in the java/lang/String/concat/WithSecurityManager.java test
+         */
+        String value = VM.getSavedProperty(key);
         this.key = key;
         boolean enabled = value != null && value.isEmpty() ? true : Boolean.parseBoolean(value);
         if (enabled) {

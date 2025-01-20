@@ -2547,6 +2547,18 @@ public final class System {
                 return sb.prepend(lengthCoder, buf);
             }
 
+            public Object stringConcat1(String[] constants) {
+                return new StringConcatHelper.Concat1(constants);
+            }
+
+            public byte stringInitCoder() {
+                return String.COMPACT_STRINGS ? String.LATIN1 : String.UTF16;
+            }
+
+            public byte stringCoder(String str) {
+                return str.coder();
+            }
+
             public String join(String prefix, String suffix, String delimiter, String[] elements, int size) {
                 return String.join(prefix, suffix, delimiter, elements, size);
             }
