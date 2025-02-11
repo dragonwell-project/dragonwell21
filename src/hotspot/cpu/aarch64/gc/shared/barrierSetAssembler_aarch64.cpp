@@ -313,7 +313,10 @@ void BarrierSetAssembler::nmethod_entry_barrier(MacroAssembler* masm, Label* slo
   Assembler::Condition condition = slow_path == nullptr ? Assembler::EQ : Assembler::NE;
   Label& barrier_target = slow_path == nullptr ? skip_barrier : *slow_path;
 
-  __ ldrw(rscratch1, *guard);
+  if (patching_type != NMethodPatchingType::conc_data_patch ||
+      ReplaceLLMemBarWithLoadAcquire == false) {
+    __ ldrw(rscratch1, *guard);
+  }
 
   if (patching_type == NMethodPatchingType::stw_instruction_and_data_patch) {
     // With STW patching, no data or instructions are updated concurrently,
@@ -350,7 +353,13 @@ void BarrierSetAssembler::nmethod_entry_barrier(MacroAssembler* masm, Label* slo
     assert(patching_type == NMethodPatchingType::conc_data_patch, "must be");
     // Subsequent loads of oops must occur after load of guard value.
     // BarrierSetNMethod::disarm sets guard with release semantics.
-    __ membar(__ LoadLoad);
+    if (ReplaceLLMemBarWithLoadAcquire) {
+      __ adr(rscratch1, *guard);
+      // ldapr is better on paper, but not significant enough to justify a change.
+      __ ldarw(rscratch1, rscratch1);
+    } else {
+      __ membar(__ LoadLoad);
+    }
     Address thread_disarmed_addr(rthread, in_bytes(bs_nm->thread_disarmed_guard_value_offset()));
     __ ldrw(rscratch2, thread_disarmed_addr);
     __ cmpw(rscratch1, rscratch2);
