@@ -35,6 +35,9 @@
                          constraint)                                           \
   product(bool, UseNewCode4, false, DIAGNOSTIC,                                \
           "Testing Only: Use the new version while testing")                   \
+                                                                               \
+  product(bool, ReplaceLLMemBarWithLoadAcquire, false,                         \
+          "Replace LoadLoad membar with load-acquire")                         \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
 
