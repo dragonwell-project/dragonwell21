@@ -402,6 +402,8 @@ protected:
   enum Extended_Family {
     // AMD
     CPU_FAMILY_AMD_11H       = 0x11,
+    CPU_FAMILY_AMD_17H       = 0x17, /* Zen1 & Zen2 */
+    CPU_FAMILY_AMD_19H       = 0x19, /* Zen3 & Zen4 */
     // ZX
     CPU_FAMILY_ZX_CORE_F6    = 6,
     CPU_FAMILY_ZX_CORE_F7    = 7,
@@ -703,6 +705,17 @@ public:
   static bool supports_ospke()        { return (_features & CPU_OSPKE) != 0; }
   static bool supports_cet_ss()       { return (_features & CPU_CET_SS) != 0; }
   static bool supports_cet_ibt()      { return (_features & CPU_CET_IBT) != 0; }
+
+  static bool supports_avx512_simd_sort() {
+    if (supports_avx512dq()) {
+      // Disable AVX512 version of SIMD Sort on AMD Zen4 Processors.
+      if (is_amd() && cpu_family() == CPU_FAMILY_AMD_19H) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
 
   // Intel features
   static bool is_intel_family_core() { return is_intel() &&

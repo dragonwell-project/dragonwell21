@@ -576,6 +576,8 @@ bool C2Compiler::is_intrinsic_supported(const methodHandle& method) {
   case vmIntrinsics::_min_strict:
   case vmIntrinsics::_max_strict:
   case vmIntrinsics::_arraycopy:
+  case vmIntrinsics::_arraySort:
+  case vmIntrinsics::_arrayPartition:
   case vmIntrinsics::_indexOfL:
   case vmIntrinsics::_indexOfU:
   case vmIntrinsics::_indexOfUL:
