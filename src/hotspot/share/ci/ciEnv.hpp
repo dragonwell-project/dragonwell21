@@ -383,6 +383,7 @@ public:
                        bool                      has_unsafe_access,
                        bool                      has_wide_vectors,
                        bool                      has_monitors,
+                       bool                      alloc_in_non_profiled_hot_code_heap,
                        int                       immediate_oops_patched,
                        RTMState                  rtm_state = NoRTM);
 

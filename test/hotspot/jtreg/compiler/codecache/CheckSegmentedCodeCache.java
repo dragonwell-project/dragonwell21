@@ -48,6 +48,7 @@ public class CheckSegmentedCodeCache {
     private static final String NON_METHOD = "CodeHeap 'non-nmethods'";
     private static final String PROFILED = "CodeHeap 'profiled nmethods'";
     private static final String NON_PROFILED = "CodeHeap 'non-profiled nmethods'";
+    private static final String NON_PROFILED_HOT = "CodeHeap 'non-profiled hot nmethods'";
 
     private static void verifySegmentedCodeCache(ProcessBuilder pb, boolean enabled) throws Exception {
         OutputAnalyzer out = new OutputAnalyzer(pb.start());
@@ -93,12 +94,22 @@ public class CheckSegmentedCodeCache {
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
         verifySegmentedCodeCache(pb, false);
+        pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:ReservedCodeCacheSize=239m",
+                                                              "-XX:NonProfiledHotCodeHeapSize=1m",
+                                                              "-XX:+PrintCodeCache",
+                                                              "-version");
+        failsWith(pb, "SegmentedCodeCache should be enabled when NonProfiledHotCodeHeapSize is specified");
 
         // Disabled without TieredCompilation
         pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:-TieredCompilation",
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
         verifySegmentedCodeCache(pb, false);
+        pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:-TieredCompilation",
+                                                              "-XX:NonProfiledHotCodeHeapSize=1m",
+                                                              "-XX:+PrintCodeCache",
+                                                              "-version");
+        failsWith(pb, "SegmentedCodeCache should be enabled when NonProfiledHotCodeHeapSize is specified");
 
         // Enabled with TieredCompilation and ReservedCodeCacheSize >= 240MB
         pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:+TieredCompilation",
@@ -111,11 +122,24 @@ public class CheckSegmentedCodeCache {
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
         verifySegmentedCodeCache(pb, true);
+        pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:+TieredCompilation",
+                                                              "-XX:ReservedCodeCacheSize=400m",
+                                                              "-XX:NonProfiledHotCodeHeapSize=1m",
+                                                              "-XX:+PrintCodeCache",
+                                                              "-version");
+        verifySegmentedCodeCache(pb, true);
 
         // Always enabled if SegmentedCodeCache is set
         pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:+SegmentedCodeCache",
                                                               "-XX:-TieredCompilation",
                                                               "-XX:ReservedCodeCacheSize=239m",
+                                                              "-XX:+PrintCodeCache",
+                                                              "-version");
+        verifySegmentedCodeCache(pb, true);
+        pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:+SegmentedCodeCache",
+                                                              "-XX:-TieredCompilation",
+                                                              "-XX:ReservedCodeCacheSize=239m",
+                                                              "-XX:NonProfiledHotCodeHeapSize=1m",
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
         verifySegmentedCodeCache(pb, true);
@@ -126,7 +150,7 @@ public class CheckSegmentedCodeCache {
                                                               "-Xint",
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
-        verifyCodeHeapNotExists(pb, PROFILED, NON_PROFILED);
+        verifyCodeHeapNotExists(pb, PROFILED, NON_PROFILED, NON_PROFILED_HOT);
 
         // If we stop compilation at CompLevel_none or CompLevel_simple we
         // don't need a profiled code heap.
@@ -134,12 +158,12 @@ public class CheckSegmentedCodeCache {
                                                               "-XX:TieredStopAtLevel=0",
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
-        verifyCodeHeapNotExists(pb, PROFILED);
+        verifyCodeHeapNotExists(pb, PROFILED, NON_PROFILED_HOT);
         pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:+SegmentedCodeCache",
                                                               "-XX:TieredStopAtLevel=1",
                                                               "-XX:+PrintCodeCache",
                                                               "-version");
-        verifyCodeHeapNotExists(pb, PROFILED);
+        verifyCodeHeapNotExists(pb, PROFILED, NON_PROFILED_HOT);
 
         // Fails with too small non-nmethod code heap size
         pb = ProcessTools.createLimitedTestJavaProcessBuilder("-XX:NonNMethodCodeHeapSize=100K",

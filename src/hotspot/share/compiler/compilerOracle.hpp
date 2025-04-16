@@ -74,6 +74,7 @@ class methodHandle;
   option(CompileThresholdScaling, "CompileThresholdScaling", Double) \
   option(ControlIntrinsic,  "ControlIntrinsic",  Ccstrlist) \
   option(DisableIntrinsic,  "DisableIntrinsic",  Ccstrlist) \
+  option(AllocInNonProfiledHotCodeHeap, "AllocInNonProfiledHotCodeHeap", Bool) \
   option(NoRTMLockEliding,  "NoRTMLockEliding",  Bool) \
   option(UseRTMLockEliding, "UseRTMLockEliding", Bool) \
   option(BlockLayoutByFrequency, "BlockLayoutByFrequency", Bool) \
