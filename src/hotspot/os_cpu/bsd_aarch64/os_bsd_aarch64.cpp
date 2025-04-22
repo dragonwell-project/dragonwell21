@@ -160,6 +160,12 @@ frame os::fetch_frame_from_context(const void* ucVoid) {
   intptr_t* sp;
   intptr_t* fp;
   address epc = fetch_frame_from_context(ucVoid, &sp, &fp);
+  if (!is_readable_pointer(epc)) {
+    // Try to recover from calling into bad memory
+    // Assume new frame has not been set up, the same as
+    // compiled frame stack bang
+    return fetch_compiled_frame_from_context(ucVoid);
+  }
   return frame(sp, fp, epc);
 }
 
@@ -191,15 +197,6 @@ NOINLINE frame os::current_frame() {
   } else {
     return os::get_sender_for_C_frame(&myframe);
   }
-}
-
-ATTRIBUTE_PRINTF(6, 7)
-static void report_and_die(Thread* thread, void* context, const char* filename, int lineno, const char* message,
-                             const char* detail_fmt, ...) {
-  va_list va;
-  va_start(va, detail_fmt);
-  VMError::report_and_die(thread, context, filename, lineno, message, detail_fmt, va);
-  va_end(va);
 }
 
 bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
@@ -288,7 +285,7 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
 
         // End life with a fatal error, message and detail message and the context.
         // Note: no need to do any post-processing here (e.g. signal chaining)
-        report_and_die(thread, uc, nullptr, 0, msg, "%s", detail_msg);
+        VMError::report_and_die(thread, uc, nullptr, 0, msg, "%s", detail_msg);
         ShouldNotReachHere();
 
       } else if (sig == SIGFPE &&
@@ -461,23 +458,6 @@ void os::print_context(outputStream *st, const void *context) {
   st->cr();
   st->print(  "pc=" INTPTR_FORMAT,  (intptr_t)uc->context_pc);
   st->print(" cpsr=" INTPTR_FORMAT, (intptr_t)uc->context_cpsr);
-  st->cr();
-}
-
-void os::print_tos_pc(outputStream *st, const void *context) {
-  if (context == nullptr) return;
-
-  const ucontext_t* uc = (const ucontext_t*)context;
-
-  address sp = (address)os::Bsd::ucontext_get_sp(uc);
-  print_tos(st, sp);
-  st->cr();
-
-  // Note: it may be unsafe to inspect memory near pc. For example, pc may
-  // point to garbage if entry point in an nmethod is corrupted. Leave
-  // this at the end, and hope for the best.
-  address pc = os::Posix::ucontext_get_pc(uc);
-  print_instructions(st, pc);
   st->cr();
 }
 
