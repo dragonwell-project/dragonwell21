@@ -31,7 +31,7 @@
 #include "oops/oop.inline.hpp"
 #include "runtime/globals_extension.hpp"
 #include "runtime/java.hpp"
-#include "runtime/os.hpp"
+#include "runtime/os.inline.hpp"
 #include "services/memTracker.hpp"
 #include "utilities/align.hpp"
 #include "utilities/formatBuffer.hpp"
@@ -365,7 +365,7 @@ void ReservedHeapSpace::establish_noaccess_prefix() {
   if (base() && base() + _size > (char *)OopEncodingHeapMax) {
     if (true
         WIN64_ONLY(&& !UseLargePages)
-        AIX_ONLY(&& os::vm_page_size() != 64*K)) {
+        AIX_ONLY(&& (os::Aix::supports_64K_mmap_pages() || os::vm_page_size() == 4*K))) {
       // Protect memory at the base of the allocated region.
       // If special, the page was committed (only matters on windows)
       if (!os::protect_memory(_base, _noaccess_prefix, os::MEM_PROT_NONE, _special)) {
@@ -437,7 +437,7 @@ void ReservedHeapSpace::try_reserve_range(char *highest_start,
   while (attach_point >= lowest_start  &&
          attach_point <= highest_start &&  // Avoid wrap around.
          ((_base == nullptr) ||
-          (_base < aligned_heap_base_min_address || _base + size > upper_bound))) {
+          (_base < aligned_heap_base_min_address || size > (uintptr_t)(upper_bound - _base)))) {
     try_reserve_heap(size, alignment, page_size, attach_point);
     attach_point -= stepsize;
   }
