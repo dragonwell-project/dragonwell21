@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,22 +22,14 @@
  *
  */
 
-/* @test
- * @bug 4140421
- * @summary Tests JToolBar set title correctly
- * @run main bug4140421
- */
-
-import javax.swing.JToolBar;
-import javax.swing.SwingUtilities;
-
-public class bug4140421 {
-    public static void main(String[] args) throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            JToolBar tb = new JToolBar("MyToolBar");
-            if (!tb.getName().equals("MyToolBar")) {
-                throw new RuntimeException("Title of JToolBar set incorrectly...");
-            }
-        });
+super public class LastJsr
+{
+    public static Method test:"()V"
+    stack 100 locals 100
+    {
+        return;
+    LABEL:
+        nop;
+        jsr LABEL; // bci=2. Compute bci + length(jsr) -> bci = 5 accessed, out of bounds.
     }
 }
