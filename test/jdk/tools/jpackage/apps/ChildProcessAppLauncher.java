@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,28 +21,22 @@
  * questions.
  */
 
-/* @test
- * @bug 4196662
- * @summary JToolBar has remove(int) method.
- * @run main bug4196662
- */
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 
-import javax.swing.JButton;
-import javax.swing.JToolBar;
-import javax.swing.SwingUtilities;
-
-public class bug4196662 {
-    public static void main(String[] args) throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            JToolBar tb = new JToolBar();
-            tb.add(new JButton("Button1"));
-            JButton bt2 = new JButton("Button2");
-            tb.add(bt2);
-            tb.add(new JButton("Button3"));
-            tb.remove(1);
-            if (tb.getComponentCount() != 2 || tb.getComponent(1) == bt2) {
-                throw new RuntimeException("Component wasn't removed...");
+public class ChildProcessAppLauncher {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        if (args.length == 1 && "noexit".equals(args[0])) {
+            var lock = new Object();
+            synchronized (lock) {
+                lock.wait();
             }
-        });
+        } else {
+            var childPath = System.getProperty("jpackage.app-path"); // get the path to the current jpackage app launcher
+            ProcessBuilder processBuilder = new ProcessBuilder(childPath, "noexit"); //ChildProcessAppLauncher acts as third party app
+            Process process = processBuilder.start();
+            System.out.println("Child id=" + process.pid());
+        }
     }
 }

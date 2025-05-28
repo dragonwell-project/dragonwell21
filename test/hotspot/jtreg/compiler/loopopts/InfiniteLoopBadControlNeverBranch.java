@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,35 +21,37 @@
  * questions.
  */
 
-/* @test
- * @bug 4677611
- * @summary JViewport sets Opaque after UpdateUI (prevents UI delegates
- * to determine look)
- * @run main bug4677611
+/*
+ * @test
+ * @bug 8335709
+ * @summary C2: assert(!loop->is_member(get_loop(useblock))) failed: must be outside loop
+ * @library /test/lib
+ * @run main/othervm -Xcomp -XX:CompileCommand=compileonly,InfiniteLoopBadControlNeverBranch::* InfiniteLoopBadControlNeverBranch
+ *
  */
 
-import java.awt.Color;
 
-import javax.swing.JScrollPane;
-import javax.swing.JViewport;
+import jdk.test.lib.Utils;
 
-public class bug4677611 {
-    public static void main(String[] args) throws Exception {
-        JScrollPane sp = new JScrollPane();
-        JViewport vp = new MyViewport();
-        vp.setBackground(Color.blue);
-        sp.setViewport(vp);
+public class InfiniteLoopBadControlNeverBranch {
+    static int b;
+    static short c;
 
-        if (vp.isOpaque()) {
-            throw new RuntimeException("JViewport shouldn't set Opaque " +
-                    "after update the UI");
-        }
+    public static void main(String[] args) throws InterruptedException {
+        Thread thread = new Thread(() -> test());
+        thread.setDaemon(true);
+        thread.start();
+        Thread.sleep(Utils.adjustTimeout(4000));
     }
 
-    static class MyViewport extends JViewport {
-        public void updateUI() {
-            setOpaque(false);
-            super.updateUI();
+    static void test() {
+        int i = 0;
+        while (true) {
+            if (i > 1) {
+                b = 0;
+            }
+            c = (short) (b * 7);
+            i++;
         }
     }
 }
