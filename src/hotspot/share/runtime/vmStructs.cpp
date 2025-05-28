@@ -622,6 +622,8 @@
   nonstatic_field(CodeBlob,                 _frame_size,                             int)                                            \
   nonstatic_field(CodeBlob,                 _oop_maps,                               ImmutableOopMapSet*)                            \
   nonstatic_field(CodeBlob,                 _caller_must_gc_arguments,                     bool)                                  \
+  nonstatic_field(CodeBlob,                    _mutable_data,                                 address)                               \
+  nonstatic_field(CodeBlob,                    _mutable_data_size,                            int)                                   \
                                                                                                                                      \
   nonstatic_field(DeoptimizationBlob,          _unpack_offset,                                int)                                   \
                                                                                                                                      \
@@ -646,7 +648,6 @@
   nonstatic_field(nmethod,                     _exception_offset,                             int)                                   \
   nonstatic_field(nmethod,                     _orig_pc_offset,                               int)                                   \
   nonstatic_field(nmethod,                     _stub_offset,                                  int)                                   \
-  nonstatic_field(nmethod,                     _metadata_offset,                              u2)                                    \
   nonstatic_field(nmethod,                     _scopes_pcs_offset,                            int)                                    \
   nonstatic_field(nmethod,                     _scopes_data_offset,                           int)                                   \
   nonstatic_field(nmethod,                     _handler_table_offset,                         u2)                                    \
