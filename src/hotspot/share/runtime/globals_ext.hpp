@@ -38,6 +38,12 @@
                                                                                \
   product(bool, ReplaceLLMemBarWithLoadAcquire, false,                         \
           "Replace LoadLoad membar with load-acquire")                         \
+                                                                               \
+  product(bool, PolymorphicInlining, false,                                    \
+          "Inline caching multiple type of receivers")                         \
+                                                                               \
+  product(uintx, MorphismLimit, 2,                                             \
+          "Max call site's morphism we care about")                            \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
 
