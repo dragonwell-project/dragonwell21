@@ -80,7 +80,7 @@ CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, CompilerType type, CodeB
                    int mutable_data_size) :
   _oop_maps(nullptr), // will be set by set_oop_maps() call
   _name(name),
-  _mutable_data(nullptr),
+  _mutable_data(header_begin() + size), // default value is blob_end()
   _size(size),
   _relocation_size(align_up(cb->total_relocation_size(), oopSize)),
   _content_offset(CodeBlob::align_code_offset(header_size)),
@@ -111,6 +111,9 @@ CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, CompilerType type, CodeB
     if (_mutable_data == nullptr) {
       vm_exit_out_of_memory(_mutable_data_size, OOM_MALLOC_ERROR, "codebuffer: no space for mutable data");
     }
+  } else {
+    // We need unique and valid not null address
+    assert(_mutable_data = blob_end(), "sanity");
   }
 
   set_oop_maps(oop_maps);
@@ -120,7 +123,7 @@ CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, CompilerType type, CodeB
 CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, int size, uint16_t header_size) :
   _oop_maps(nullptr),
   _name(name),
-  _mutable_data(nullptr),
+  _mutable_data(header_begin() + size), // default value is blob_end()
   _size(size),
   _relocation_size(0),
   _content_offset(CodeBlob::align_code_offset(header_size)),
@@ -136,6 +139,7 @@ CodeBlob::CodeBlob(const char* name, CodeBlobKind kind, int size, uint16_t heade
 {
   assert(is_aligned(size,            oopSize), "unaligned size");
   assert(is_aligned(header_size,     oopSize), "unaligned size");
+  assert(_mutable_data = blob_end(), "sanity");
 }
 
 // Creates a RuntimeBlob from a CodeBuffer
@@ -169,9 +173,10 @@ void RuntimeBlob::free(RuntimeBlob* blob) {
 }
 
 void CodeBlob::purge(bool free_code_cache_data, bool unregister_nmethod) {
-  if (_mutable_data != nullptr) {
+  assert(_mutable_data != nullptr, "should never be null");
+  if (_mutable_data != blob_end()) {
     os::free(_mutable_data);
-    _mutable_data = nullptr;
+    _mutable_data = blob_end(); // Valid not null address
   }
 
   if (_oop_maps != nullptr) {
