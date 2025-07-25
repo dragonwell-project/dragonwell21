@@ -203,11 +203,13 @@ static char cpu_arch[] = "ppc";
   #error Add appropriate cpu_arch setting
 #endif
 
-// Compiler variant
-#ifdef COMPILER2
-  #define COMPILER_VARIANT "server"
+// JVM variant
+#if   defined(ZERO)
+  #define JVM_VARIANT "zero"
+#elif defined(COMPILER2)
+  #define JVM_VARIANT "server"
 #else
-  #define COMPILER_VARIANT "client"
+  #define JVM_VARIANT "client"
 #endif
 
 
@@ -1499,10 +1501,10 @@ void os::jvm_path(char *buf, jint buflen) {
           snprintf(jrelib_p, buflen-len, "/lib");
         }
 
-        // Add the appropriate client or server subdir
+        // Add the appropriate JVM variant subdir
         len = strlen(buf);
         jrelib_p = buf + len;
-        snprintf(jrelib_p, buflen-len, "/%s", COMPILER_VARIANT);
+        snprintf(jrelib_p, buflen-len, "/%s", JVM_VARIANT);
         if (0 != access(buf, F_OK)) {
           snprintf(jrelib_p, buflen-len, "%s", "");
         }
@@ -2501,7 +2503,9 @@ void os::jfr_report_memory_info() {
     // Send the RSS JFR event
     EventResidentSetSize event;
     event.set_size(info.resident_size);
-    event.set_peak(info.resident_size_max);
+    // We've seen that resident_size_max sometimes trails resident_size with one page.
+    // Make sure we always report size <= peak
+    event.set_peak(MAX2(info.resident_size_max, info.resident_size));
     event.commit();
   } else {
     // Log a warning
