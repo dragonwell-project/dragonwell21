@@ -602,7 +602,7 @@ define SetupRunMicroTestBody
     $1_JMH_JVM_ARGS += $$(MICRO_VM_OPTIONS) $$(MICRO_JAVA_OPTIONS)
   endif
 
-  $1_MICRO_VM_OPTIONS := -jvmArgs $(call ShellQuote,$$($1_JMH_JVM_ARGS))
+  $1_MICRO_VM_OPTIONS := -jvmArgsPrepend $(call ShellQuote,$$($1_JMH_JVM_ARGS))
 
   ifneq ($$(MICRO_ITER), )
     $1_MICRO_ITER := -i $$(MICRO_ITER)
@@ -848,9 +848,14 @@ define SetupRunJtregTestBody
     endif
   endif
 
+<<<<<<< HEAD
   # Add more Lilliput-specific ProblemLists when UCOH is enabled
   ifneq ($$(findstring -XX:+UseCompactObjectHeaders, $$(TEST_OPTS)), )
     JTREG_EXTRA_PROBLEM_LISTS += $(TOPDIR)/test/hotspot/jtreg/ProblemList-lilliput.txt
+=======
+  ifneq ($$(findstring -XX:+UseShenandoahGC, $$(JTREG_ALL_OPTIONS)), )
+    JTREG_AUTO_PROBLEM_LISTS += ProblemList-shenandoah.txt
+>>>>>>> jdk-21.0.8+9
   endif
 
   ifneq ($$(JTREG_EXTRA_PROBLEM_LISTS), )

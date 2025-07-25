@@ -180,8 +180,13 @@ class Abstract_VM_Version: AllStatic {
   // Does platform support stack watermark barriers for concurrent stack processing?
   constexpr static bool supports_stack_watermark_barrier() { return false; }
 
+<<<<<<< HEAD
   // Is recursive lightweight locking implemented for this platform?
   constexpr static bool supports_recursive_lightweight_locking() { return false; }
+=======
+  // Does platform support secondary supers table lookup?
+  constexpr static bool supports_secondary_supers_table() { return false; }
+>>>>>>> jdk-21.0.8+9
 
   // Does platform support float16 instructions?
   static bool supports_float16() { return false; }
