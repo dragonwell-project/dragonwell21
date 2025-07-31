@@ -27,26 +27,42 @@
 #include "runtime/flags/jvmFlagLimit.hpp"
 #include "runtime/flags/jvmFlagConstraintsRuntime.hpp"
 #include "runtime/globals.hpp"
+#include "runtime/globals_extension.hpp"
 #include "runtime/os.hpp"
 #include "runtime/safepointMechanism.hpp"
 #include "runtime/task.hpp"
 #include "utilities/powerOfTwo.hpp"
 
 JVMFlag::Error ObjectAlignmentInBytesConstraintFunc(int value, bool verbose) {
+  bool verifyFailed = false;
   if (!is_power_of_2(value)) {
-    JVMFlag::printError(verbose,
-                        "ObjectAlignmentInBytes (%d) must be "
-                        "power of 2\n",
-                        value);
-    return JVMFlag::VIOLATES_CONSTRAINT;
+    if (VerifyFlagConstraints) {
+      verifyFailed = true;
+      value = round_down_power_of_2(value);
+    } else {
+      JVMFlag::printError(verbose,
+                          "ObjectAlignmentInBytes (%d) must be "
+                          "power of 2\n",
+                          value);
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
   }
   // In case page size is very small.
   if (value >= (intx)os::vm_page_size()) {
-    JVMFlag::printError(verbose,
+    if (VerifyFlagConstraints) {
+      verifyFailed = true;
+      value = (intx)(os::vm_page_size()/2);
+    } else {
+      JVMFlag::printError(verbose,
                         "ObjectAlignmentInBytes (%d) must be "
                         "less than page size (" SIZE_FORMAT ")\n",
-                        value, os::vm_page_size());
-    return JVMFlag::VIOLATES_CONSTRAINT;
+                        value, (intx)os::vm_page_size());
+      return JVMFlag::VIOLATES_CONSTRAINT;
+    }
+  }
+  if (verifyFailed) {
+    ObjectAlignmentInBytes = value;
+    JVMFlag::printError(true, "ObjectAlignmentInBytes:%d\n", value);
   }
   return JVMFlag::SUCCESS;
 }
@@ -55,6 +71,12 @@ JVMFlag::Error ObjectAlignmentInBytesConstraintFunc(int value, bool verbose) {
 // It is sufficient to check against the largest type size.
 JVMFlag::Error ContendedPaddingWidthConstraintFunc(intx value, bool verbose) {
   if ((value % BytesPerLong) != 0) {
+    if (VerifyFlagConstraints) {
+      int remainder = value % BytesPerLong;
+      ContendedPaddingWidth = value - remainder;
+      JVMFlag::printError(true, "ContendedPaddingWidth:" INTX_FORMAT "\n", ContendedPaddingWidth);
+      return JVMFlag::SUCCESS;
+    }
     JVMFlag::printError(verbose,
                         "ContendedPaddingWidth (" INTX_FORMAT ") must be "
                         "a multiple of %d\n",
@@ -67,6 +89,12 @@ JVMFlag::Error ContendedPaddingWidthConstraintFunc(intx value, bool verbose) {
 
 JVMFlag::Error PerfDataSamplingIntervalFunc(intx value, bool verbose) {
   if ((value % PeriodicTask::interval_gran != 0)) {
+    if (VerifyFlagConstraints) {
+      int remainder = value % PeriodicTask::interval_gran;
+      PerfDataSamplingInterval = value - remainder;
+      JVMFlag::printError(true, "PerfDataSamplingInterval:" INTX_FORMAT "\n", PerfDataSamplingInterval);
+      return JVMFlag::SUCCESS;
+    }
     JVMFlag::printError(verbose,
                         "PerfDataSamplingInterval (" INTX_FORMAT ") must be "
                         "evenly divisible by PeriodicTask::interval_gran (%d)\n",
@@ -80,6 +108,13 @@ JVMFlag::Error PerfDataSamplingIntervalFunc(intx value, bool verbose) {
 JVMFlag::Error VMPageSizeConstraintFunc(uintx value, bool verbose) {
   uintx min = (uintx)os::vm_page_size();
   if (value < min) {
+    if (VerifyFlagConstraints) {
+      JVMFlagAccess::set_uintx(const_cast<JVMFlag*>(JVMFlagLimit::last_checked_flag()), &value, JVMFlagOrigin::ERGONOMIC);
+      // JVMFlagLimit::last_checked_flag()->write(min);
+      JVMFlag::printError(true, "%s:" UINTX_FORMAT "\n", JVMFlagLimit::last_checked_flag()->name(), JVMFlagLimit::last_checked_flag()->read<uintx>());
+      return JVMFlag::SUCCESS;
+    }
+
     JVMFlag::printError(verbose,
                         "%s %s=" UINTX_FORMAT " is outside the allowed range [ " UINTX_FORMAT
                         " ... " UINTX_FORMAT " ]\n",
@@ -96,7 +131,24 @@ JVMFlag::Error NUMAInterleaveGranularityConstraintFunc(size_t value, bool verbos
   size_t min = os::vm_allocation_granularity();
   size_t max = NOT_LP64(2*G) LP64_ONLY(8192*G);
 
-  if (value < min || value > max) {
+  if (value < min) {
+    if (VerifyFlagConstraints) {
+      NUMAInterleaveGranularity = min;
+      JVMFlag::printError(true, "NUMAInterleaveGranularity:" UINTX_FORMAT "\n", min);
+      return JVMFlag::SUCCESS;
+    }
+    JVMFlag::printError(verbose,
+                        "size_t NUMAInterleaveGranularity=" UINTX_FORMAT " is outside the allowed range [ " UINTX_FORMAT
+                        " ... " UINTX_FORMAT " ]\n", value, min, max);
+    return JVMFlag::VIOLATES_CONSTRAINT;
+  }
+
+  if (value > max) {
+    if (VerifyFlagConstraints) {
+      NUMAInterleaveGranularity = max;
+      JVMFlag::printError(true, "NUMAInterleaveGranularity:" UINTX_FORMAT "\n", max);
+      return JVMFlag::SUCCESS;
+    }
     JVMFlag::printError(verbose,
                         "size_t NUMAInterleaveGranularity=" UINTX_FORMAT " is outside the allowed range [ " UINTX_FORMAT
                         " ... " UINTX_FORMAT " ]\n", value, min, max);
