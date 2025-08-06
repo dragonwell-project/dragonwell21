@@ -35,6 +35,7 @@
 #include "opto/castnode.hpp"
 #include "opto/cfgnode.hpp"
 #include "opto/mulnode.hpp"
+#include "opto/nativeAcceleration.hpp"
 #include "opto/parse.hpp"
 #include "opto/rootnode.hpp"
 #include "opto/runtime.hpp"
@@ -120,6 +121,12 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
       log->print(" method_handle_intrinsic='1'");
     }
     log->end_elem();
+  }
+
+  // Handle native acceleration before intrinsic, to make sure we can always
+  // call the replaced version of the current method.
+  if (callee->accel_call_entry() != nullptr) {
+    return new AccelCallGenerator(callee, call_does_dispatch);
   }
 
   // Special case the handling of certain common, profitable library

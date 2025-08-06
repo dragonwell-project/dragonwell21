@@ -32,6 +32,7 @@
 #include "interpreter/bytecodes.hpp"
 #include "logging/logAsyncWriter.hpp"
 #include "memory/universe.hpp"
+#include "opto/nativeAcceleration.hpp"
 #include "prims/jvmtiExport.hpp"
 #include "prims/methodHandles.hpp"
 #include "prims/downcallLinker.hpp"
@@ -143,6 +144,11 @@ jint init_globals() {
   InterfaceSupport_init();
   VMRegImpl::set_regName();  // need this before generate_stubs (for printing oop maps).
   SharedRuntime::generate_stubs();
+
+  if (!NativeAccelTable::init()) {
+    return JNI_EINVAL;
+  }
+
   return JNI_OK;
 }
 
@@ -198,6 +204,7 @@ void exit_globals() {
       SymbolTable::dump(tty);
       StringTable::dump(tty);
     }
+    NativeAccelTable::destroy();
     ostream_exit();
 #ifdef LEAK_SANITIZER
     {
