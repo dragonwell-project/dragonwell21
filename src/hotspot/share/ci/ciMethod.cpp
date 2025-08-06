@@ -47,6 +47,7 @@
 #include "oops/generateOopMap.hpp"
 #include "oops/method.inline.hpp"
 #include "oops/oop.inline.hpp"
+#include "opto/nativeAcceleration.hpp"
 #include "prims/methodHandles.hpp"
 #include "runtime/deoptimization.hpp"
 #include "runtime/handles.inline.hpp"
@@ -104,6 +105,10 @@ ciMethod::ciMethod(const methodHandle& h_m, ciInstanceKlass* holder) :
   // Check for blackhole intrinsic and then populate the intrinsic ID.
   CompilerOracle::tag_blackhole_if_possible(h_m);
   _intrinsic_id       = h_m->intrinsic_id();
+
+  // Get entry of accelerated call.
+  _accel_call_entry = NativeAccelTable::find(h_m->klass_name(), h_m->name(),
+                                             h_m->signature());
 
   ciEnv *env = CURRENT_ENV;
   if (env->jvmti_can_hotswap_or_post_breakpoint()) {
@@ -175,6 +180,7 @@ ciMethod::ciMethod(ciInstanceKlass* holder,
   _method_blocks(          nullptr),
   _intrinsic_id(           vmIntrinsics::_none),
   _inline_instructions_size(-1),
+  _accel_call_entry(nullptr),
   _can_be_statically_bound(false),
   _can_omit_stack_trace(true),
   _liveness(               nullptr)
