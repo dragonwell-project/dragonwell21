@@ -2577,6 +2577,14 @@ WB_ENTRY(void, WB_CleanMetaspaces(JNIEnv* env, jobject target))
   ClassLoaderDataGraph::safepoint_and_clean_metaspaces();
 WB_END
 
+WB_ENTRY(jboolean, WB_IsAIExtSupported(JNIEnv* env))
+#if INCLUDE_AIEXT
+  return true;
+#else
+  return false;
+#endif // INCLUDE_AIEXT
+WB_END
+
 #define CC (char*)
 
 static JNINativeMethod methods[] = {
@@ -2861,6 +2869,7 @@ static JNINativeMethod methods[] = {
   {CC"setVirtualThreadsNotifyJvmtiMode", CC"(Z)Z",    (void*)&WB_SetVirtualThreadsNotifyJvmtiMode},
   {CC"preTouchMemory",  CC"(JJ)V",                    (void*)&WB_PreTouchMemory},
   {CC"cleanMetaspaces", CC"()V",                      (void*)&WB_CleanMetaspaces},
+  {CC"isAIExtSupported", CC"()Z",                     (void*)&WB_IsAIExtSupported},
 };
 
 

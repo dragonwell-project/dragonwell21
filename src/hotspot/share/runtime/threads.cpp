@@ -113,6 +113,9 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif
+#if INCLUDE_AIEXT
+#include "opto/aiExtension.hpp"
+#endif
 
 // Initialization after module runtime initialization
 void universe_post_module_init();  // must happen after call_initPhase2
@@ -459,6 +462,12 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
   jint ergo_result = Arguments::apply_ergo();
   if (ergo_result != JNI_OK) return ergo_result;
+
+#if INCLUDE_AIEXT
+  if (!AIExt::init()) {
+    return JNI_EINVAL;
+  }
+#endif // INCLUDE_AIEXT
 
   // Final check of all ranges after ergonomics which may change values.
   if (!JVMFlagLimit::check_all_ranges()) {
