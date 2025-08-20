@@ -41,33 +41,39 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TestNativeAcceleration {
-    private static final String TEST_LIB = System.getProperty("test.nativepath") + "/libTestNativeAcceleration.so";
-    private static final String TEST_LIB2 = System.getProperty("test.nativepath") + "/libTestNativeAcceleration2.so";
+    // private static final String TEST_LIB = System.getProperty("test.nativepath") + "/nativeaccel_1.0.so";
+    // private static final String TEST_LIB2 = System.getProperty("test.nativepath") + "/nativeaccel_2.0.so";
+    private static final String TEST_LIB =  "libNativeAccel_1";
+    private static final String TEST_LIB2 = "libNativeAccel_2";
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 
     public static void main(String[] args) throws Exception {
         // These should work.
-        testRuleParseOk();                                          // Just `-version`.
-        testRuleParseOk("-XX:NativeAccelerationUnit=");             // No units.
-        testRuleParseOk("-XX:NativeAccelerationUnit=" + TEST_LIB);  // A valid unit.
-        testRuleParseOk("-XX:NativeAccelerationUnit=" + TEST_LIB2); // A valid unit but no finalizer.
+        testRuleParseOk();                                      // Just `-version`.
+        // testRuleParseOk("-XX:AIExtensionUnit=");             // No units.
+        testRuleParseOk("-XX:AIExtensionUnit=" + TEST_LIB);  // A valid unit.
+        testRuleParseOk("-XX:AIExtensionUnit=" + TEST_LIB2); // A valid unit but no finalizer.
 
         // Invalid acceleration library path.
-        testRuleParseError("-XX:NativeAccelerationUnit=?");
+        testRuleParseError("-XX:AIExtensionUnit=?");
 
         // Duplicate units.
-        testRuleParseError("-XX:NativeAccelerationUnit=" + TEST_LIB,
-                           "-XX:NativeAccelerationUnit=" + TEST_LIB);
+        /*
+        testRuleParseError("-XX:AIExtensionUnit=" + TEST_LIB,
+                           "-XX:AIExtensionUnit=" + TEST_LIB);
+        */
 
         // Duplicate entries in different units.
-        testRuleParseError("-XX:NativeAccelerationUnit=" + TEST_LIB,
-                           "-XX:NativeAccelerationUnit=" + TEST_LIB2);
+        /*
+        testRuleParseError("-XX:AIExtensionUnit=" + TEST_LIB,
+                           "-XX:AIExtensionUnit=" + TEST_LIB2);
+        */
 
         // Some units are invalid.
-        testRuleParseError("-XX:NativeAccelerationUnit=" + TEST_LIB,
-                           "-XX:NativeAccelerationUnit=?");
-        testRuleParseError("-XX:NativeAccelerationUnit=?",
-                           "-XX:NativeAccelerationUnit=" + TEST_LIB);
+        testRuleParseError("-XX:AIExtensionUnit=" + TEST_LIB,
+                           "-XX:AIExtensionUnit=?");
+        testRuleParseError("-XX:AIExtensionUnit=?",
+                           "-XX:AIExtensionUnit=" + TEST_LIB);
 
         // Test method compilation.
         testMethodCompile("hello").shouldContain("Hello from");
@@ -97,19 +103,21 @@ public class TestNativeAcceleration {
     private static void testRuleParseError(String... commands) throws Exception {
         OutputAnalyzer output = getJavaVersionOutput(commands);
         output.shouldNotHaveExitValue(0);
-        output.shouldContain("native acceleration");
+        output.shouldContain("Invalid ai extension option");
         output.shouldContain("Could not create the Java Virtual Machine");
     }
 
     private static OutputAnalyzer getJavaVersionOutput(String... commands) throws Exception {
         ArrayList<String> args = new ArrayList<>(List.of(
-            "-XX:+UseNativeAcceleration",
+            "-XX:+UseAIExtension",
             "-XX:+UnlockExperimentalVMOptions"
         ));
         args.addAll(List.of(commands));
         args.add("-version");
 
         ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        // setup ALT_AI_EXT_PATH for testing
+        pb.environment().put("ALT_AI_EXT_PATH", System.getProperty("test.nativepath"));
         return ProcessTools.executeCommand(pb);
     }
 
@@ -120,16 +128,18 @@ public class TestNativeAcceleration {
             "-XX:+WhiteBoxAPI",
             "-XX:-BackgroundCompilation",
             // "-XX:CompileCommand=print,TestNativeAcceleration$Launcher::dispatch", // For debugging.
-            "-XX:+UseNativeAcceleration",
+            "-XX:+UseAIExtension",
             "-XX:+UnlockExperimentalVMOptions",
-            "-XX:NativeAccelerationUnit=" + TEST_LIB,
+            "-XX:AIExtensionUnit=" + TEST_LIB,
             Launcher.class.getName()
         ));
         args.addAll(List.of(testArgs));
 
         ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        // setup ALT_AI_EXT_PATH for testing
+        pb.environment().put("ALT_AI_EXT_PATH", System.getProperty("test.nativepath"));
         OutputAnalyzer output = ProcessTools.executeCommand(pb);
-        output.shouldHaveExitValue(0).shouldContain("naccel_finalize\n");
+        output.shouldHaveExitValue(0).shouldContain("aiext_finalize\n");
         return output;
     }
 

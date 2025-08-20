@@ -34,7 +34,11 @@
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 
-JNIEXPORT naccel_init_result_t JNICALL naccel_initialize(naccel_unit_t *unit) {
+JNIEXPORT naccel_init_result_t JNICALL aiext_initialize(naccel_unit_t *unit) {
+  return NACCEL_INIT_OK;
+}
+
+JNIEXPORT naccel_init_result_t JNICALL aiext_post_init(naccel_unit_t *unit) {
   static const naccel_entry_t entries[] = {
       NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
                    hello),

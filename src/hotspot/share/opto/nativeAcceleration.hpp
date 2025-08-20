@@ -28,16 +28,54 @@
 #include "opto/callGenerator.hpp"
 #include "utilities/growableArray.hpp"
 
+class NativeAccelTable;
+
 // Entry for loaded native acceleration units.
-struct NativeAccelUnit {
-  // String to native acceleration unit library path.
-  // Allocated on the C heap, and should be freed before VM exit.
-  const char* path;
+class NativeAccelUnit : public CHeapObj<mtCompiler> {
+friend NativeAccelTable;
+private:
+  // String parsed from argument option
+  // Feature name
+  const char* feature;
+  // Version string
+  const char* version;
+  // Optional parameter list
+  const char* param_list;
   // Handle of the loaded native acceleration unit library.
   void* handle;
 
+public:
   // Comparator for the native acceleration unit library entry.
-  static int compare(const NativeAccelUnit& e1, const NativeAccelUnit& e2);
+  static int compare(NativeAccelUnit* const& e1, NativeAccelUnit* const& e2);
+
+  // Parse argument option string to construct a unit
+  static NativeAccelUnit* parse_from_option(const char* arg_option);
+
+  NativeAccelUnit(const char* f, const char* v, const char* p) : handle(nullptr) {
+    assert(f != nullptr && v != nullptr, "sanity");
+    feature = os::strdup(f);
+    version = os::strdup(v);
+    if (p != nullptr) {
+      param_list = os::strdup(p);
+    }
+  }
+
+  ~NativeAccelUnit() {
+    os::free((void*)feature);
+    os::free((void*)version);
+    if (param_list != nullptr) {
+      os::free((void *) param_list);
+    }
+    if (handle != nullptr) {
+      os::dll_unload(handle);
+    }
+  }
+
+  // Load the extension unit and verify before run
+  bool load_and_verify();
+
+  // Print name of extension
+  void name(char* buf, size_t len) { snprintf(buf, len, "%s_%s", feature, version); }
 };
 
 // Entry for accelerated Java method calls.
@@ -93,16 +131,22 @@ class NativeAccelTable : public AllStatic {
   //
   // The Map is initialized during startup, and will never be modified, so it
   // does not need to be protected by locks.
-  static GrowableArrayCHeap<NativeAccelUnit, mtCompiler>* _loaded_units;
-
-  // Loads a native acceleration unit library from the given path.
-  // Returns `false` on error.
-  static bool load_unit(const char* path);
+  static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* _loaded_units;
 
  public:
+  // Loads a native acceleration unit library from the given path.
+  // Returns handle of loaded library, nullptr for failure
+  static void* load_unit(const char* path);
+
   // Loads native acceleration libraries, creates the acceleration table.
   // Returns `false` on error.
   static bool init();
+
+  // AI Extension initialize work after Java VM init
+  static bool post_init();
+
+  // Add Native acceleration unit to list
+  static void add_unit(NativeAccelUnit* unit);
 
   // Deletes the acceleration table and frees all related resources.
   static void destroy();

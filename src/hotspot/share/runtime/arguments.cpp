@@ -43,6 +43,7 @@
 #include "memory/allocation.inline.hpp"
 #include "oops/instanceKlass.hpp"
 #include "oops/oop.inline.hpp"
+#include "opto/nativeAcceleration.hpp"
 #include "prims/jvmtiAgentList.hpp"
 #include "prims/jvmtiExport.hpp"
 #include "runtime/arguments.hpp"
@@ -2406,6 +2407,18 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
         }
       }
 #endif // !INCLUDE_JVMTI
+#ifdef INCLUDE_AIEXT
+    } else if (match_option(option, "-XX:AIExtensionUnit", &tail)) {
+      log_debug(arguments)("AI extension unit = %s", option->optionString);
+      NativeAccelUnit* unit = NativeAccelUnit::parse_from_option(tail);
+      if (unit == nullptr) {
+        jio_fprintf(defaultStream::error_stream(),
+                    "Invalid ai extension option: %s\n", option->optionString);
+        return JNI_EINVAL;
+      } else {
+        NativeAccelTable::add_unit(unit);
+      }
+#endif // INCLUDE_AIEXT
     // --enable_preview
     } else if (match_option(option, "--enable-preview")) {
       set_enable_preview();

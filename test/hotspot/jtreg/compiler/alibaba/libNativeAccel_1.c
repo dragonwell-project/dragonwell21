@@ -86,7 +86,11 @@ static void add_arrays(const void *this, int32_t *a, int32_t a_len, int32_t *b,
   }
 }
 
-JNIEXPORT naccel_init_result_t JNICALL naccel_initialize(naccel_unit_t *unit) {
+JNIEXPORT naccel_init_result_t JNICALL aiext_initialize(naccel_unit_t *unit) {
+  return NACCEL_INIT_OK;
+}
+
+JNIEXPORT naccel_init_result_t JNICALL aiext_post_init(naccel_unit_t *unit) {
   static const naccel_entry_t entries[] = {
       NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
                    hello),
@@ -116,4 +120,4 @@ JNIEXPORT naccel_init_result_t JNICALL naccel_initialize(naccel_unit_t *unit) {
   return NACCEL_INIT_OK;
 }
 
-JNIEXPORT void JNICALL naccel_finalize() { printf("naccel_finalize\n"); }
+JNIEXPORT void JNICALL aiext_finalize() { printf("aiext_finalize\n"); }

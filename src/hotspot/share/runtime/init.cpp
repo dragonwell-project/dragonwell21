@@ -32,6 +32,9 @@
 #include "interpreter/bytecodes.hpp"
 #include "logging/logAsyncWriter.hpp"
 #include "memory/universe.hpp"
+#ifdef INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
+#endif
 #include "prims/jvmtiExport.hpp"
 #include "prims/methodHandles.hpp"
 #include "prims/downcallLinker.hpp"
@@ -50,9 +53,6 @@
 #if INCLUDE_JVMCI
 #include "jvmci/jvmci.hpp"
 #endif
-#ifdef COMPILER2
-#include "opto/nativeAcceleration.hpp"
-#endif // COMPILER2
 
 // Initialization done by VM thread in vm_init_globals()
 void check_ThreadShadow();
@@ -147,12 +147,6 @@ jint init_globals() {
   VMRegImpl::set_regName();  // need this before generate_stubs (for printing oop maps).
   SharedRuntime::generate_stubs();
 
-#ifdef COMPILER2
-  if (!NativeAccelTable::init()) {
-    return JNI_EINVAL;
-  }
-#endif // COMPILER2
-
   return JNI_OK;
 }
 
@@ -188,6 +182,14 @@ jint init_globals2() {
   final_stubs_init();    // final StubRoutines stubs
   MethodHandles::generate_adapters();
 
+#ifdef INCLUDE_AIEXT
+  if (UseAIExtension) {
+    if( !NativeAccelTable::post_init()) {
+      return JNI_ERR;
+    }
+  }
+#endif
+
   // All the flags that get adjusted by VM_Version_init and os::init_2
   // have been set so dump the flags now.
   if (PrintFlagsFinal || PrintFlagsRanges) {
@@ -208,9 +210,11 @@ void exit_globals() {
       SymbolTable::dump(tty);
       StringTable::dump(tty);
     }
-#ifdef COMPILER2
-    NativeAccelTable::destroy();
-#endif // COMPILER2
+#ifdef INCLUDE_AIEXT
+    if (UseAIExtension) {
+      NativeAccelTable::destroy();
+    }
+#endif
     ostream_exit();
 #ifdef LEAK_SANITIZER
     {
