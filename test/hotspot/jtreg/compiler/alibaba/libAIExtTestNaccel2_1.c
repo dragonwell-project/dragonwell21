@@ -23,23 +23,17 @@
 
 #include <stdio.h>
 
-#include "naccel.h"
-
-// We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
-// to prevent the linker from hiding the functions in this library.
-//
-// Note that all functions in the library have nothing to do with JNI.
-#include "jni_md.h"
+#include "aiext.h"
 
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 
-JNIEXPORT naccel_init_result_t JNICALL naccel_initialize(naccel_unit_t *unit) {
-  static const naccel_entry_t entries[] = {
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
-                   hello),
-  };
-  unit->num_entries = sizeof(entries) / sizeof(entries[0]);
-  unit->entries = entries;
-  return NACCEL_INIT_OK;
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
+                                            aiext_handle_t handle) {
+  return AIEXT_OK;
+}
+
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+  return env->register_naccel_provider("TestAIExtension$Launcher", "hello",
+                                       "()V", "hello", hello, NULL);
 }

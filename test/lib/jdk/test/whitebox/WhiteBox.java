@@ -765,4 +765,7 @@ public class WhiteBox {
   public native boolean setVirtualThreadsNotifyJvmtiMode(boolean enabled);
 
   public native void preTouchMemory(long addr, long size);
+
+  // AI-Extension support
+  public native boolean isAIExtSupported();
 }

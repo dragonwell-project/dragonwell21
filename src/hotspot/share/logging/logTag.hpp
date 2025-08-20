@@ -36,6 +36,7 @@ class outputStream;
 #define LOG_TAG_LIST \
   LOG_TAG(add) \
   LOG_TAG(age) \
+  AIEXT_ONLY(LOG_TAG(aiext)) \
   LOG_TAG(alloc) \
   LOG_TAG(annotation) \
   LOG_TAG(arguments) \
