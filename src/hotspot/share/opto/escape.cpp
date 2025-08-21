@@ -1163,7 +1163,9 @@ void ConnectionGraph::process_call_arguments(CallNode *call) {
 #ifdef ASSERT
           if (!(is_arraycopy ||
                 BarrierSet::barrier_set()->barrier_set_c2()->is_gc_barrier_node(call) ||
+#if INCLUDE_AIEXT
                 NativeAccelTable::is_accel_native_call(call) ||
+#endif
                 (call->as_CallLeaf()->_name != nullptr &&
                  (strcmp(call->as_CallLeaf()->_name, "updateBytesCRC32") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "updateBytesCRC32C") == 0 ||

@@ -39,12 +39,6 @@
   product(bool, ReplaceLLMemBarWithLoadAcquire, false,                         \
           "Replace LoadLoad membar with load-acquire")                         \
                                                                                \
-  product(bool, UseAIExtension, false,                                         \
-          "Enable Alibaba Dragonwell AI Extension")                            \
-                                                                               \
-  product(ccstrlist, AIExtensionUnit, "",                                      \
-          "Load additional ai extension units")                                \
-                                                                               \
   product(bool, TraceNonProfiledHotCodeHeapActivities, false, DIAGNOSTIC,      \
           "Trace activities of NonProfiledHotCodeHeap")                        \
                                                                                \
@@ -54,6 +48,12 @@
                                                                                \
   product(bool, AllocIVtableStubInNonProfiledHotCodeHeap, false,               \
           "Allocate itable/vtable in NonProfiledHotCodeHeap")                  \
+                                                                               \
+  AIEXT_ONLY(product(bool, UseAIExtension, false,                              \
+          "Enable Alibaba Dragonwell AI Extension"))                           \
+                                                                               \
+  AIEXT_ONLY(product(ccstrlist, AIExtensionUnit, "",                           \
+          "Load external ai extension units"))                                 \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
 

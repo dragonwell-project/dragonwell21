@@ -32,7 +32,7 @@
 #include "interpreter/bytecodes.hpp"
 #include "logging/logAsyncWriter.hpp"
 #include "memory/universe.hpp"
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
 #include "opto/nativeAcceleration.hpp"
 #endif
 #include "prims/jvmtiExport.hpp"
@@ -182,7 +182,7 @@ jint init_globals2() {
   final_stubs_init();    // final StubRoutines stubs
   MethodHandles::generate_adapters();
 
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
   if (UseAIExtension) {
     if( !NativeAccelTable::post_init()) {
       return JNI_ERR;
@@ -210,7 +210,7 @@ void exit_globals() {
       SymbolTable::dump(tty);
       StringTable::dump(tty);
     }
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
     if (UseAIExtension) {
       NativeAccelTable::destroy();
     }

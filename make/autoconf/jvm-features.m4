@@ -47,6 +47,7 @@ m4_define(jvm_features_valid, m4_normalize( \
     cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check \
     jvmci jvmti link-time-opt management minimal opt-size parallelgc \
     serialgc services shenandoahgc static-build vm-structs zero zgc \
+    aiext \
 ))
 
 # Deprecated JVM features (these are ignored, but with a warning)
@@ -55,6 +56,7 @@ m4_define(jvm_features_deprecated, m4_normalize(
 ))
 
 # Feature descriptions
+m4_define(jvm_feature_desc_aiext, [enable alibaba AI-Ext framework])
 m4_define(jvm_feature_desc_cds, [enable class data sharing (CDS)])
 m4_define(jvm_feature_desc_compiler1, [enable hotspot compiler C1])
 m4_define(jvm_feature_desc_compiler2, [enable hotspot compiler C2])
@@ -226,6 +228,28 @@ AC_DEFUN([JVM_FEATURES_CHECK_AVAILABILITY],
 ])
 
 ###############################################################################
+# Check if the feature 'aiext' is available on this platform.
+#
+AC_DEFUN_ONCE([JVM_FEATURES_CHECK_AIEXT],
+[
+  JVM_FEATURES_CHECK_AVAILABILITY(aiext, [
+    AC_MSG_CHECKING([if platform is supported by AIEXT])
+    if test "x$OPENJDK_TARGET_OS" = xlinux; then
+      if test "x$OPENJDK_TARGET_CPU" = "xx86_64" || \
+         test "x$OPENJDK_TARGET_CPU" = "xaarch64"; then
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no, $OPENJDK_TARGETT_OS-$OPENJDK_TARGET_CPU])
+        AVAILABLE=false
+      fi
+    else
+      AC_MSG_RESULT([no, $OPENJDK_TARGETT_OS-$OPENJDK_TARGET_CPU])
+      AVAILABLE=false
+    fi
+  ])
+])
+
+###############################################################################
 # Check if the feature 'cds' is available on this platform.
 #
 AC_DEFUN_ONCE([JVM_FEATURES_CHECK_CDS],
@@ -391,6 +415,7 @@ AC_DEFUN_ONCE([JVM_FEATURES_PREPARE_PLATFORM],
   # The checks below should add unavailable features to
   # JVM_FEATURES_PLATFORM_UNAVAILABLE.
 
+  JVM_FEATURES_CHECK_AIEXT
   JVM_FEATURES_CHECK_CDS
   JVM_FEATURES_CHECK_DTRACE
   JVM_FEATURES_CHECK_JVMCI

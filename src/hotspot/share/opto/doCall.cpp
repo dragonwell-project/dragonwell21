@@ -123,11 +123,13 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
     log->end_elem();
   }
 
+#if INCLUDE_AIEXT
   // Handle native acceleration before intrinsic, to make sure we can always
   // call the replaced version of the current method.
   if (callee->accel_call_entry() != nullptr) {
     return new AccelCallGenerator(callee, call_does_dispatch);
   }
+#endif
 
   // Special case the handling of certain common, profitable library
   // methods.  If these methods are replaced with specialized code,

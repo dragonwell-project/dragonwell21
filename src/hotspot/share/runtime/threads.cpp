@@ -56,7 +56,7 @@
 #include "oops/klass.inline.hpp"
 #include "oops/oop.inline.hpp"
 #include "oops/symbol.hpp"
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
 #include "opto/nativeAcceleration.hpp"
 #endif
 #include "prims/jvmtiAgentList.hpp"
@@ -463,7 +463,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   jint ergo_result = Arguments::apply_ergo();
   if (ergo_result != JNI_OK) return ergo_result;
 
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
   if (UseAIExtension && !NativeAccelTable::init()) {
     return JNI_EINVAL;
   }

@@ -47,6 +47,9 @@
 #include "oops/generateOopMap.hpp"
 #include "oops/method.inline.hpp"
 #include "oops/oop.inline.hpp"
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
+#endif
 #include "prims/methodHandles.hpp"
 #include "runtime/deoptimization.hpp"
 #include "runtime/handles.inline.hpp"
@@ -56,7 +59,6 @@
 #include "ci/bcEscapeAnalyzer.hpp"
 #include "ci/ciTypeFlow.hpp"
 #include "oops/method.hpp"
-#include "opto/nativeAcceleration.hpp"
 #endif
 
 // ciMethod
@@ -106,13 +108,11 @@ ciMethod::ciMethod(const methodHandle& h_m, ciInstanceKlass* holder) :
   CompilerOracle::tag_blackhole_if_possible(h_m);
   _intrinsic_id       = h_m->intrinsic_id();
 
-#ifdef COMPILER2
+#if INCLUDE_AIEXT
   // Get entry of accelerated call.
   _accel_call_entry = NativeAccelTable::find(h_m->klass_name(), h_m->name(),
                                              h_m->signature());
-#else
-  _accel_call_entry = nullptr;
-#endif // COMPILER2
+#endif
 
   ciEnv *env = CURRENT_ENV;
   if (env->jvmti_can_hotswap_or_post_breakpoint()) {
@@ -184,7 +184,9 @@ ciMethod::ciMethod(ciInstanceKlass* holder,
   _method_blocks(          nullptr),
   _intrinsic_id(           vmIntrinsics::_none),
   _inline_instructions_size(-1),
+#if INCLUDE_AIEXT
   _accel_call_entry(nullptr),
+#endif
   _can_be_statically_bound(false),
   _can_omit_stack_trace(true),
   _liveness(               nullptr)

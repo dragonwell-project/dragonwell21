@@ -163,6 +163,10 @@ ifneq ($(call check-jvm-feature, jfr), true)
   JVM_EXCLUDE_FILES += compilerEvent.cpp
 endif
 
+ifeq ($(call check-jvm-feature, aiext), true)
+  JVM_CFLAGS_FEATURES += -DINCLUDE_AIEXT=1
+endif
+
 ################################################################################
 
 ifeq ($(call check-jvm-feature, link-time-opt), true)

@@ -2407,7 +2407,7 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
         }
       }
 #endif // !INCLUDE_JVMTI
-#ifdef INCLUDE_AIEXT
+#if INCLUDE_AIEXT
     } else if (match_option(option, "-XX:AIExtensionUnit", &tail)) {
       log_debug(arguments)("AI extension unit = %s", option->optionString);
       NativeAccelUnit* unit = NativeAccelUnit::parse_from_option(tail);

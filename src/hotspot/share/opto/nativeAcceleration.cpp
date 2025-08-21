@@ -39,6 +39,7 @@
 #include "utilities/debug.hpp"
 #include "utilities/ostream.hpp"
 
+#if INCLUDE_AIEXT
 GrowableArrayCHeap<AccelCallEntry*, mtCompiler>*
     NativeAccelTable::_accel_table = nullptr;
 
@@ -145,25 +146,19 @@ bool NativeAccelUnit::load_and_verify() {
   NOT_AMD64(NOT_AARCH64(ShouldNotReachHere();))  // Only x86_64 and aarch64 are supported
   // $JAVA_HOME/lib/ai-ext/feature_ver_arch.so
   int lib_path_len = strlen(java_home_path) + 17 + strlen(feature) + strlen(version) + strlen(cpu_arch);
-#ifndef PRODUCT
   // Used by testing
   const char * alt_ext_path = ::getenv("ALT_AI_EXT_PATH");
   if (alt_ext_path != nullptr) {
     // $ALT_AI_EXT_PATH/feature_ver_arch.so
     lib_path_len = strlen(alt_ext_path) + 6 + strlen(feature) + strlen(version) + strlen(cpu_arch);
   }
-#endif
   char * buf = (char*)os::malloc(lib_path_len + 1, mtCompiler);
   assert(buf != nullptr, "OOM on native malloc");
-#ifndef PRODUCT
   if (alt_ext_path != nullptr) {
     snprintf(buf, lib_path_len+1, "%s/%s_%s_%s.so", alt_ext_path, feature, version, cpu_arch);
   } else {
-#endif
     snprintf(buf, lib_path_len+1, "%s/lib/ai-ext/%s_%s_%s.so", java_home_path, feature, version, cpu_arch);
-#ifndef PRODUCT
   }
-#endif
   int prefix_len = strlen(buf) - strlen(cpu_arch) - 4;   // reduce size of "_cpuarch.so"
   // First try with cpuarch in path
   void * lib_handle = NativeAccelTable::load_unit(buf);
@@ -602,3 +597,4 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   // Done.
   return kit.transfer_exceptions_into_jvms();
 }
+#endif
