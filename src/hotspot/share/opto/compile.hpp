@@ -343,6 +343,7 @@ class Compile : public Phase {
   RTMState              _rtm_state;             // State of Restricted Transactional Memory usage
   int                   _loop_opts_cnt;         // loop opts round
   bool                  _clinit_barrier_on_entry; // True if clinit barrier is needed on nmethod entry
+  bool                  _alloc_in_non_profiled_hot_code_heap;
   uint                  _stress_seed;           // Seed for stress testing
 
   // Compilation environment.
@@ -639,6 +640,8 @@ class Compile : public Phase {
   void          set_max_node_limit(uint n)       { _max_node_limit = n; }
   bool              clinit_barrier_on_entry()       { return _clinit_barrier_on_entry; }
   void          set_clinit_barrier_on_entry(bool z) { _clinit_barrier_on_entry = z; }
+  bool              alloc_in_non_profiled_hot_code_heap() const { return _alloc_in_non_profiled_hot_code_heap; }
+  void          set_alloc_in_non_profiled_hot_code_heap(bool z) { _alloc_in_non_profiled_hot_code_heap = z; }
   bool              has_monitors() const         { return _has_monitors; }
   void          set_has_monitors(bool v)         { _has_monitors = v; }
 
