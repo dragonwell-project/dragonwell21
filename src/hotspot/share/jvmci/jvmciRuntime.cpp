@@ -2213,6 +2213,7 @@ JVMCI::CodeInstallResult JVMCIRuntime::register_method(JVMCIEnv* JVMCIENV,
                                  frame_words, oop_map_set,
                                  handler_table, implicit_exception_table,
                                  compiler, comp_level,
+                                 false, // No jvmci support for allocation inside NonProfiledHotCodeHeap
                                  speculations, speculations_len, data);
 
 
@@ -2222,7 +2223,7 @@ JVMCI::CodeInstallResult JVMCIRuntime::register_method(JVMCIEnv* JVMCIENV,
         {
           MutexUnlocker ml(Compile_lock);
           MutexUnlocker locker(MethodCompileQueue_lock);
-          CompileBroker::handle_full_code_cache(CodeCache::get_code_blob_type(comp_level));
+          CompileBroker::handle_full_code_cache(CodeCache::get_code_blob_type(method, comp_level, false));
         }
         result = JVMCI::cache_full;
       } else {

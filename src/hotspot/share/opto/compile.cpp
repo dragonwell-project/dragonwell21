@@ -617,6 +617,7 @@ Compile::Compile( ciEnv* ci_env, ciMethod* target, int osr_bci,
 #endif
                   _has_method_handle_invokes(false),
                   _clinit_barrier_on_entry(false),
+                  _alloc_in_non_profiled_hot_code_heap(false),
                   _stress_seed(0),
                   _comp_arena(mtCompiler),
                   _barrier_set_state(BarrierSet::barrier_set()->barrier_set_c2()->create_barrier_state(comp_arena())),
@@ -693,6 +694,9 @@ Compile::Compile( ciEnv* ci_env, ciMethod* target, int osr_bci,
 
   if (directive->ReplayInlineOption) {
     _replay_inline_data = ciReplay::load_inline_data(method(), entry_bci(), ci_env->comp_level());
+  }
+  if (NonProfiledHotCodeHeapSize) {
+    set_alloc_in_non_profiled_hot_code_heap(directive->AllocInNonProfiledHotCodeHeapOption);
   }
   set_print_inlining(directive->PrintInliningOption || PrintOptoInlining);
   set_print_intrinsics(directive->PrintIntrinsicsOption);
@@ -913,6 +917,7 @@ Compile::Compile( ciEnv* ci_env,
 #endif
     _has_method_handle_invokes(false),
     _clinit_barrier_on_entry(false),
+    _alloc_in_non_profiled_hot_code_heap(false),
     _stress_seed(0),
     _comp_arena(mtCompiler),
     _barrier_set_state(BarrierSet::barrier_set()->barrier_set_c2()->create_barrier_state(comp_arena())),
