@@ -299,7 +299,7 @@
   product(ccstr, CompileCommandFile, nullptr,                               \
           "Read compiler commands from this file [.hotspot_compiler]")      \
                                                                             \
-  product(ccstr, CompilerDirectivesFile, nullptr, DIAGNOSTIC,               \
+  product(ccstr, CompilerDirectivesFile, nullptr,                           \
           "Read compiler directives from this file")                        \
                                                                             \
   product(ccstrlist, CompileCommand, "",                                    \
