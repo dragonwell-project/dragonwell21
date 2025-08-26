@@ -92,35 +92,38 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV *env) {
-  /*
-  static const naccel_entry_t entries[] = {
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
-                   hello),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "(I)V",
-                   "hello_int", hello_int),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "(J)V",
-                   "hello_long", hello_long),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "(F)V",
-                   "hello_float", hello_float),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "(D)V",
-                   "hello_double", hello_double),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "([B)V",
-                   "hello_bytes", hello_bytes),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello",
-                   "(Ljava/lang/Object;)V", "hello_object", hello_object),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "(S)V",
-                   "hello_short_method", hello_short_method),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "add", "(II)I",
-                   "add_ints", add_ints),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "add", "(DD)D",
-                   "add_doubles", add_doubles),
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "add", "([I[I)V",
-                   "add_arrays", add_arrays),
-  };
-  unit->num_entries = sizeof(entries) / sizeof(entries[0]);
-  unit->entries = entries;
-  */
-  return AIEXT_OK;
+  aiext_result_t res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(I)V",
+      "hello_int", hello_int);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(J)V",
+      "hello_long", hello_long);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(F)V",
+      "hello_float", hello_float);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(D)V",
+      "hello_double", hello_double);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "([B)V",
+      "hello_bytes", hello_bytes);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello",
+      "(Ljava/lang/Object;)V", "hello_object", hello_object);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(S)V",
+      "hello_short_method", hello_short_method);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "(II)I",
+      "add_ints", add_ints);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "(DD)D",
+      "add_doubles", add_doubles);
+  if (res != AIEXT_OK) return res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "([I[I)V",
+      "add_arrays", add_arrays);
+  return res;
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_finalize(const AIEXT_ENV* env) {

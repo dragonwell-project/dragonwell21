@@ -41,14 +41,6 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV* env) {
-  /*
-  static const naccel_entry_t entries[] = {
-      NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
-                   hello),
-  };
-  unit->num_entries = sizeof(entries) / sizeof(entries[0]);
-  unit->entries = entries;
-  */
   char buf[4096];
   aiext_result_t result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
   printf("result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
@@ -81,6 +73,10 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV* env) {
   }
   exist = env->support_cpu_feature("fake_feature");
   result = exist ? AIEXT_ERROR : AIEXT_OK;
+  if (result != AIEXT_OK) {
+    return result;
+  }
 
+  result = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
   return result;
 }

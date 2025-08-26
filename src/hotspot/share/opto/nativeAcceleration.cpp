@@ -323,57 +323,38 @@ bool NativeAccelTable::post_init() {
   return true;
 }
 
-/*
-bool NativeAccelTable::init() {
-  // Quit if native acceleration is not enabled.
-  if (!UseNativeAcceleration) {
-    return true;
+AccelCallEntry* NativeAccelTable::add_entry(const char* klass, const char* method,
+                          const char* signature, const char* native_func_name,
+                          void* native_entry) {
+  if (klass == nullptr || method == nullptr ||
+      signature == nullptr || native_func_name == nullptr ||
+      native_func_name[0] == '\0' || native_entry == nullptr) {
+    log_error(aiext)("Invalid entry information");
+    return nullptr;
   }
 
-  // Create tables.
-  assert(_accel_table == nullptr, "init should only be called once");
-  _accel_table = new GrowableArrayCHeap<AccelCallEntry*, mtCompiler>();
+  // Create symbols.
+  Symbol* sKlass = SymbolTable::new_permanent_symbol(klass);
+  Symbol* sMethod = SymbolTable::new_permanent_symbol(method);
+  Symbol* sSignature = SymbolTable::new_permanent_symbol(signature);
 
-  // Load the builtin native acceleration unit.
-  if (!load_unit("libnaccel.so")) {
-    return false;
+  // Check if the entry presents.
+  bool found;
+  AccelCallEntry key(sKlass, sMethod, sSignature);
+  int index = _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
+          &key, found);
+  if (found) {
+    tty->print_cr(
+        "Error: Duplicate native acceleration entry found for %s::%s%s",
+        klass, method, signature);
+    return nullptr;
   }
 
-  // Load other native acceleration units.
-  char* paths = os::strdup(NativeAccelerationUnit);
-  size_t paths_len = strlen(paths);
-  char* path = paths;
-  while (path < paths + paths_len) {
-    // Find the next path.
-    char* p = path;
-    while (*p != '\n' && *p != '\0') {
-      ++p;
-    }
-    *p = '\0';
-
-    // Load the current unit.
-    if (!load_unit(path)) {
-      os::free(paths);
-      return false;
-    }
-
-    path = p + 1;
-  }
-  os::free(paths);
-
-  // Shrink tables.
-  _accel_table->shrink_to_fit();
-  _loaded_units->shrink_to_fit();
-
-  // Check if there are any entries loaded.
-  if (_accel_table->is_empty()) {
-    warning(
-        "No native acceleration entries were found in any of the units, "
-        "native acceleration will have no effect");
-  }
-  return true;
+  // Create entry and add to table.
+  AccelCallEntry* entry = new AccelCallEntry(sKlass, sMethod, sSignature, native_func_name, native_entry);
+  _accel_table->insert_before( index, entry);
+  return entry;
 }
-*/
 
 void NativeAccelTable::destroy() {
   // Close all loaded libraries and free related resources.

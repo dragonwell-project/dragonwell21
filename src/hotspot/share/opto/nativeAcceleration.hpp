@@ -151,6 +151,11 @@ class NativeAccelTable : public AllStatic {
   // Returns handle of loaded library, nullptr for failure
   static void* load_unit(const char* path);
 
+  // Add a new acceleration entry into table
+  static AccelCallEntry* add_entry(const char* klass, const char* method,
+                                   const char* signature, const char* native_func_name,
+                                   void* native_entry);
+
   // Finds the acceleration entry for a given method.
   static const AccelCallEntry* find(Symbol* klass, Symbol* method,
                                     Symbol* signature);

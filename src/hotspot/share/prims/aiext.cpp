@@ -24,6 +24,7 @@
 #include "precompiled.hpp"
 #include "aiext.h"
 #include "logging/log.hpp"
+#include "opto/nativeAcceleration.hpp"
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
 
@@ -215,8 +216,9 @@ jboolean aiext_support_cpu_feature(const char* feature) {
 }
 
 // Register native accel function
-aiext_result_t aiext_register_native_accel_provider(const char* klass, const char* method, const char* sig, void* (*provider)(const AIEXT_ENV* env)) {
-  return AIEXT_ERROR;
+aiext_result_t aiext_register_native_accel_provider(const char* klass, const char* method, const char* sig, const char* native_func_name, void* native_entry) {
+  AccelCallEntry* entry = NativeAccelTable::add_entry(klass, method, sig, native_func_name, native_entry);
+  return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
 }
 
 // Get field offset, return -1 for failure
@@ -227,6 +229,7 @@ jlong aiext_get_field_offset(const char* klass, const char* method, const char* 
 
 // Get extension info (name, version, param_list)
 aiext_result_t aiext_get_extension_info(const aiext_handle_t handle, char* name_buf, int name_buf_size, char* version_info, int version_buf_size, char* param_list_buf, int param_list_buf_size) {
+  // Unimplemented
   return AIEXT_ERROR;
 }
 

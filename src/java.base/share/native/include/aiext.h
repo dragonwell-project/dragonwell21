@@ -59,7 +59,7 @@ struct AIEXT_ENV_ {
   jboolean (*support_cpu_feature)(const char* feature);
 
   // Register native accel function
-  aiext_result_t (*register_native_accel_provider)(const char* klass, const char* method, const char* sig, void* (*provider)(const struct AIEXT_ENV_* env));
+  aiext_result_t (*register_native_accel_provider)(const char* klass, const char* method, const char* sig, const char* native_func_name, void* native_entry);
 
   // Get field offset, return -1 for failure
   jlong (*get_field_offset)(const char* klass, const char* method, const char* sig);
