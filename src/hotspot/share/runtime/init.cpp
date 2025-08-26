@@ -182,14 +182,6 @@ jint init_globals2() {
   final_stubs_init();    // final StubRoutines stubs
   MethodHandles::generate_adapters();
 
-#if INCLUDE_AIEXT
-  if (UseAIExtension) {
-    if( !NativeAccelTable::post_init()) {
-      return JNI_ERR;
-    }
-  }
-#endif
-
   // All the flags that get adjusted by VM_Version_init and os::init_2
   // have been set so dump the flags now.
   if (PrintFlagsFinal || PrintFlagsRanges) {

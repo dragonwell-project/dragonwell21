@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "aiext.h"
 #include "naccel.h"
 
 // We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
@@ -86,11 +87,12 @@ static void add_arrays(const void *this, int32_t *a, int32_t a_len, int32_t *b,
   }
 }
 
-JNIEXPORT naccel_init_result_t JNICALL aiext_initialize(naccel_unit_t *unit) {
-  return NACCEL_INIT_OK;
+JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
+  return AIEXT_OK;
 }
 
-JNIEXPORT naccel_init_result_t JNICALL aiext_post_init(naccel_unit_t *unit) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV *env) {
+  /*
   static const naccel_entry_t entries[] = {
       NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
                    hello),
@@ -117,7 +119,11 @@ JNIEXPORT naccel_init_result_t JNICALL aiext_post_init(naccel_unit_t *unit) {
   };
   unit->num_entries = sizeof(entries) / sizeof(entries[0]);
   unit->entries = entries;
-  return NACCEL_INIT_OK;
+  */
+  return AIEXT_OK;
 }
 
-JNIEXPORT void JNICALL aiext_finalize() { printf("aiext_finalize\n"); }
+JNIEXPORT aiext_result_t JNICALL aiext_finalize(const AIEXT_ENV* env) {
+  printf("aiext_finalize\n");
+  return AIEXT_OK;
+}

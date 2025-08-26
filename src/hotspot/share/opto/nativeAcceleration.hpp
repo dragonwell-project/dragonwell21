@@ -134,22 +134,22 @@ class NativeAccelTable : public AllStatic {
   static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* _loaded_units;
 
  public:
-  // Loads a native acceleration unit library from the given path.
-  // Returns handle of loaded library, nullptr for failure
-  static void* load_unit(const char* path);
-
-  // Loads native acceleration libraries, creates the acceleration table.
+  // Loads ai extension units from parsed unit list, creates the acceleration table.
   // Returns `false` on error.
   static bool init();
 
   // AI Extension initialize work after Java VM init
   static bool post_init();
 
-  // Add Native acceleration unit to list
+  // Add Native acceleration unit to list, used when match arguments
   static void add_unit(NativeAccelUnit* unit);
 
   // Deletes the acceleration table and frees all related resources.
   static void destroy();
+
+  // Utility helper to loads an AI-Ext unit library from the given path.
+  // Returns handle of loaded library, nullptr for failure
+  static void* load_unit(const char* path);
 
   // Finds the acceleration entry for a given method.
   static const AccelCallEntry* find(Symbol* klass, Symbol* method,

@@ -817,6 +817,14 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   //   take a while to process their first tick).
   WatcherThread::run_all_tasks();
 
+#if INCLUDE_AIEXT
+  if (UseAIExtension) {
+    if( !NativeAccelTable::post_init()) {
+      return JNI_ERR;
+    }
+  }
+#endif
+
   create_vm_timer.end();
 #ifdef ASSERT
   _vm_complete = true;

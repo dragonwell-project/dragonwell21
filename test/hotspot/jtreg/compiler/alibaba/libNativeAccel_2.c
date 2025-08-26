@@ -22,7 +22,9 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
+#include "aiext.h"
 #include "naccel.h"
 
 // We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
@@ -34,16 +36,51 @@
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 
-JNIEXPORT naccel_init_result_t JNICALL aiext_initialize(naccel_unit_t *unit) {
-  return NACCEL_INIT_OK;
+JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
+  return AIEXT_OK;
 }
 
-JNIEXPORT naccel_init_result_t JNICALL aiext_post_init(naccel_unit_t *unit) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV* env) {
+  /*
   static const naccel_entry_t entries[] = {
       NACCEL_ENTRY("TestNativeAcceleration$Launcher", "hello", "()V", "hello",
                    hello),
   };
   unit->num_entries = sizeof(entries) / sizeof(entries[0]);
   unit->entries = entries;
-  return NACCEL_INIT_OK;
+  */
+  char buf[4096];
+  aiext_result_t result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
+  printf("result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
+  if (result != AIEXT_OK) {
+    return result;
+  }
+  // shrink nonprofiledcodeheapsize
+  char* end_pos;
+  jlong old_size = strtol(buf, &end_pos, 10);
+  snprintf(buf, sizeof(buf), "%ld", old_size-4096*20);  // reduce size 80k
+  result = env->set_jvm_flag("NonProfiledCodeHeapSize", buf);
+  if (result != AIEXT_OK) {
+    return result;
+  }
+  // get size again
+  result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
+  if (result != AIEXT_OK) {
+    return result;
+  }
+  printf("result %d, NonProfiledCodeHeapSize=%s", result, buf);
+#if defined(__x86_64__)
+  const char* feature = "avx2";
+#elif defined(__aarch64__)
+  const char* feature = "neon";
+#endif
+  jboolean exist = env->support_cpu_feature(feature);
+  result = exist ? AIEXT_OK : AIEXT_ERROR;
+  if (result != AIEXT_OK) {
+    return result;
+  }
+  exist = env->support_cpu_feature("fake_feature");
+  result = exist ? AIEXT_ERROR : AIEXT_OK;
+
+  return result;
 }

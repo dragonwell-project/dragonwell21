@@ -25,6 +25,7 @@
 
 #include <string.h>
 
+#include "aiext.h"
 #include "classfile/symbolTable.hpp"
 #include "logging/log.hpp"
 #include "memory/resourceArea.hpp"
@@ -45,6 +46,8 @@ GrowableArrayCHeap<AccelCallEntry*, mtCompiler>*
 
 GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>*
     NativeAccelTable::_loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+
+extern const AIEXT_ENV _global_aiext_env;
 
 int NativeAccelUnit::compare(NativeAccelUnit* const &e1,
                              NativeAccelUnit* const &e2) {
@@ -210,20 +213,20 @@ void* NativeAccelTable::load_unit(const char* path) {
   }
 
   // Get the entry point.
-  naccel_initialize_t init =
-      (naccel_initialize_t)os::dll_lookup(handle, "aiext_initialize");
+  aiext_init_t init =
+      (aiext_init_t)os::dll_lookup(handle, "aiext_init");
   if (init == nullptr) {
     tty->print_cr(
-        "Error: Could not find `aiext_initialize` "
-        "in native acceleration unit `%s`",
+        "Error: Could not find `aiext_init` "
+        "in aiext unit `%s`",
         path);
     return nullptr;
   }
 
   // Get native acceleration entries.
   naccel_unit_t unit;
-  naccel_init_result_t result = init(&unit);
-  if (result != NACCEL_INIT_OK) {
+  aiext_result_t result = init(&_global_aiext_env);
+  if (result != AIEXT_OK) {
     tty->print_cr("Error: Could not initialize ai extension unit `%s`",
                   path);
     return nullptr;
@@ -267,17 +270,17 @@ bool NativeAccelTable::post_init() {
   for (const auto& e : *_loaded_units) {
     if (e->handle != nullptr) {
       // invoke aiext_post_init
-      naccel_initialize_t post_init =
-          (naccel_initialize_t)os::dll_lookup(e->handle, "aiext_post_init");
+      aiext_post_init_t post_init =
+          (aiext_post_init_t)os::dll_lookup(e->handle, "aiext_post_init");
       if (post_init != nullptr) {
-        naccel_unit_t unit;
-        naccel_init_result_t result = post_init(&unit);
+        aiext_result_t result = post_init(&_global_aiext_env);
         char ext_name[200];
         e->name(ext_name, sizeof(ext_name));
-        if (result != NACCEL_INIT_OK || unit.entries == nullptr) {
+        if (result != AIEXT_OK) {
           tty->print_cr("Error: Could not post vm initialize ai extension unit `%s`", ext_name);
           return false;
         }
+        /*
         // Create native acceleration entries.
         for (size_t i = 0; i < unit.num_entries; ++i) {
           // Check if the entry is valid.
@@ -313,6 +316,7 @@ bool NativeAccelTable::post_init() {
               index, new AccelCallEntry(klass, method, signature,
                                         entry->native_func_name, entry->native_func));
         }
+        */
       }
     };
   }
@@ -376,10 +380,10 @@ void NativeAccelTable::destroy() {
   for (const auto& e : *_loaded_units) {
     if (e->handle != nullptr) {
       // Call the finalize function if present.
-      naccel_finalize_t finalize =
-          (naccel_finalize_t)os::dll_lookup(e->handle, "aiext_finalize");
+      aiext_finalize_t finalize =
+          (aiext_finalize_t)os::dll_lookup(e->handle, "aiext_finalize");
       if (finalize != nullptr) {
-        finalize();
+        finalize(&_global_aiext_env);
       }
     }
 
