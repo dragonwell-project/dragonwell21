@@ -47,7 +47,6 @@
 #include "oops/generateOopMap.hpp"
 #include "oops/method.inline.hpp"
 #include "oops/oop.inline.hpp"
-#include "opto/nativeAcceleration.hpp"
 #include "prims/methodHandles.hpp"
 #include "runtime/deoptimization.hpp"
 #include "runtime/handles.inline.hpp"
@@ -57,6 +56,7 @@
 #include "ci/bcEscapeAnalyzer.hpp"
 #include "ci/ciTypeFlow.hpp"
 #include "oops/method.hpp"
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 // ciMethod
@@ -106,9 +106,13 @@ ciMethod::ciMethod(const methodHandle& h_m, ciInstanceKlass* holder) :
   CompilerOracle::tag_blackhole_if_possible(h_m);
   _intrinsic_id       = h_m->intrinsic_id();
 
+#ifdef COMPILER2
   // Get entry of accelerated call.
   _accel_call_entry = NativeAccelTable::find(h_m->klass_name(), h_m->name(),
                                              h_m->signature());
+#else
+  _accel_call_entry = nullptr;
+#endif // COMPILER2
 
   ciEnv *env = CURRENT_ENV;
   if (env->jvmti_can_hotswap_or_post_breakpoint()) {
