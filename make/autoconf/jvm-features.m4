@@ -444,18 +444,18 @@ AC_DEFUN([JVM_FEATURES_PREPARE_VARIANT],
     JVM_FEATURES_VARIANT_UNAVAILABLE="cds minimal zero"
   elif test "x$variant" = "xzero"; then
     JVM_FEATURES_VARIANT_UNAVAILABLE="compiler1 compiler2 \
-        jvmci minimal zgc"
+        jvmci minimal zgc aiext"
   else
     JVM_FEATURES_VARIANT_UNAVAILABLE="minimal zero"
   fi
 
   # Check which features should be off by default for this JVM variant.
   if test "x$variant" = "xclient"; then
-    JVM_FEATURES_VARIANT_FILTER="compiler2 jvmci link-time-opt opt-size"
+    JVM_FEATURES_VARIANT_FILTER="compiler2 jvmci link-time-opt opt-size aiext"
   elif test "x$variant" = "xminimal"; then
     JVM_FEATURES_VARIANT_FILTER="cds compiler2 dtrace epsilongc g1gc \
         jfr jni-check jvmci jvmti management parallelgc services \
-        shenandoahgc vm-structs zgc"
+        shenandoahgc vm-structs zgc aiext"
     if test "x$OPENJDK_TARGET_CPU" = xarm ; then
       JVM_FEATURES_VARIANT_FILTER="$JVM_FEATURES_VARIANT_FILTER opt-size"
     else
@@ -465,7 +465,7 @@ AC_DEFUN([JVM_FEATURES_PREPARE_VARIANT],
     fi
   elif test "x$variant" = "xcore"; then
     JVM_FEATURES_VARIANT_FILTER="compiler1 compiler2 jvmci \
-        link-time-opt opt-size"
+        link-time-opt opt-size aiext"
   elif test "x$variant" = "xzero"; then
     JVM_FEATURES_VARIANT_FILTER="jfr link-time-opt opt-size"
   else
@@ -547,6 +547,10 @@ AC_DEFUN([JVM_FEATURES_VERIFY],
 
   if JVM_FEATURES_IS_ACTIVE(jvmti) && ! JVM_FEATURES_IS_ACTIVE(services); then
     AC_MSG_ERROR([Specified JVM feature 'jvmti' requires feature 'services' for variant '$variant'])
+  fi
+
+  if JVM_FEATURES_IS_ACTIVE(aiext) && ! JVM_FEATURES_IS_ACTIVE(compiler2); then
+    AC_MSG_ERROR([Specified JVM feature 'aiext' requires feature 'compiler2' for variant '$variant'])
   fi
 
   # For backwards compatibility, disable a feature "globally" if one variant
