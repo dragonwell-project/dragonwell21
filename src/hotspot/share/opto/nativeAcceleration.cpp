@@ -29,7 +29,6 @@
 #include "classfile/symbolTable.hpp"
 #include "logging/log.hpp"
 #include "memory/resourceArea.hpp"
-#include "naccel.h"
 #include "opto/callnode.hpp"
 #include "opto/graphKit.hpp"
 #include "opto/multnode.hpp"
@@ -224,7 +223,6 @@ void* NativeAccelTable::load_unit(const char* path) {
   }
 
   // Get native acceleration entries.
-  naccel_unit_t unit;
   aiext_result_t result = init(&_global_aiext_env);
   if (result != AIEXT_OK) {
     tty->print_cr("Error: Could not initialize ai extension unit `%s`",
@@ -280,43 +278,6 @@ bool NativeAccelTable::post_init() {
           tty->print_cr("Error: Could not post vm initialize ai extension unit `%s`", ext_name);
           return false;
         }
-        /*
-        // Create native acceleration entries.
-        for (size_t i = 0; i < unit.num_entries; ++i) {
-          // Check if the entry is valid.
-          const naccel_entry_t* entry = &unit.entries[i];
-          if (entry->klass == nullptr || entry->method == nullptr ||
-              entry->signature == nullptr || entry->native_func_name == nullptr ||
-              entry->native_func_name[0] == '\0' || entry->native_func == nullptr) {
-            tty->print_cr("Error: Invalid entry %zu in ai extension unit `%s`",
-                          i, ext_name);
-            return false;
-          }
-
-          // Create symbols.
-          Symbol* klass = SymbolTable::new_permanent_symbol(entry->klass);
-          Symbol* method = SymbolTable::new_permanent_symbol(entry->method);
-          Symbol* signature = SymbolTable::new_permanent_symbol(entry->signature);
-
-          // Check if the entry presents.
-          bool found;
-          AccelCallEntry key(klass, method, signature);
-          int index =
-              _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
-                  &key, found);
-          if (found) {
-            tty->print_cr(
-                "Error: Duplicate native acceleration entry found for %s::%s%s",
-                entry->klass, entry->method, entry->signature);
-            return false;
-          }
-
-          // Create entry and add to table.
-          _accel_table->insert_before(
-              index, new AccelCallEntry(klass, method, signature,
-                                        entry->native_func_name, entry->native_func));
-        }
-        */
       }
     };
   }
@@ -582,4 +543,4 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   // Done.
   return kit.transfer_exceptions_into_jvms();
 }
-#endif
+#endif  // INCLUDE_AIEXT
