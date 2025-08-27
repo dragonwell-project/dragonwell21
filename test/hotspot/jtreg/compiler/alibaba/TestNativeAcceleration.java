@@ -109,7 +109,7 @@ public class TestNativeAcceleration {
 
     private static OutputAnalyzer getJavaVersionOutput(String... commands) throws Exception {
         ArrayList<String> args = new ArrayList<>(List.of(
-            "-Xlog:aiext=debug", 
+            "-Xlog:aiext=debug",
             "-XX:+UseAIExtension",
             "-XX:+UnlockExperimentalVMOptions"
         ));
