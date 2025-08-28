@@ -252,10 +252,14 @@ aiext_result_t aiext_get_unit_info(const aiext_handle_t handle, char* name_buf,
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
-    aiext_get_jvm_version,     aiext_get_aiext_version,
-    aiext_get_jvm_flag,        aiext_set_jvm_flag,
-    aiext_support_cpu_feature, aiext_register_naccel_provider,
-    aiext_get_field_offset,    aiext_get_unit_info,
+    aiext_get_jvm_version,
+    aiext_get_aiext_version,
+    aiext_get_jvm_flag,
+    aiext_set_jvm_flag,
+    aiext_support_cpu_feature,
+    aiext_register_naccel_provider,
+    aiext_get_field_offset,
+    aiext_get_unit_info,
 };
 
 #endif  // INCLUDE_AIEXT
