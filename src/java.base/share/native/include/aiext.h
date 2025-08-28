@@ -25,8 +25,7 @@
 #define _AIEXT_H_
 
 #include <stddef.h>
-
-#include "jni.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,31 +36,31 @@ extern "C" {
 
 // The result of initializing AI-Extension unit.
 typedef enum {
-  AIEXT_OK = JNI_OK,
-  AIEXT_ERROR = JNI_ERR,
+  AIEXT_OK,
+  AIEXT_ERROR,
 } aiext_result_t;
 
 // AI-Extension unit handle, for identification of a unit.
 typedef unsigned long aiext_handle_t;
-#define INVALID_HANDLE (0xFFFFFFFFFFFFFFFF)
+#define INVALID_HANDLE (0xffffffffffffffff)
 
 // API for AI Extension units.
 typedef struct aiext_env {
   // Returns JVM version string.
-  aiext_result_t (*get_jvm_version)(char* buf, int buf_size);
+  aiext_result_t (*get_jvm_version)(char* buf, size_t buf_size);
 
   // Returns current AI-Extension version.
-  jint (*get_aiext_version)();
+  int (*get_aiext_version)();
 
   // Gets JVM flag by name, the value is stored in `value_buf`.
   aiext_result_t (*get_jvm_flag)(const char* flag_name, char* value_buf,
-                                 int buf_size);
+                                 size_t buf_size);
 
   // Sets JVM flag with new value string.
   aiext_result_t (*set_jvm_flag)(const char* flag_name, const char* value);
 
-  // Returns `true` if the given CPU feature is supported.
-  jboolean (*support_cpu_feature)(const char* feature);
+  // Returns non-zero if the given CPU feature is supported.
+  int (*support_cpu_feature)(const char* feature);
 
   // Registers native acceleration provider for specific Java method.
   aiext_result_t (*register_naccel_provider)(const char* klass,
@@ -71,14 +70,14 @@ typedef struct aiext_env {
                                              void* native_entry);
 
   // Gets field offset in a Java class, returns `-1` on failure.
-  jlong (*get_field_offset)(const char* klass, const char* method,
-                            const char* sig);
+  int64_t (*get_field_offset)(const char* klass, const char* method,
+                              const char* sig);
 
   // Gets unit info, including name, version and parameter list.
   aiext_result_t (*get_unit_info)(const aiext_handle_t handle, char* name_buf,
-                                  int name_buf_size, char* version_info,
-                                  int version_buf_size, char* param_list_buf,
-                                  int param_list_buf_size);
+                                  size_t name_buf_size, char* version_info,
+                                  size_t version_buf_size, char* param_list_buf,
+                                  size_t param_list_buf_size);
 } aiext_env_t;
 
 // API provided by AI Extension, these will be invoked by JVM:

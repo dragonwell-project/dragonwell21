@@ -70,7 +70,7 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
 #elif defined(__aarch64__)
   const char* feature = "neon";
 #endif
-  jboolean exist = env->support_cpu_feature(feature);
+  int exist = env->support_cpu_feature(feature);
   printf("Support %s? %s\n", feature, exist ? "true" : "false");
 
   // Check invalid CPU feature.

@@ -31,10 +31,10 @@
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
 
-static jint CurrentVersion = AIEXT_VERSION_1;
+static int CurrentVersion = AIEXT_VERSION_1;
 
 // Returns JVM version string.
-static aiext_result_t aiext_get_jvm_version(char* buf, int buf_size) {
+static aiext_result_t aiext_get_jvm_version(char* buf, size_t buf_size) {
   if (buf == nullptr || buf_size <= 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
@@ -44,11 +44,11 @@ static aiext_result_t aiext_get_jvm_version(char* buf, int buf_size) {
 }
 
 // Returns current AI-Extension version.
-static jint aiext_get_aiext_version() { return CurrentVersion; }
+static int aiext_get_aiext_version() { return CurrentVersion; }
 
 // Gets JVM flag by name, the value is stored in `value_buf`.
 static aiext_result_t aiext_get_jvm_flag(const char* flag_name, char* value_buf,
-                                         int buf_size) {
+                                         size_t buf_size) {
   if (value_buf == nullptr || buf_size <= 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
@@ -210,16 +210,16 @@ static aiext_result_t aiext_set_jvm_flag(const char* flag_name,
 }
 
 // Returns `true` if the given CPU feature is supported.
-static jboolean aiext_support_cpu_feature(const char* feature) {
+static int aiext_support_cpu_feature(const char* feature) {
   const char* cpu_feature = Abstract_VM_Version::features_string();
   log_debug(aiext)("cpu features:%s", cpu_feature);
   const char* loc = strstr(cpu_feature, feature);
-  jboolean result = false;
+  int result = 0;
   if (loc != nullptr) {
     // check if it is surrounded by space or is the last feature
     if (*(loc - 1) == ' ' &&
         (*(loc + strlen(feature)) == ',' || *(loc + strlen(feature)) == 0)) {
-      result = true;
+      result = 1;
     }
   }
   return result;
@@ -235,28 +235,32 @@ static aiext_result_t aiext_register_naccel_provider(
 }
 
 // Gets field offset in a Java class, returns `-1` on failure.
-static jlong aiext_get_field_offset(const char* klass, const char* method,
-                                    const char* sig) {
+static int64_t aiext_get_field_offset(const char* klass, const char* method,
+                                      const char* sig) {
   // Unimplemented
   return -1;
 }
 
 // Gets unit info, including name, version and parameter list.
 static aiext_result_t aiext_get_unit_info(const aiext_handle_t handle,
-                                          char* name_buf, int name_buf_size,
+                                          char* name_buf, size_t name_buf_size,
                                           char* version_info,
-                                          int version_buf_size,
+                                          size_t version_buf_size,
                                           char* param_list_buf,
-                                          int param_list_buf_size) {
+                                          size_t param_list_buf_size) {
   // Unimplemented
   return AIEXT_ERROR;
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
-    aiext_get_jvm_version,     aiext_get_aiext_version,
-    aiext_get_jvm_flag,        aiext_set_jvm_flag,
-    aiext_support_cpu_feature, aiext_register_naccel_provider,
-    aiext_get_field_offset,    aiext_get_unit_info,
+    aiext_get_jvm_version,
+    aiext_get_aiext_version,
+    aiext_get_jvm_flag,
+    aiext_set_jvm_flag,
+    aiext_support_cpu_feature,
+    aiext_register_naccel_provider,
+    aiext_get_field_offset,
+    aiext_get_unit_info,
 };
 
 #endif  // INCLUDE_AIEXT
