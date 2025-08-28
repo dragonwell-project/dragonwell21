@@ -21,6 +21,8 @@
  * questions.
  */
 
+#if INCLUDE_AIEXT
+
 #include "opto/nativeAcceleration.hpp"
 
 #include <string.h>
@@ -39,155 +41,199 @@
 #include "utilities/debug.hpp"
 #include "utilities/ostream.hpp"
 
-#if INCLUDE_AIEXT
+// Declared in `aiext.cpp`.
+extern const aiext_env_t GLOBAL_AIEXT_ENV;
+
 GrowableArrayCHeap<AccelCallEntry*, mtCompiler>*
     NativeAccelTable::_accel_table = nullptr;
 
 GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>*
-    NativeAccelTable::_loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+    NativeAccelTable::_loaded_units =
+        new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
 
-extern const AIEXT_ENV _global_aiext_env;
-
-int NativeAccelUnit::compare(NativeAccelUnit* const &e1,
-                             NativeAccelUnit* const &e2) {
-  // param list is skipped in compare
-  return strcmp(e1->feature, e2->feature) == 0
-      && strcmp(e1->version, e2->version) == 0;
+int NativeAccelUnit::compare(NativeAccelUnit* const& u1,
+                             NativeAccelUnit* const& u2) {
+  // Skip parameter list, and multiple versions for same feature is not allowed.
+  return strcmp(u1->_feature, u2->_feature);
 }
 
-// max length of feature name and version string
+// Max length of feature name and version string.
 #define MAX_UNIT_COMPONENT_LEN 50
-// max length of parameter list
+// Max length of parameter list.
 #define MAX_UNIT_PARAM_LIST_LEN 200
 
-bool parse_feature_and_version(const char* str, size_t maxlen, char* feature, char* version) {
+// Parses feature and version from the given string with the given length,
+// and stores them into the given buffers. Returns `false` on failure.
+bool parse_feature_and_version(const char* str, size_t str_len, char* feature,
+                               char* version) {
+  // Find '_' in the string.
   const char* pos = strchr(str, '_');
-  if (pos == nullptr) return false;
-  size_t len = pos - str;
-  if (len > MAX_UNIT_COMPONENT_LEN || len >= maxlen) {
+  if (pos == nullptr) {
     return false;
-  } else {
-    strncpy(feature, str, len);
-    feature[len] = 0;
   }
 
-  const size_t ver_len = maxlen - len - 1;
-  const char*  ver_str = str + len + 1;
+  // Check and copy the feature name.
+  size_t feature_len = pos - str;
+  if (feature_len > MAX_UNIT_COMPONENT_LEN || feature_len >= str_len) {
+    return false;
+  } else {
+    strncpy(feature, str, feature_len);
+    feature[feature_len] = 0;
+  }
+
+  // Check the length of the version string.
+  const size_t ver_len = str_len - feature_len - 1;
+  const char* ver_str = str + feature_len + 1;
   if (ver_len > MAX_UNIT_COMPONENT_LEN) {
     return false;
   }
 
-  size_t i=0;
+  // Check for format and copy the version string.
+  size_t i = 0;
   bool has_dot = false;
-  for (; i<ver_len; i++) {
+  for (; i < ver_len; i++) {
     char c = ver_str[i];
     if (c == '.') {
       if (!has_dot) {
         has_dot = true;
       } else {
-        // find multiple dot
+        // Found multiple dots.
         return false;
       }
-    } else if ( c < '0' || c > '9') {
+    } else if (c < '0' || c > '9') {
+      // Found non-digit character.
       return false;
     }
     version[i] = c;
   }
-  version[i]=0;
-  assert(strlen(feature) <= MAX_UNIT_COMPONENT_LEN && strlen(version) <= MAX_UNIT_COMPONENT_LEN, "sanity");
+  version[i] = 0;
 
+  assert(strlen(feature) <= MAX_UNIT_COMPONENT_LEN &&
+             strlen(version) <= MAX_UNIT_COMPONENT_LEN,
+         "sanity");
   return true;
 }
 
+// Parses the parameter list from the given string, and stores it
+// in the given buffer. Returns `false` on failure.
 bool parse_param_list(const char* str, char* param_list) {
-  if (strlen(str) > MAX_UNIT_PARAM_LIST_LEN) return false;
+  // Check length and copy to the buffer.
+  if (strlen(str) > MAX_UNIT_PARAM_LIST_LEN) {
+    return false;
+  }
   strcpy(param_list, str);
+
+  // Check for parameter format.
   const char* colon_pos;
   const char* param_group = str;
   while ((colon_pos = strchr(param_group, ':')) != nullptr) {
     const char* delim = strchr(param_group, '=');
-    if (delim == nullptr || delim >= colon_pos) return false;  // TODO: check duplicate '=' in one group
-    param_group = colon_pos+1;
+    if (delim == nullptr || delim >= colon_pos) {
+      return false;  // TODO: check duplicate '=' in one group
+    }
+    param_group = colon_pos + 1;
   }
-  // last group
+
+  // Check format for the last group.
   const char* delim = strchr(param_group, '=');
-  if (delim == nullptr) return false;  // TODO: check duplicate '=' in one group
+  if (delim == nullptr) {
+    return false;  // TODO: check duplicate '=' in one group
+  }
   return true;
 }
 
-NativeAccelUnit* NativeAccelUnit::parse_from_option(const char *arg_option) {
-  // The argument option has pattern feature_version?param1=val1:param2=val2
-  char feature[MAX_UNIT_COMPONENT_LEN+1];
-  char version[MAX_UNIT_COMPONENT_LEN+1];
-  char param_list[MAX_UNIT_PARAM_LIST_LEN+1];
-  bool parse_result = false;
-  const char* option = arg_option+1;   // ignore the heading '=' chararcter;
+NativeAccelUnit* NativeAccelUnit::parse_from_option(const char* arg_option) {
+  // The argument option has pattern `feature_version?param1=val1:param2=val2`.
+  char feature[MAX_UNIT_COMPONENT_LEN + 1];
+  char version[MAX_UNIT_COMPONENT_LEN + 1];
+  char param_list[MAX_UNIT_PARAM_LIST_LEN + 1];
+
+  const char* option = arg_option + 1;  // Ignore the leading '=' chararcter.
   const char* pos;
   bool has_param_list = false;
   if ((pos = strchr(option, '?')) != nullptr) {
     has_param_list = true;
-    parse_result = parse_feature_and_version(option, pos - option, feature, version);
+    if (!parse_feature_and_version(option, pos - option, feature, version)) {
+      return nullptr;
+    }
   } else {
-    parse_result = parse_feature_and_version(option, strlen(option), feature, version);
+    if (!parse_feature_and_version(option, strlen(option), feature, version)) {
+      return nullptr;
+    }
   }
-  if (!parse_result) return nullptr;
 
-  if (has_param_list) {
-    parse_result = parse_param_list(pos+1, param_list);
+  if (has_param_list && !parse_param_list(pos + 1, param_list)) {
+    return nullptr;
   }
-  if (!parse_result) return nullptr;
 
   return new NativeAccelUnit(feature, version, param_list);
 }
+
 #undef MAX_UNIT_COMPONENT_LEN
 #undef MAX_UNIT_PARAM_LIST_LEN
 
 bool NativeAccelUnit::load_and_verify() {
-  const char * java_home_path = Arguments::get_java_home();
-  const char * cpu_arch = AMD64_ONLY("x86-64") AARCH64_ONLY("aarch64") "";
-  NOT_AMD64(NOT_AARCH64(ShouldNotReachHere();))  // Only x86_64 and aarch64 are supported
-  // $JAVA_HOME/lib/ai-ext/feature_ver_arch.so
-  int lib_path_len = strlen(java_home_path) + 17 + strlen(feature) + strlen(version) + strlen(cpu_arch);
-  // Used by testing
-  const char * alt_ext_path = ::getenv("ALT_AI_EXT_PATH");
+  const char* java_home = Arguments::get_java_home();
+
+  // Only x86_64 and AArch64 are supported.
+  const char* cpu_arch = AMD64_ONLY("x86-64") AARCH64_ONLY("aarch64") "";
+  NOT_AMD64(NOT_AARCH64(ShouldNotReachHere();))
+
+  // Check for `DRAGONWELL_AIEXT_HOME`, used for testing purpose.
+  size_t lib_path_len;
+  const char* alt_ext_path = ::getenv("DRAGONWELL_AIEXT_HOME");
   if (alt_ext_path != nullptr) {
-    // $ALT_AI_EXT_PATH/feature_ver_arch.so
-    lib_path_len = strlen(alt_ext_path) + 6 + strlen(feature) + strlen(version) + strlen(cpu_arch);
+    // Library path: `$DRAGONWELL_AIEXT_HOME/feature_ver_arch.so`.
+    lib_path_len = strlen(alt_ext_path) + strlen(_feature) + strlen(_version) +
+                   strlen(cpu_arch) + sizeof("/__.so") - 1;
+  } else {
+    // Library path: `$JAVA_HOME/lib/ai-ext/feature_ver_arch.so`.
+    lib_path_len = strlen(java_home) + strlen(_feature) + strlen(_version) +
+                   strlen(cpu_arch) + sizeof("/lib/ai-ext/__.so") - 1;
   }
-  char * buf = (char*)os::malloc(lib_path_len + 1, mtCompiler);
+
+  // Construct library path.
+  char* buf = (char*)os::malloc(lib_path_len + 1, mtCompiler);
   assert(buf != nullptr, "OOM on native malloc");
   if (alt_ext_path != nullptr) {
-    snprintf(buf, lib_path_len+1, "%s/%s_%s_%s.so", alt_ext_path, feature, version, cpu_arch);
+    snprintf(buf, lib_path_len + 1, "%s/%s_%s_%s.so", alt_ext_path, _feature,
+             _version, cpu_arch);
   } else {
-    snprintf(buf, lib_path_len+1, "%s/lib/ai-ext/%s_%s_%s.so", java_home_path, feature, version, cpu_arch);
+    snprintf(buf, lib_path_len + 1, "%s/lib/ai-ext/%s_%s_%s.so", java_home,
+             _feature, _version, cpu_arch);
   }
-  int prefix_len = strlen(buf) - strlen(cpu_arch) - 4;   // reduce size of "_cpuarch.so"
-  // First try with cpuarch in path
-  void * lib_handle = NativeAccelTable::load_unit(buf);
+
+  // Length of library path not including the trailing `_arch.so`.
+  size_t prefix_len = strlen(buf) - strlen(cpu_arch) - sizeof("_.so") + 1;
+
+  // Try to load with `arch` in path.
+  void* lib_handle = NativeAccelTable::load_unit(buf);
   if (lib_handle == nullptr) {
-    // Second try without cpu arch
+    // Try without `arch`.
     buf[prefix_len] = 0;
     strcat(buf, ".so");
     lib_handle = NativeAccelTable::load_unit(buf);
   }
-  handle = lib_handle;
+  _handle = lib_handle;
 
-  // extension verification is done in aiext_initialize()
-
+  // Free the buffer.
   os::free(buf);
   return lib_handle != nullptr;
 }
 
-void NativeAccelTable::add_unit(NativeAccelUnit *unit) {
+bool NativeAccelTable::add_unit(NativeAccelUnit* unit) {
   assert(_loaded_units != nullptr, "must be initialized");
   bool found;
-  int index = _loaded_units->find_sorted<NativeAccelUnit*, NativeAccelUnit::compare>(
+  int index =
+      _loaded_units->find_sorted<NativeAccelUnit*, NativeAccelUnit::compare>(
           unit, found);
   if (found) {
-    tty->print_cr("Error: Duplicate native acceleration unit `%s_%s`", unit->feature, unit->version);
-    return;
+    tty->print_cr("Error: Duplicate AI-Extension unit `%s_%s`", unit->_feature,
+                  unit->_version);
+    return false;
   }
   _loaded_units->insert_before(index, unit);
+  return true;
 }
 
 int AccelCallEntry::compare(AccelCallEntry* const& e1,
@@ -206,34 +252,30 @@ void* NativeAccelTable::load_unit(const char* path) {
   char ebuf[1024];
   void* handle = os::dll_load(path, ebuf, sizeof(ebuf));
   if (handle == nullptr) {
-    tty->print_cr("Error: Could not load ai extension unit `%s`", path);
+    tty->print_cr("Error: Could not load AI-Extension unit `%s`", path);
     tty->print_cr("Error: %s", ebuf);
     return nullptr;
   }
 
   // Get the entry point.
-  aiext_init_t init =
-      (aiext_init_t)os::dll_lookup(handle, "aiext_init");
+  aiext_init_t init = (aiext_init_t)os::dll_lookup(handle, "aiext_init");
   if (init == nullptr) {
     tty->print_cr(
-        "Error: Could not find `aiext_init` "
-        "in aiext unit `%s`",
-        path);
+        "Error: Could not find `aiext_init` in AI-Extension unit `%s`", path);
     return nullptr;
   }
 
-  // Get native acceleration entries.
-  aiext_result_t result = init(&_global_aiext_env);
+  // Initialize the AI-Extension unit.
+  aiext_result_t result = init(&GLOBAL_AIEXT_ENV);
   if (result != AIEXT_OK) {
-    tty->print_cr("Error: Could not initialize ai extension unit `%s`",
-                  path);
+    tty->print_cr("Error: Could not initialize AI-Extension unit `%s`", path);
     return nullptr;
   }
   return handle;
 }
 
 bool NativeAccelTable::init() {
-  // Quit if native acceleration is not enabled.
+  // Quit if AI extension is not enabled.
   if (!UseAIExtension) {
     return true;
   }
@@ -244,7 +286,8 @@ bool NativeAccelTable::init() {
 
   if (_loaded_units->is_empty()) {
     ttyLocker ttyl;
-    tty->print_cr("Warning: AI-Extension unit is not provided in jvm arguments.");
+    tty->print_cr(
+        "Warning: AI-Extension unit is not provided in JVM arguments.");
     return true;
   }
 
@@ -253,7 +296,7 @@ bool NativeAccelTable::init() {
       ttyLocker ttyl;
       char buf[200];
       e->name(buf, sizeof(buf));
-      tty->print_cr("Error: failed to load AI-Extension unit %s", buf);
+      tty->print_cr("Error: failed to load AI-Extension unit `%s`", buf);
       return false;
     };
   }
@@ -266,16 +309,19 @@ bool NativeAccelTable::post_init() {
   }
 
   for (const auto& e : *_loaded_units) {
-    if (e->handle != nullptr) {
+    if (e->_handle != nullptr) {
       // invoke aiext_post_init
       aiext_post_init_t post_init =
-          (aiext_post_init_t)os::dll_lookup(e->handle, "aiext_post_init");
+          (aiext_post_init_t)os::dll_lookup(e->_handle, "aiext_post_init");
       if (post_init != nullptr) {
-        aiext_result_t result = post_init(&_global_aiext_env);
+        aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV);
         char ext_name[200];
         e->name(ext_name, sizeof(ext_name));
         if (result != AIEXT_OK) {
-          tty->print_cr("Error: Could not post vm initialize ai extension unit `%s`", ext_name);
+          tty->print_cr(
+              "Error: Could not initialize AI-Extension unit after JVM "
+              "initialization: `%s`",
+              ext_name);
           return false;
         }
       }
@@ -284,48 +330,52 @@ bool NativeAccelTable::post_init() {
   return true;
 }
 
-AccelCallEntry* NativeAccelTable::add_entry(const char* klass, const char* method,
-                          const char* signature, const char* native_func_name,
-                          void* native_entry) {
-  if (klass == nullptr || method == nullptr ||
-      signature == nullptr || native_func_name == nullptr ||
-      native_func_name[0] == '\0' || native_entry == nullptr) {
+AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
+                                            const char* method,
+                                            const char* signature,
+                                            const char* native_func_name,
+                                            void* native_entry) {
+  if (klass == nullptr || method == nullptr || signature == nullptr ||
+      native_func_name == nullptr || native_func_name[0] == '\0' ||
+      native_entry == nullptr) {
     log_error(aiext)("Invalid entry information");
     return nullptr;
   }
 
   // Create symbols.
-  Symbol* sKlass = SymbolTable::new_permanent_symbol(klass);
-  Symbol* sMethod = SymbolTable::new_permanent_symbol(method);
-  Symbol* sSignature = SymbolTable::new_permanent_symbol(signature);
+  Symbol* klass_sym = SymbolTable::new_permanent_symbol(klass);
+  Symbol* method_sym = SymbolTable::new_permanent_symbol(method);
+  Symbol* sig_sym = SymbolTable::new_permanent_symbol(signature);
 
   // Check if the entry presents.
   bool found;
-  AccelCallEntry key(sKlass, sMethod, sSignature);
-  int index = _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
+  AccelCallEntry key(klass_sym, method_sym, sig_sym);
+  int index =
+      _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
           &key, found);
   if (found) {
     tty->print_cr(
-        "Error: Duplicate native acceleration entry found for %s::%s%s",
-        klass, method, signature);
+        "Error: Duplicate native acceleration entry found for %s::%s%s", klass,
+        method, signature);
     return nullptr;
   }
 
   // Create entry and add to table.
-  AccelCallEntry* entry = new AccelCallEntry(sKlass, sMethod, sSignature, native_func_name, native_entry);
-  _accel_table->insert_before( index, entry);
+  AccelCallEntry* entry = new AccelCallEntry(klass_sym, method_sym, sig_sym,
+                                             native_func_name, native_entry);
+  _accel_table->insert_before(index, entry);
   return entry;
 }
 
 void NativeAccelTable::destroy() {
   // Close all loaded libraries and free related resources.
   for (const auto& e : *_loaded_units) {
-    if (e->handle != nullptr) {
+    if (e->_handle != nullptr) {
       // Call the finalize function if present.
       aiext_finalize_t finalize =
-          (aiext_finalize_t)os::dll_lookup(e->handle, "aiext_finalize");
+          (aiext_finalize_t)os::dll_lookup(e->_handle, "aiext_finalize");
       if (finalize != nullptr) {
-        finalize(&_global_aiext_env);
+        finalize(&GLOBAL_AIEXT_ENV);
       }
     }
 
@@ -340,7 +390,9 @@ void NativeAccelTable::destroy() {
 
 const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
                                              Symbol* signature) {
-  if (!UseAIExtension) return nullptr;
+  if (!UseAIExtension) {
+    return nullptr;
+  }
 
   assert(_accel_table != nullptr, "must be initialized");
   if (_accel_table->is_empty()) {
@@ -361,7 +413,10 @@ const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
 
 #ifdef ASSERT
 bool NativeAccelTable::is_accel_native_call(CallNode* call) {
-  if (!UseAIExtension) return false;
+  if (!UseAIExtension) {
+    return false;
+  }
+
   assert(_accel_table != nullptr, "must be initialized");
   if (_accel_table->is_empty()) {
     return false;
@@ -543,4 +598,5 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   // Done.
   return kit.transfer_exceptions_into_jvms();
 }
+
 #endif  // INCLUDE_AIEXT

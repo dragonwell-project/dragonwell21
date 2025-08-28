@@ -47,9 +47,6 @@
 #include "oops/generateOopMap.hpp"
 #include "oops/method.inline.hpp"
 #include "oops/oop.inline.hpp"
-#if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
-#endif
 #include "prims/methodHandles.hpp"
 #include "runtime/deoptimization.hpp"
 #include "runtime/handles.inline.hpp"
@@ -59,6 +56,9 @@
 #include "ci/bcEscapeAnalyzer.hpp"
 #include "ci/ciTypeFlow.hpp"
 #include "oops/method.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 // ciMethod
@@ -112,7 +112,7 @@ ciMethod::ciMethod(const methodHandle& h_m, ciInstanceKlass* holder) :
   // Get entry of accelerated call.
   _accel_call_entry = NativeAccelTable::find(h_m->klass_name(), h_m->name(),
                                              h_m->signature());
-#endif
+#endif // INCLUDE_AIEXT
 
   ciEnv *env = CURRENT_ENV;
   if (env->jvmti_can_hotswap_or_post_breakpoint()) {
@@ -186,7 +186,7 @@ ciMethod::ciMethod(ciInstanceKlass* holder,
   _inline_instructions_size(-1),
 #if INCLUDE_AIEXT
   _accel_call_entry(nullptr),
-#endif
+#endif // INCLUDE_AIEXT
   _can_be_statically_bound(false),
   _can_omit_stack_trace(true),
   _liveness(               nullptr)

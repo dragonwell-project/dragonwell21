@@ -44,7 +44,7 @@ class InlineTree;
 class xmlStream;
 #if INCLUDE_AIEXT
 class AccelCallEntry;
-#endif
+#endif // INCLUDE_AIEXT
 
 // Whether profiling found an oop to be always, never or sometimes
 // null
@@ -91,7 +91,7 @@ class ciMethod : public ciMetadata {
 #if INCLUDE_AIEXT
   // Native acceleration.
   const AccelCallEntry* _accel_call_entry;
-#endif
+#endif // INCLUDE_AIEXT
 
   bool _uses_monitors;
   bool _balanced_monitors;
@@ -202,7 +202,7 @@ class ciMethod : public ciMetadata {
 #if INCLUDE_AIEXT
   // Native acceleration.
   const AccelCallEntry* accel_call_entry() const { check_is_loaded(); return _accel_call_entry; }
-#endif
+#endif // INCLUDE_AIEXT
 
   // Code size for inlining decisions.
   int code_size_for_inlining();

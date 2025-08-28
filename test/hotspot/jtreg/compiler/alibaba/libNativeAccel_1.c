@@ -26,7 +26,6 @@
 #include <stdio.h>
 
 #include "aiext.h"
-#include "naccel.h"
 
 // We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
 // to prevent the linker from hiding the functions in this library.
@@ -56,17 +55,17 @@ static void hello_double(double d) {
 }
 
 // For ([B)V static method.
-static void hello_bytes(const int8_t *chars, int32_t len) {
+static void hello_bytes(const int8_t* chars, int32_t len) {
   printf("Hello, I got %.*s (bytes)!\n", len, chars);
 }
 
 // For (Ljava/lang/Object;)V static method.
-static void hello_object(const void *obj) {
+static void hello_object(const void* obj) {
   printf("Hello, I got %p (object)!\n", obj);
 }
 
 // For (S)V method (with a `this` pointer).
-static void hello_short_method(const void *this, int16_t i) {
+static void hello_short_method(const void* this, int16_t i) {
   printf("Hello, I got %p (this) and %" PRId16 " (short)!\n", this, i);
 }
 
@@ -80,53 +79,64 @@ static double add_doubles(double a, double b) { return a + b; }
 
 // Adds two integer arrays, updates the first array in-place.
 // For ([I[I)V method.
-static void add_arrays(const void *this, int32_t *a, int32_t a_len, int32_t *b,
+static void add_arrays(const void* this, int32_t* a, int32_t a_len, int32_t* b,
                        int32_t b_len) {
   for (int i = 0; i < a_len && i < b_len; i++) {
     a[i] += b[i];
   }
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV *env) {
-  aiext_result_t res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+  aiext_result_t res;
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "()V", "hello", hello);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(I)V",
-      "hello_int", hello_int);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "(I)V", "hello_int",
+                                            hello_int);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(J)V",
-      "hello_long", hello_long);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "(J)V", "hello_long",
+                                            hello_long);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(F)V",
-      "hello_float", hello_float);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "(F)V", "hello_float",
+                                            hello_float);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(D)V",
-      "hello_double", hello_double);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "(D)V", "hello_double",
+                                            hello_double);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "([B)V",
-      "hello_bytes", hello_bytes);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "([B)V", "hello_bytes",
+                                            hello_bytes);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello",
-      "(Ljava/lang/Object;)V", "hello_object", hello_object);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "hello", "(Ljava/lang/Object;)V",
+                                            "hello_object", hello_object);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "(S)V",
-      "hello_short_method", hello_short_method);
+  res = env->register_native_accel_provider(
+      "TestNativeAcceleration$Launcher", "hello", "(S)V", "hello_short_method",
+      hello_short_method);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "(II)I",
-      "add_ints", add_ints);
+  res = env->register_native_accel_provider(
+      "TestNativeAcceleration$Launcher", "add", "(II)I", "add_ints", add_ints);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "(DD)D",
-      "add_doubles", add_doubles);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "add", "(DD)D", "add_doubles",
+                                            add_doubles);
   if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "add", "([I[I)V",
-      "add_arrays", add_arrays);
+  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
+                                            "add", "([I[I)V", "add_arrays",
+                                            add_arrays);
   return res;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_finalize(const AIEXT_ENV* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_finalize(const aiext_env_t* env) {
   printf("aiext_finalize\n");
   return AIEXT_OK;
 }

@@ -50,10 +50,10 @@
           "Allocate itable/vtable in NonProfiledHotCodeHeap")                  \
                                                                                \
   AIEXT_ONLY(product(bool, UseAIExtension, false,                              \
-          "Enable Alibaba Dragonwell AI Extension"))                           \
+                     "Enable Alibaba Dragonwell AI Extension"))                \
                                                                                \
   AIEXT_ONLY(product(ccstrlist, AIExtensionUnit, "",                           \
-          "Load external ai extension units"))                                 \
+                     "Load external AI-Extension units"))                      \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
 

@@ -25,7 +25,6 @@
 #include <stdlib.h>
 
 #include "aiext.h"
-#include "naccel.h"
 
 // We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
 // to prevent the linker from hiding the functions in this library.
@@ -36,21 +35,22 @@
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const AIEXT_ENV* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
   char buf[4096];
-  aiext_result_t result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
+  aiext_result_t result =
+      env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
   printf("result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
   if (result != AIEXT_OK) {
     return result;
   }
-  // shrink nonprofiledcodeheapsize
+  // Shrink `NonProfiledCodeHeapSize`.
   char* end_pos;
   jlong old_size = strtol(buf, &end_pos, 10);
-  snprintf(buf, sizeof(buf), "%ld", old_size-4096*20);  // reduce size 80k
+  snprintf(buf, sizeof(buf), "%ld", old_size - 4096 * 20);  // reduce size 80k
   result = env->set_jvm_flag("NonProfiledCodeHeapSize", buf);
   if (result != AIEXT_OK) {
     return result;
@@ -77,6 +77,7 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const AIEXT_ENV* env) {
     return result;
   }
 
-  result = env->register_native_accel_provider("TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
+  result = env->register_native_accel_provider(
+      "TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
   return result;
 }

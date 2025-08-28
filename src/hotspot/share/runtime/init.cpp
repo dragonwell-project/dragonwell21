@@ -32,9 +32,6 @@
 #include "interpreter/bytecodes.hpp"
 #include "logging/logAsyncWriter.hpp"
 #include "memory/universe.hpp"
-#if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
-#endif
 #include "prims/jvmtiExport.hpp"
 #include "prims/methodHandles.hpp"
 #include "prims/downcallLinker.hpp"
@@ -52,6 +49,9 @@
 #include "utilities/macros.hpp"
 #if INCLUDE_JVMCI
 #include "jvmci/jvmci.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 // Initialization done by VM thread in vm_init_globals()
@@ -206,7 +206,7 @@ void exit_globals() {
     if (UseAIExtension) {
       NativeAccelTable::destroy();
     }
-#endif
+#endif // INCLUDE_AIEXT
     ostream_exit();
 #ifdef LEAK_SANITIZER
     {

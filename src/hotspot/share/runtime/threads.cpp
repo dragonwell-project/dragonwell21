@@ -56,9 +56,6 @@
 #include "oops/klass.inline.hpp"
 #include "oops/oop.inline.hpp"
 #include "oops/symbol.hpp"
-#if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
-#endif
 #include "prims/jvmtiAgentList.hpp"
 #include "prims/jvm_misc.hpp"
 #include "runtime/arguments.hpp"
@@ -115,6 +112,9 @@
 #endif
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 // Initialization after module runtime initialization
@@ -467,7 +467,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   if (UseAIExtension && !NativeAccelTable::init()) {
     return JNI_EINVAL;
   }
-#endif
+#endif // INCLUDE_AIEXT
 
   // Final check of all ranges after ergonomics which may change values.
   if (!JVMFlagLimit::check_all_ranges()) {
@@ -818,12 +818,12 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   WatcherThread::run_all_tasks();
 
 #if INCLUDE_AIEXT
-  if (UseAIExtension) {
-    if( !NativeAccelTable::post_init()) {
-      return JNI_ERR;
-    }
+  if (UseAIExtension && !NativeAccelTable::post_init()) {
+    // Failed to perform post initialization for AI-Extension units,
+    // just exit VM.
+    vm_exit(1);
   }
-#endif
+#endif // INCLUDE_AIEXT
 
   create_vm_timer.end();
 #ifdef ASSERT

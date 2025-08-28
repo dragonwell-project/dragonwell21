@@ -27,55 +27,66 @@
 #include "oops/symbol.hpp"
 #include "opto/callGenerator.hpp"
 #include "utilities/growableArray.hpp"
+#include "utilities/macros.hpp"
+
+#if !INCLUDE_AIEXT
+#error "This file should not be included if `aiext` is not enabled"
+#endif // !INCLUDE_AIEXT
 
 class NativeAccelTable;
 
 // Entry for loaded native acceleration units.
 class NativeAccelUnit : public CHeapObj<mtCompiler> {
-friend NativeAccelTable;
-private:
-  // String parsed from argument option
-  // Feature name
-  const char* feature;
-  // Version string
-  const char* version;
-  // Optional parameter list
-  const char* param_list;
+ private:
+  friend NativeAccelTable;
+
+  // Strings parsed from argument option:
+  // Feature name.
+  const char* _feature;
+  // Version string.
+  const char* _version;
+  // Optional parameter list.
+  const char* _param_list;
+
   // Handle of the loaded native acceleration unit library.
-  void* handle;
+  void* _handle;
 
-public:
+ public:
   // Comparator for the native acceleration unit library entry.
-  static int compare(NativeAccelUnit* const& e1, NativeAccelUnit* const& e2);
+  static int compare(NativeAccelUnit* const& u1, NativeAccelUnit* const& u2);
 
-  // Parse argument option string to construct a unit
+  // Parses argument option string to construct a unit.
   static NativeAccelUnit* parse_from_option(const char* arg_option);
 
-  NativeAccelUnit(const char* f, const char* v, const char* p) : handle(nullptr) {
-    assert(f != nullptr && v != nullptr, "sanity");
-    feature = os::strdup(f);
-    version = os::strdup(v);
-    if (p != nullptr) {
-      param_list = os::strdup(p);
+  NativeAccelUnit(const char* feature, const char* version,
+                  const char* param_list)
+      : _handle(nullptr) {
+    assert(feature != nullptr && version != nullptr, "sanity");
+    _feature = os::strdup(feature);
+    _version = os::strdup(version);
+    if (param_list != nullptr) {
+      _param_list = os::strdup(param_list);
     }
   }
 
   ~NativeAccelUnit() {
-    os::free((void*)feature);
-    os::free((void*)version);
-    if (param_list != nullptr) {
-      os::free((void *) param_list);
+    os::free((void*)_feature);
+    os::free((void*)_version);
+    if (_param_list != nullptr) {
+      os::free((void*)_param_list);
     }
-    if (handle != nullptr) {
-      os::dll_unload(handle);
+    if (_handle != nullptr) {
+      os::dll_unload(_handle);
     }
   }
 
-  // Load the extension unit and verify before run
+  // Loads the extension unit and verify before run.
   bool load_and_verify();
 
-  // Print name of extension
-  void name(char* buf, size_t len) { snprintf(buf, len, "%s_%s", feature, version); }
+  // Prints name of extension to the given buffer.
+  void name(char* buf, size_t len) {
+    snprintf(buf, len, "%s_%s", _feature, _version);
+  }
 };
 
 // Entry for accelerated Java method calls.
@@ -134,26 +145,28 @@ class NativeAccelTable : public AllStatic {
   static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* _loaded_units;
 
  public:
-  // Loads ai extension units from parsed unit list, creates the acceleration table.
-  // Returns `false` on error.
+  // Loads AI-Extension units from parsed unit list, creates the acceleration
+  // table. Returns `false` on error.
   static bool init();
 
-  // AI Extension initialize work after Java VM init
+  // Initializes AI-Extension after Java VM initialization.
   static bool post_init();
 
-  // Add Native acceleration unit to list, used when match arguments
-  static void add_unit(NativeAccelUnit* unit);
+  // Adds the given native acceleration unit to table,
+  // used when matching arguments.
+  static bool add_unit(NativeAccelUnit* unit);
 
   // Deletes the acceleration table and frees all related resources.
   static void destroy();
 
-  // Utility helper to loads an AI-Ext unit library from the given path.
-  // Returns handle of loaded library, nullptr for failure
+  // Utility helper to load an AI-Extension unit library from the given path.
+  // Returns handle of loaded library, nullptr for failure.
   static void* load_unit(const char* path);
 
-  // Add a new acceleration entry into table
+  // Adds a new acceleration entry to table.
   static AccelCallEntry* add_entry(const char* klass, const char* method,
-                                   const char* signature, const char* native_func_name,
+                                   const char* signature,
+                                   const char* native_func_name,
                                    void* native_entry);
 
   // Finds the acceleration entry for a given method.

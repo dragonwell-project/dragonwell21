@@ -25,64 +25,72 @@
 #define _AIEXT_H_
 
 #include <stddef.h>
+
 #include "jni.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// Versions of AI-Extension.
 #define AIEXT_VERSION_1 0xBABA0001
-// The result of initializing native acceleration unit.
+
+// The result of initializing AI-Extension unit.
 typedef enum {
-  AIEXT_OK    = JNI_OK,
+  AIEXT_OK = JNI_OK,
   AIEXT_ERROR = JNI_ERR,
 } aiext_result_t;
 
+// AI-Extension unit handle, for identification of a unit.
 typedef unsigned long aiext_handle_t;
 #define INVALID_HANDLE (0xFFFFFFFFFFFFFFFF)
 
-// API for AI Extension unit
-struct AIEXT_ENV_ {
-  // Return vm version string
+// API for AI Extension units.
+typedef struct aiext_env {
+  // Returns JVM version string.
   aiext_result_t (*get_jvm_version)(char* buf, int buf_size);
 
-  // Return current aiext version
+  // Returns current AI-Extension version.
   jint (*get_aiext_version)();
 
-  // Find JVM flag and value, value is stored in value_buf,
-  aiext_result_t (*get_jvm_flag)(const char* flag_name, char* value_buf, int buf_size);
+  // Gets JVM flag by name, the value is stored in `value_buf`.
+  aiext_result_t (*get_jvm_flag)(const char* flag_name, char* value_buf,
+                                 int buf_size);
 
-  // Set JVM flag with new value string
+  // Sets JVM flag with new value string.
   aiext_result_t (*set_jvm_flag)(const char* flag_name, const char* value);
 
-  // Check if cpu feature is supported
+  // Returns `true` if the given CPU feature is supported.
   jboolean (*support_cpu_feature)(const char* feature);
 
-  // Register native accel function
-  aiext_result_t (*register_native_accel_provider)(const char* klass, const char* method, const char* sig, const char* native_func_name, void* native_entry);
+  // Registers native acceleration provider for specific Java method.
+  aiext_result_t (*register_native_accel_provider)(const char* klass,
+                                                   const char* method,
+                                                   const char* sig,
+                                                   const char* native_func_name,
+                                                   void* native_entry);
 
-  // Get field offset, return -1 for failure
-  jlong (*get_field_offset)(const char* klass, const char* method, const char* sig);
+  // Gets field offset in a Java class, returns `-1` on failure.
+  jlong (*get_field_offset)(const char* klass, const char* method,
+                            const char* sig);
 
-  // Get extension info (name, version, param_list)
-  aiext_result_t (*get_extension_info)(const aiext_handle_t handle, char* name_buf, int name_buf_size, char* version_info, int version_buf_size, char* param_list_buf, int param_list_buf_size);
+  // Gets unit info, including name, version and parameter list.
+  aiext_result_t (*get_unit_info)(const aiext_handle_t handle, char* name_buf,
+                                  int name_buf_size, char* version_info,
+                                  int version_buf_size, char* param_list_buf,
+                                  int param_list_buf_size);
+} aiext_env_t;
 
-  // Extension specific handle, stored after aiext_init
-  // aiext_handle_t handle;
-};
+// API provided by AI Extension, these will be invoked by JVM:
 
-typedef struct AIEXT_ENV_ AIEXT_ENV;
+// Initializes AI-Extension unit.
+typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env);
 
-// API provided by AI Extension, they are invoked by jvm
+// Initializes AI-Extension unit after JVM's initialization.
+typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env);
 
-// Initialize extension
-typedef aiext_result_t (*aiext_init_t)(const AIEXT_ENV* env);
-
-// Post init, invoked after jvm init
-typedef aiext_result_t (*aiext_post_init_t)(const AIEXT_ENV* env);
-
-// Destroy ai extension
-typedef aiext_result_t (*aiext_finalize_t)(const AIEXT_ENV* env);
+// Finalizes AI-Extension unit.
+typedef aiext_result_t (*aiext_finalize_t)(const aiext_env_t* env);
 
 #ifdef __cplusplus
 }  // extern "C"

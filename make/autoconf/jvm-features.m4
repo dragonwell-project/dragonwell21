@@ -56,7 +56,7 @@ m4_define(jvm_features_deprecated, m4_normalize(
 ))
 
 # Feature descriptions
-m4_define(jvm_feature_desc_aiext, [enable alibaba AI-Ext framework])
+m4_define(jvm_feature_desc_aiext, [enable alibaba AI-Extension framework])
 m4_define(jvm_feature_desc_cds, [enable class data sharing (CDS)])
 m4_define(jvm_feature_desc_compiler1, [enable hotspot compiler C1])
 m4_define(jvm_feature_desc_compiler2, [enable hotspot compiler C2])
@@ -233,7 +233,7 @@ AC_DEFUN([JVM_FEATURES_CHECK_AVAILABILITY],
 AC_DEFUN_ONCE([JVM_FEATURES_CHECK_AIEXT],
 [
   JVM_FEATURES_CHECK_AVAILABILITY(aiext, [
-    AC_MSG_CHECKING([if platform is supported by AIEXT])
+    AC_MSG_CHECKING([if platform is supported by AI-Extension])
     if test "x$OPENJDK_TARGET_OS" = xlinux; then
       if test "x$OPENJDK_TARGET_CPU" = "xx86_64" || \
          test "x$OPENJDK_TARGET_CPU" = "xaarch64"; then

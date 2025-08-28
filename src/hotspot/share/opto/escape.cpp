@@ -42,9 +42,9 @@
 #include "opto/rootnode.hpp"
 #include "utilities/macros.hpp"
 
-#ifdef ASSERT
+#if INCLUDE_AIEXT && defined(ASSERT)
 #include "opto/nativeAcceleration.hpp"
-#endif  // ASSERT
+#endif  // INCLUDE_AIEXT && defined(ASSERT)
 
 ConnectionGraph::ConnectionGraph(Compile * C, PhaseIterGVN *igvn, int invocation) :
   _nodes(C->comp_arena(), C->unique(), C->unique(), nullptr),
@@ -1165,7 +1165,7 @@ void ConnectionGraph::process_call_arguments(CallNode *call) {
                 BarrierSet::barrier_set()->barrier_set_c2()->is_gc_barrier_node(call) ||
 #if INCLUDE_AIEXT
                 NativeAccelTable::is_accel_native_call(call) ||
-#endif
+#endif // INCLUDE_AIEXT
                 (call->as_CallLeaf()->_name != nullptr &&
                  (strcmp(call->as_CallLeaf()->_name, "updateBytesCRC32") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "updateBytesCRC32C") == 0 ||

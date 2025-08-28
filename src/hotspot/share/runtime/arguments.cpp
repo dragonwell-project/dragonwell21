@@ -43,7 +43,6 @@
 #include "memory/allocation.inline.hpp"
 #include "oops/instanceKlass.hpp"
 #include "oops/oop.inline.hpp"
-#include "opto/nativeAcceleration.hpp"
 #include "prims/jvmtiAgentList.hpp"
 #include "prims/jvmtiExport.hpp"
 #include "runtime/arguments.hpp"
@@ -69,6 +68,9 @@
 #include "utilities/systemMemoryBarrier.hpp"
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 #include <limits>
@@ -2409,14 +2411,14 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
 #endif // !INCLUDE_JVMTI
 #if INCLUDE_AIEXT
     } else if (match_option(option, "-XX:AIExtensionUnit", &tail)) {
-      log_debug(arguments)("AI extension unit = %s", option->optionString);
+      log_debug(arguments)("AI-Extension unit: %s", option->optionString);
       NativeAccelUnit* unit = NativeAccelUnit::parse_from_option(tail);
       if (unit == nullptr) {
         jio_fprintf(defaultStream::error_stream(),
-                    "Invalid ai extension option: %s\n", option->optionString);
+                    "Invalid AI-Extension option: %s\n", option->optionString);
         return JNI_EINVAL;
-      } else {
-        NativeAccelTable::add_unit(unit);
+      } else if (!NativeAccelTable::add_unit(unit)) {
+        return JNI_EINVAL;
       }
 #endif // INCLUDE_AIEXT
     // --enable_preview

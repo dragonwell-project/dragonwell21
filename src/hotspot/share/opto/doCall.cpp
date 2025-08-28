@@ -35,7 +35,6 @@
 #include "opto/castnode.hpp"
 #include "opto/cfgnode.hpp"
 #include "opto/mulnode.hpp"
-#include "opto/nativeAcceleration.hpp"
 #include "opto/parse.hpp"
 #include "opto/rootnode.hpp"
 #include "opto/runtime.hpp"
@@ -45,6 +44,9 @@
 #include "utilities/macros.hpp"
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/nativeAcceleration.hpp"
 #endif
 
 void trace_type_profile(Compile* C, ciMethod *method, int depth, int bci, ciMethod *prof_method, ciKlass *prof_klass, int site_count, int receiver_count) {
@@ -129,7 +131,7 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
   if (callee->accel_call_entry() != nullptr) {
     return new AccelCallGenerator(callee, call_does_dispatch);
   }
-#endif
+#endif // INCLUDE_AIEXT
 
   // Special case the handling of certain common, profitable library
   // methods.  If these methods are replaced with specialized code,
