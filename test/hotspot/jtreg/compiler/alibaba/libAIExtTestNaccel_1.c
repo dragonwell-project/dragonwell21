@@ -91,13 +91,13 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
-#define REPLACE_WITH_NATIVE(k, m, s, fn, f)                    \
-  do {                                                         \
-    aiext_result_t res;                                        \
-    res = env->register_native_accel_provider(k, m, s, fn, f); \
-    if (res != AIEXT_OK) {                                     \
-      return res;                                              \
-    }                                                          \
+#define REPLACE_WITH_NATIVE(k, m, s, fn, f)              \
+  do {                                                   \
+    aiext_result_t res;                                  \
+    res = env->register_naccel_provider(k, m, s, fn, f); \
+    if (res != AIEXT_OK) {                               \
+      return res;                                        \
+    }                                                    \
   } while (0)
 
   REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "()V", "hello",

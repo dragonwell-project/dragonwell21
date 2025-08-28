@@ -64,11 +64,11 @@ typedef struct aiext_env {
   jboolean (*support_cpu_feature)(const char* feature);
 
   // Registers native acceleration provider for specific Java method.
-  aiext_result_t (*register_native_accel_provider)(const char* klass,
-                                                   const char* method,
-                                                   const char* sig,
-                                                   const char* native_func_name,
-                                                   void* native_entry);
+  aiext_result_t (*register_naccel_provider)(const char* klass,
+                                             const char* method,
+                                             const char* sig,
+                                             const char* native_func_name,
+                                             void* native_entry);
 
   // Gets field offset in a Java class, returns `-1` on failure.
   jlong (*get_field_offset)(const char* klass, const char* method,

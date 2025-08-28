@@ -225,9 +225,11 @@ jboolean aiext_support_cpu_feature(const char* feature) {
 }
 
 // Registers native acceleration provider for specific Java method.
-aiext_result_t aiext_register_native_accel_provider(
-    const char* klass, const char* method, const char* sig,
-    const char* native_func_name, void* native_entry) {
+aiext_result_t aiext_register_naccel_provider(const char* klass,
+                                              const char* method,
+                                              const char* sig,
+                                              const char* native_func_name,
+                                              void* native_entry) {
   AccelCallEntry* entry = NativeAccelTable::add_entry(
       klass, method, sig, native_func_name, native_entry);
   return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
@@ -252,7 +254,7 @@ aiext_result_t aiext_get_unit_info(const aiext_handle_t handle, char* name_buf,
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     aiext_get_jvm_version,     aiext_get_aiext_version,
     aiext_get_jvm_flag,        aiext_set_jvm_flag,
-    aiext_support_cpu_feature, aiext_register_native_accel_provider,
+    aiext_support_cpu_feature, aiext_register_naccel_provider,
     aiext_get_field_offset,    aiext_get_unit_info,
 };
 
