@@ -31,7 +31,7 @@
 
 #if !INCLUDE_AIEXT
 #error "This file should not be included if `aiext` is not enabled"
-#endif // !INCLUDE_AIEXT
+#endif  // !INCLUDE_AIEXT
 
 class NativeAccelTable;
 
@@ -50,6 +50,14 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
 
   // Handle of the loaded native acceleration unit library.
   void* _handle;
+
+  // Loads the extension unit and verify before run.
+  bool load_and_verify();
+
+  // Prints name of extension to the given buffer.
+  void name(char* buf, size_t len) {
+    snprintf(buf, len, "%s_%s", _feature, _version);
+  }
 
  public:
   // Comparator for the native acceleration unit library entry.
@@ -78,14 +86,6 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
     if (_handle != nullptr) {
       os::dll_unload(_handle);
     }
-  }
-
-  // Loads the extension unit and verify before run.
-  bool load_and_verify();
-
-  // Prints name of extension to the given buffer.
-  void name(char* buf, size_t len) {
-    snprintf(buf, len, "%s_%s", _feature, _version);
   }
 };
 
@@ -158,10 +158,6 @@ class NativeAccelTable : public AllStatic {
 
   // Deletes the acceleration table and frees all related resources.
   static void destroy();
-
-  // Utility helper to load an AI-Extension unit library from the given path.
-  // Returns handle of loaded library, nullptr for failure.
-  static void* load_unit(const char* path);
 
   // Adds a new acceleration entry to table.
   static AccelCallEntry* add_entry(const char* klass, const char* method,

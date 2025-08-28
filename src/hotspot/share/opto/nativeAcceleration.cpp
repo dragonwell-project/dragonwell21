@@ -172,6 +172,35 @@ NativeAccelUnit* NativeAccelUnit::parse_from_option(const char* arg_option) {
 #undef MAX_UNIT_COMPONENT_LEN
 #undef MAX_UNIT_PARAM_LIST_LEN
 
+// Utility helper to load an AI-Extension unit library from the given path.
+// Returns handle of loaded library, `nullptr` for failure.
+static void* load_unit(const char* path) {
+  // Try to load the library.
+  char ebuf[1024];
+  void* handle = os::dll_load(path, ebuf, sizeof(ebuf));
+  if (handle == nullptr) {
+    tty->print_cr("Error: Could not load AI-Extension unit `%s`", path);
+    tty->print_cr("Error: %s", ebuf);
+    return nullptr;
+  }
+
+  // Get the entry point.
+  aiext_init_t init = (aiext_init_t)os::dll_lookup(handle, "aiext_init");
+  if (init == nullptr) {
+    tty->print_cr(
+        "Error: Could not find `aiext_init` in AI-Extension unit `%s`", path);
+    return nullptr;
+  }
+
+  // Initialize the AI-Extension unit.
+  aiext_result_t result = init(&GLOBAL_AIEXT_ENV);
+  if (result != AIEXT_OK) {
+    tty->print_cr("Error: Could not initialize AI-Extension unit `%s`", path);
+    return nullptr;
+  }
+  return handle;
+}
+
 bool NativeAccelUnit::load_and_verify() {
   const char* java_home = Arguments::get_java_home();
 
@@ -207,12 +236,12 @@ bool NativeAccelUnit::load_and_verify() {
   size_t prefix_len = strlen(buf) - strlen(cpu_arch) - sizeof("_.so") + 1;
 
   // Try to load with `arch` in path.
-  void* lib_handle = NativeAccelTable::load_unit(buf);
+  void* lib_handle = load_unit(buf);
   if (lib_handle == nullptr) {
     // Try without `arch`.
     buf[prefix_len] = 0;
     strcat(buf, ".so");
-    lib_handle = NativeAccelTable::load_unit(buf);
+    lib_handle = load_unit(buf);
   }
   _handle = lib_handle;
 
@@ -245,33 +274,6 @@ int AccelCallEntry::compare(AccelCallEntry* const& e1,
          : e1->_signature < e2->_signature ? -1
          : e1->_signature > e2->_signature ? 1
                                            : 0;
-}
-
-void* NativeAccelTable::load_unit(const char* path) {
-  // Try to load the library.
-  char ebuf[1024];
-  void* handle = os::dll_load(path, ebuf, sizeof(ebuf));
-  if (handle == nullptr) {
-    tty->print_cr("Error: Could not load AI-Extension unit `%s`", path);
-    tty->print_cr("Error: %s", ebuf);
-    return nullptr;
-  }
-
-  // Get the entry point.
-  aiext_init_t init = (aiext_init_t)os::dll_lookup(handle, "aiext_init");
-  if (init == nullptr) {
-    tty->print_cr(
-        "Error: Could not find `aiext_init` in AI-Extension unit `%s`", path);
-    return nullptr;
-  }
-
-  // Initialize the AI-Extension unit.
-  aiext_result_t result = init(&GLOBAL_AIEXT_ENV);
-  if (result != AIEXT_OK) {
-    tty->print_cr("Error: Could not initialize AI-Extension unit `%s`", path);
-    return nullptr;
-  }
-  return handle;
 }
 
 bool NativeAccelTable::init() {
