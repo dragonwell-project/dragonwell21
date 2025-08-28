@@ -54,11 +54,6 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   // Loads the extension unit and verify before run.
   bool load_and_verify();
 
-  // Prints name of extension to the given buffer.
-  void name(char* buf, size_t len) {
-    snprintf(buf, len, "%s_%s", _feature, _version);
-  }
-
  public:
   // Comparator for the native acceleration unit library entry.
   static int compare(NativeAccelUnit* const& u1, NativeAccelUnit* const& u2);

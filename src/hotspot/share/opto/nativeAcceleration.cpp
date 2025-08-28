@@ -296,9 +296,8 @@ bool NativeAccelTable::init() {
   for (const auto& e : *_loaded_units) {
     if (!e->load_and_verify()) {
       ttyLocker ttyl;
-      char buf[200];
-      e->name(buf, sizeof(buf));
-      tty->print_cr("Error: failed to load AI-Extension unit `%s`", buf);
+      tty->print_cr("Error: failed to load AI-Extension unit `%s_%s`",
+                    e->_feature, e->_version);
       return false;
     };
   }
@@ -317,13 +316,11 @@ bool NativeAccelTable::post_init() {
           (aiext_post_init_t)os::dll_lookup(e->_handle, "aiext_post_init");
       if (post_init != nullptr) {
         aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV);
-        char ext_name[200];
-        e->name(ext_name, sizeof(ext_name));
         if (result != AIEXT_OK) {
           tty->print_cr(
               "Error: Could not initialize AI-Extension unit after JVM "
-              "initialization: `%s`",
-              ext_name);
+              "initialization: `%s_%s`",
+              e->_feature, e->_version);
           return false;
         }
       }
