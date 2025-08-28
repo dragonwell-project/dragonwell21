@@ -91,49 +91,40 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
-  aiext_result_t res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "()V", "hello", hello);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "(I)V", "hello_int",
-                                            hello_int);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "(J)V", "hello_long",
-                                            hello_long);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "(F)V", "hello_float",
-                                            hello_float);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "(D)V", "hello_double",
-                                            hello_double);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "([B)V", "hello_bytes",
-                                            hello_bytes);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "hello", "(Ljava/lang/Object;)V",
-                                            "hello_object", hello_object);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider(
-      "TestNativeAcceleration$Launcher", "hello", "(S)V", "hello_short_method",
-      hello_short_method);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider(
-      "TestNativeAcceleration$Launcher", "add", "(II)I", "add_ints", add_ints);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "add", "(DD)D", "add_doubles",
-                                            add_doubles);
-  if (res != AIEXT_OK) return res;
-  res = env->register_native_accel_provider("TestNativeAcceleration$Launcher",
-                                            "add", "([I[I)V", "add_arrays",
-                                            add_arrays);
-  return res;
+#define REPLACE_WITH_NATIVE(k, m, s, fn, f)                    \
+  do {                                                         \
+    aiext_result_t res;                                        \
+    res = env->register_native_accel_provider(k, m, s, fn, f); \
+    if (res != AIEXT_OK) {                                     \
+      return res;                                              \
+    }                                                          \
+  } while (0)
+
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "()V", "hello",
+                      hello);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(I)V", "hello_int",
+                      hello_int);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(J)V", "hello_long",
+                      hello_long);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(F)V",
+                      "hello_float", hello_float);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(D)V",
+                      "hello_double", hello_double);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "([B)V",
+                      "hello_bytes", hello_bytes);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello",
+                      "(Ljava/lang/Object;)V", "hello_object", hello_object);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(S)V",
+                      "hello_short_method", hello_short_method);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "(II)I", "add_ints",
+                      add_ints);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "(DD)D", "add_doubles",
+                      add_doubles);
+  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "([I[I)V",
+                      "add_arrays", add_arrays);
+
+#undef REPLACE_WITH_NATIVE
+  return AIEXT_OK;
 }
 
 JNIEXPORT aiext_result_t JNICALL aiext_finalize(const aiext_env_t* env) {

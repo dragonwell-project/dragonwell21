@@ -32,52 +32,48 @@
 // Note that all functions in the library have nothing to do with JNI.
 #include "jni_md.h"
 
-// For ()V static method.
-static void hello() { printf("Hello again from native library!\n"); }
-
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
-  return AIEXT_OK;
-}
-
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+  // Read flag `NonProfiledCodeHeapSize`.
   char buf[4096];
   aiext_result_t result =
       env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
-  printf("result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
+  printf("Result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
   if (result != AIEXT_OK) {
     return result;
   }
+
   // Shrink `NonProfiledCodeHeapSize`.
-  char* end_pos;
-  jlong old_size = strtol(buf, &end_pos, 10);
-  snprintf(buf, sizeof(buf), "%ld", old_size - 4096 * 20);  // reduce size 80k
+  long size = strtol(buf, NULL, 10);
+  size -= 4096 * 20;  // Reduce 80KB.
+  snprintf(buf, sizeof(buf), "%ld", size);
   result = env->set_jvm_flag("NonProfiledCodeHeapSize", buf);
   if (result != AIEXT_OK) {
     return result;
   }
-  // get size again
+
+  // Read again.
   result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
   if (result != AIEXT_OK) {
     return result;
   }
-  printf("result %d, NonProfiledCodeHeapSize=%s", result, buf);
+  printf("Result %d, NonProfiledCodeHeapSize=%s", result, buf);
+
+  // Check the new size.
+  long new_size = strtol(buf, NULL, 10);
+  return new_size == size ? AIEXT_OK : AIEXT_ERROR;
+}
+
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+  // Check CPU feature.
 #if defined(__x86_64__)
   const char* feature = "avx2";
 #elif defined(__aarch64__)
   const char* feature = "neon";
 #endif
   jboolean exist = env->support_cpu_feature(feature);
-  result = exist ? AIEXT_OK : AIEXT_ERROR;
-  if (result != AIEXT_OK) {
-    return result;
-  }
-  exist = env->support_cpu_feature("fake_feature");
-  result = exist ? AIEXT_ERROR : AIEXT_OK;
-  if (result != AIEXT_OK) {
-    return result;
-  }
+  printf("Support %s? %s\n", feature, exist ? "true" : "false");
 
-  result = env->register_native_accel_provider(
-      "TestNativeAcceleration$Launcher", "hello", "()V", "hello", hello);
-  return result;
+  // Check invalid CPU feature.
+  exist = env->support_cpu_feature("invalid feature");
+  return exist ? AIEXT_ERROR : AIEXT_OK;
 }

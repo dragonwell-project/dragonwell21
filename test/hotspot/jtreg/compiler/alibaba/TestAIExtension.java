@@ -22,13 +22,13 @@
  */
 
 /**
- * @test TestNativeAcceleration
+ * @test TestAIExtension
  * @summary Check that HotSpot can replace Java methods with user-provided native functions
  * @requires vm.compiler2.enabled
  * @library /test/lib /
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
- * @run main/native/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI TestNativeAcceleration
+ * @run main/native/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI TestAIExtension
  */
 
 import jdk.test.lib.process.OutputAnalyzer;
@@ -40,36 +40,43 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TestNativeAcceleration {
-    private static final String TEST_UNIT1 = "libNativeAccel_1";
-    private static final String TEST_UNIT2 = "libNativeAccel_2";
+public class TestAIExtension {
+    private static final String UNIT_NACCEL_1 = "libAIExtTestNaccel_1";
+    private static final String UNIT_NACCEL_2 = "libAIExtTestNaccel_2";
+    private static final String UNIT_NACCEL2_1 = "libAIExtTestNaccel2_1";
+    private static final String UNIT_ENVCALL_1 = "libAIExtTestEnvCall_1";
+
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 
     public static void main(String[] args) throws Exception {
         // These should work.
-        testUnitLoadOk();                                    // Just `-version`.
-        testUnitLoadOk("-XX:AIExtensionUnit=" + TEST_UNIT1); // A valid unit.
-        testUnitLoadOk("-XX:AIExtensionUnit=" + TEST_UNIT2); // A valid unit but no finalizer.
+        testUnitLoadOk();                                        // Just `-version`.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1);  // A valid unit.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_2);  // A valid unit but no finalizer.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_ENVCALL_1); // A valid unit including some env calls.
 
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=");
         testUnitParseError("-XX:AIExtensionUnit=?");
 
         // Duplicate units.
-        testUnitLoadError("-XX:AIExtensionUnit=" + TEST_UNIT1,
-                          "-XX:AIExtensionUnit=" + TEST_UNIT1)
+        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_1)
+            .shouldContain("Duplicate AI-Extension unit");
+        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_2)
             .shouldContain("Duplicate AI-Extension unit");
 
         // Duplicate entries in different units.
-        testUnitLoadError("-XX:AIExtensionUnit=" + TEST_UNIT1,
-                          "-XX:AIExtensionUnit=" + TEST_UNIT2)
+        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                          "-XX:AIExtensionUnit=" + UNIT_NACCEL2_1)
             .shouldContain("Duplicate native acceleration entry found for");
 
         // Some units are invalid.
-        testUnitParseError("-XX:AIExtensionUnit=" + TEST_UNIT1,
+        testUnitParseError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
                            "-XX:AIExtensionUnit=?");
         testUnitParseError("-XX:AIExtensionUnit=?",
-                           "-XX:AIExtensionUnit=" + TEST_UNIT1);
+                           "-XX:AIExtensionUnit=" + UNIT_NACCEL_1);
 
         // Test method compilation.
         testMethodCompile("hello").shouldContain("Hello from");
@@ -129,9 +136,9 @@ public class TestNativeAcceleration {
             "-XX:+UnlockDiagnosticVMOptions",
             "-XX:+WhiteBoxAPI",
             "-XX:-BackgroundCompilation",
-            // "-XX:CompileCommand=print,TestNativeAcceleration$Launcher::dispatch", // For debugging.
+            // "-XX:CompileCommand=print,TestAIExtension$Launcher::dispatch", // For debugging.
             "-XX:+UseAIExtension",
-            "-XX:AIExtensionUnit=" + TEST_UNIT1,
+            "-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
             Launcher.class.getName()
         ));
         args.addAll(List.of(testArgs));
