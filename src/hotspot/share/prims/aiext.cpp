@@ -34,7 +34,7 @@
 static jint CurrentVersion = AIEXT_VERSION_1;
 
 // Returns JVM version string.
-aiext_result_t aiext_get_jvm_version(char* buf, int buf_size) {
+static aiext_result_t aiext_get_jvm_version(char* buf, int buf_size) {
   if (buf == nullptr || buf_size <= 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
@@ -44,11 +44,11 @@ aiext_result_t aiext_get_jvm_version(char* buf, int buf_size) {
 }
 
 // Returns current AI-Extension version.
-jint aiext_get_aiext_version() { return CurrentVersion; }
+static jint aiext_get_aiext_version() { return CurrentVersion; }
 
 // Gets JVM flag by name, the value is stored in `value_buf`.
-aiext_result_t aiext_get_jvm_flag(const char* flag_name, char* value_buf,
-                                  int buf_size) {
+static aiext_result_t aiext_get_jvm_flag(const char* flag_name, char* value_buf,
+                                         int buf_size) {
   if (value_buf == nullptr || buf_size <= 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
@@ -97,7 +97,8 @@ aiext_result_t aiext_get_jvm_flag(const char* flag_name, char* value_buf,
 }
 
 // Sets JVM flag with new value string.
-aiext_result_t aiext_set_jvm_flag(const char* flag_name, const char* value) {
+static aiext_result_t aiext_set_jvm_flag(const char* flag_name,
+                                         const char* value) {
   JVMFlag* flag = JVMFlag::find_flag(flag_name);
   if (flag == nullptr || value == nullptr) {
     return AIEXT_ERROR;
@@ -209,7 +210,7 @@ aiext_result_t aiext_set_jvm_flag(const char* flag_name, const char* value) {
 }
 
 // Returns `true` if the given CPU feature is supported.
-jboolean aiext_support_cpu_feature(const char* feature) {
+static jboolean aiext_support_cpu_feature(const char* feature) {
   const char* cpu_feature = Abstract_VM_Version::features_string();
   log_debug(aiext)("cpu features:%s", cpu_feature);
   const char* loc = strstr(cpu_feature, feature);
@@ -225,41 +226,37 @@ jboolean aiext_support_cpu_feature(const char* feature) {
 }
 
 // Registers native acceleration provider for specific Java method.
-aiext_result_t aiext_register_naccel_provider(const char* klass,
-                                              const char* method,
-                                              const char* sig,
-                                              const char* native_func_name,
-                                              void* native_entry) {
+static aiext_result_t aiext_register_naccel_provider(
+    const char* klass, const char* method, const char* sig,
+    const char* native_func_name, void* native_entry) {
   AccelCallEntry* entry = NativeAccelTable::add_entry(
       klass, method, sig, native_func_name, native_entry);
   return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
 }
 
 // Gets field offset in a Java class, returns `-1` on failure.
-jlong aiext_get_field_offset(const char* klass, const char* method,
-                             const char* sig) {
+static jlong aiext_get_field_offset(const char* klass, const char* method,
+                                    const char* sig) {
   // Unimplemented
   return -1;
 }
 
 // Gets unit info, including name, version and parameter list.
-aiext_result_t aiext_get_unit_info(const aiext_handle_t handle, char* name_buf,
-                                   int name_buf_size, char* version_info,
-                                   int version_buf_size, char* param_list_buf,
-                                   int param_list_buf_size) {
+static aiext_result_t aiext_get_unit_info(const aiext_handle_t handle,
+                                          char* name_buf, int name_buf_size,
+                                          char* version_info,
+                                          int version_buf_size,
+                                          char* param_list_buf,
+                                          int param_list_buf_size) {
   // Unimplemented
   return AIEXT_ERROR;
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
-    aiext_get_jvm_version,
-    aiext_get_aiext_version,
-    aiext_get_jvm_flag,
-    aiext_set_jvm_flag,
-    aiext_support_cpu_feature,
-    aiext_register_naccel_provider,
-    aiext_get_field_offset,
-    aiext_get_unit_info,
+    aiext_get_jvm_version,     aiext_get_aiext_version,
+    aiext_get_jvm_flag,        aiext_set_jvm_flag,
+    aiext_support_cpu_feature, aiext_register_naccel_provider,
+    aiext_get_field_offset,    aiext_get_unit_info,
 };
 
 #endif  // INCLUDE_AIEXT

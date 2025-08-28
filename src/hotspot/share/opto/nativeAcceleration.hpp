@@ -38,7 +38,7 @@ class NativeAccelTable;
 // Entry for loaded native acceleration units.
 class NativeAccelUnit : public CHeapObj<mtCompiler> {
  private:
-  friend NativeAccelTable;
+  friend class NativeAccelTable;
 
   // Strings parsed from argument option:
   // Feature name.

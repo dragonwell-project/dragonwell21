@@ -64,8 +64,8 @@ int NativeAccelUnit::compare(NativeAccelUnit* const& u1,
 
 // Parses feature and version from the given string with the given length,
 // and stores them into the given buffers. Returns `false` on failure.
-bool parse_feature_and_version(const char* str, size_t str_len, char* feature,
-                               char* version) {
+static bool parse_feature_and_version(const char* str, size_t str_len,
+                                      char* feature, char* version) {
   // Find '_' in the string.
   const char* pos = strchr(str, '_');
   if (pos == nullptr) {
@@ -116,7 +116,7 @@ bool parse_feature_and_version(const char* str, size_t str_len, char* feature,
 
 // Parses the parameter list from the given string, and stores it
 // in the given buffer. Returns `false` on failure.
-bool parse_param_list(const char* str, char* param_list) {
+static bool parse_param_list(const char* str, char* param_list) {
   // Check length and copy to the buffer.
   if (strlen(str) > MAX_UNIT_PARAM_LIST_LEN) {
     return false;
