@@ -27,7 +27,6 @@
 #include "aiext.h"
 #include "oops/symbol.hpp"
 #include "opto/callGenerator.hpp"
-#include "utilities/growableArray.hpp"
 #include "utilities/macros.hpp"
 
 #if !INCLUDE_AIEXT
@@ -140,23 +139,6 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
 
 // The native acceleration table.
 class NativeAccelTable : public AllStatic {
- private:
-  // The acceleration table, which is sorted by the class name, method name and
-  // signature.
-  //
-  // The table is initialized during startup, and will never be modified, so it
-  // does not need to be protected by locks.
-  static GrowableArrayCHeap<AccelCallEntry*, mtCompiler>* _accel_table;
-
-  // Map for loaded AI-Extension unit.
-  //
-  // The Map is initialized during startup, and will never be modified, so it
-  // does not need to be protected by locks.
-  static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* _loaded_units;
-
-  // Adds the given native acceleration unit to table.
-  static bool add_unit(NativeAccelUnit* unit);
-
  public:
   // Loads AI-Extension units from parsed unit list.
   // Returns `false` on error.

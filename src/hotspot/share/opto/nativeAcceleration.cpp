@@ -36,18 +36,29 @@
 #include "opto/type.hpp"
 #include "runtime/arguments.hpp"
 #include "runtime/globals_extension.hpp"
+#include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
 #include "utilities/debug.hpp"
+#include "utilities/growableArray.hpp"
 #include "utilities/ostream.hpp"
 
 // Declared in `aiext.cpp`.
 extern const aiext_env_t GLOBAL_AIEXT_ENV;
 
-GrowableArrayCHeap<AccelCallEntry*, mtCompiler>*
-    NativeAccelTable::_accel_table = nullptr;
+// Map for loaded AI-Extension unit.
+//
+// This map is initialized during startup, and will never be modified, so it
+// does not need to be protected by locks.
+static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* loaded_units = nullptr;
 
-GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>*
-    NativeAccelTable::_loaded_units = nullptr;
+// The acceleration table, which is sorted by the class name, method name
+// and signature.
+//
+// This map should be locked properly when accessing it.
+static GrowableArrayCHeap<AccelCallEntry*, mtCompiler>* accel_table = nullptr;
+
+// Mutex for acceleration table.
+static Mutex* accel_table_lock = nullptr;
 
 int NativeAccelUnit::compare(NativeAccelUnit* const& u1,
                              NativeAccelUnit* const& u2) {
@@ -263,21 +274,6 @@ bool NativeAccelUnit::load() {
 #undef CPU_ARCH_LEN
 }
 
-bool NativeAccelTable::add_unit(NativeAccelUnit* unit) {
-  assert(_loaded_units != nullptr, "must be initialized");
-  bool found;
-  int index =
-      _loaded_units->find_sorted<NativeAccelUnit*, NativeAccelUnit::compare>(
-          unit, found);
-  if (found) {
-    tty->print_cr("Error: Duplicate AI-Extension unit `%s_%s`", unit->_feature,
-                  unit->_version);
-    return false;
-  }
-  _loaded_units->insert_before(index, unit);
-  return true;
-}
-
 int AccelCallEntry::compare(AccelCallEntry* const& e1,
                             AccelCallEntry* const& e2) {
   return e1->_klass < e2->_klass           ? -1
@@ -289,6 +285,22 @@ int AccelCallEntry::compare(AccelCallEntry* const& e1,
                                            : 0;
 }
 
+// Adds the given native acceleration unit to table.
+static bool add_unit(NativeAccelUnit* unit) {
+  assert(loaded_units != nullptr, "must be initialized");
+  bool found;
+  int index =
+      loaded_units->find_sorted<NativeAccelUnit*, NativeAccelUnit::compare>(
+          unit, found);
+  if (found) {
+    tty->print_cr("Error: Duplicate AI-Extension unit `%s_%s`", unit->feature(),
+                  unit->version());
+    return false;
+  }
+  loaded_units->insert_before(index, unit);
+  return true;
+}
+
 bool NativeAccelTable::init() {
   // Quit if AI extension is not enabled.
   if (!UseAIExtension) {
@@ -296,10 +308,12 @@ bool NativeAccelTable::init() {
   }
 
   // Create tables.
-  assert(_accel_table == nullptr && _loaded_units == nullptr,
+  // We can not initialize locks now, because mutex is initialized in
+  // `os::init_2`, which is called after this. Just leave them null.
+  assert(loaded_units == nullptr && accel_table == nullptr,
          "init should only be called once");
-  _accel_table = new GrowableArrayCHeap<AccelCallEntry*, mtCompiler>();
-  _loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+  loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+  accel_table = new GrowableArrayCHeap<AccelCallEntry*, mtCompiler>();
 
   // Parse AI-Extension units.
   char* args = os::strdup(AIExtensionUnit);
@@ -322,7 +336,7 @@ bool NativeAccelTable::init() {
     }
 
     // Add to the table.
-    if (!NativeAccelTable::add_unit(unit)) {
+    if (!add_unit(unit)) {
       delete unit;
       os::free(args);
       return false;
@@ -333,13 +347,13 @@ bool NativeAccelTable::init() {
   os::free(args);
 
   // Check if there are any units.
-  if (_loaded_units->is_empty()) {
+  if (loaded_units->is_empty()) {
     warning("AI-Extension unit is not provided in JVM arguments");
     return true;
   }
 
   // Load AI-Extension units.
-  for (const auto& e : *_loaded_units) {
+  for (const auto& e : *loaded_units) {
     if (!e->load()) {
       tty->print_cr("Error: Failed to load AI-Extension unit `%s_%s`",
                     e->_feature, e->_version);
@@ -354,22 +368,27 @@ bool NativeAccelTable::post_init() {
     return true;
   }
 
-  for (const auto& e : *_loaded_units) {
-    if (e->_handle != nullptr) {
-      // invoke aiext_post_init
-      aiext_post_init_t post_init =
-          (aiext_post_init_t)os::dll_lookup(e->_handle, "aiext_post_init");
-      if (post_init != nullptr) {
-        aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV);
-        if (result != AIEXT_OK) {
-          tty->print_cr(
-              "Error: Could not initialize AI-Extension unit after JVM "
-              "initialization: `%s_%s`",
-              e->_feature, e->_version);
-          return false;
-        }
+  // Create locks.
+  assert(accel_table_lock == nullptr, "post init should only be called once");
+  accel_table_lock =
+      new Mutex(Mutex::oopstorage - 1 /* Higher than tty is enough. */,
+                "Native acceleration table lock");
+
+  // Invoke post initialization.
+  for (const auto& e : *loaded_units) {
+    assert(e->_handle != nullptr, "handle should be set");
+    aiext_post_init_t post_init =
+        (aiext_post_init_t)os::dll_lookup(e->_handle, "aiext_post_init");
+    if (post_init != nullptr) {
+      aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV);
+      if (result != AIEXT_OK) {
+        tty->print_cr(
+            "Error: Could not initialize AI-Extension unit after JVM "
+            "initialization: `%s_%s`",
+            e->_feature, e->_version);
+        return false;
       }
-    };
+    }
   }
   return true;
 }
@@ -391,12 +410,15 @@ AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
   Symbol* method_sym = SymbolTable::new_permanent_symbol(method);
   Symbol* sig_sym = SymbolTable::new_permanent_symbol(signature);
 
+  // Lock the acceleration table.
+  MutexLocker ml(accel_table_lock, Mutex::_no_safepoint_check_flag);
+
   // Check if the entry presents.
   bool found;
   AccelCallEntry key(klass_sym, method_sym, sig_sym);
   int index =
-      _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
-          &key, found);
+      accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(&key,
+                                                                         found);
   if (found) {
     tty->print_cr(
         "Error: Duplicate native acceleration entry found for %s::%s%s", klass,
@@ -407,20 +429,27 @@ AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
   // Create entry and add to table.
   AccelCallEntry* entry = new AccelCallEntry(klass_sym, method_sym, sig_sym,
                                              native_func_name, native_entry);
-  _accel_table->insert_before(index, entry);
+  accel_table->insert_before(index, entry);
   return entry;
 }
 
 void NativeAccelTable::destroy() {
+  if (!UseAIExtension) {
+    return;
+  }
+
+  assert(loaded_units != nullptr && accel_table != nullptr &&
+             accel_table_lock != nullptr,
+         "should be initialized");
+
   // Close all loaded libraries and free related resources.
-  for (const auto& u : *_loaded_units) {
-    if (u->_handle != nullptr) {
-      // Call the finalize function if present.
-      aiext_finalize_t finalize =
-          (aiext_finalize_t)os::dll_lookup(u->_handle, "aiext_finalize");
-      if (finalize != nullptr) {
-        finalize(&GLOBAL_AIEXT_ENV);
-      }
+  for (const auto& u : *loaded_units) {
+    assert(u->_handle != nullptr, "handle should be set");
+    // Call the finalize function if present.
+    aiext_finalize_t finalize =
+        (aiext_finalize_t)os::dll_lookup(u->_handle, "aiext_finalize");
+    if (finalize != nullptr) {
+      finalize(&GLOBAL_AIEXT_ENV);
     }
 
     // Free the unit.
@@ -428,13 +457,14 @@ void NativeAccelTable::destroy() {
   }
 
   // Free entries.
-  for (const auto& e : *_accel_table) {
+  for (const auto& e : *accel_table) {
     delete e;
   }
 
-  // Delete tables.
-  delete _accel_table;
-  delete _loaded_units;
+  // Delete tables and locks.
+  delete loaded_units;
+  delete accel_table;
+  delete accel_table_lock;
 }
 
 const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
@@ -443,19 +473,22 @@ const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
     return nullptr;
   }
 
-  assert(_accel_table != nullptr, "must be initialized");
-  if (_accel_table->is_empty()) {
+  // Lock the acceleration table.
+  MutexLocker ml(accel_table_lock, Mutex::_no_safepoint_check_flag);
+
+  assert(accel_table != nullptr, "must be initialized");
+  if (accel_table->is_empty()) {
     return nullptr;
   }
 
   bool found;
   AccelCallEntry key(klass, method, signature);
   int index =
-      _accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(
-          &key, found);
+      accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(&key,
+                                                                         found);
 
   if (found) {
-    return _accel_table->at(index);
+    return accel_table->at(index);
   }
   return nullptr;
 }
@@ -466,8 +499,8 @@ bool NativeAccelTable::is_accel_native_call(CallNode* call) {
     return false;
   }
 
-  assert(_accel_table != nullptr, "must be initialized");
-  if (_accel_table->is_empty()) {
+  assert(accel_table != nullptr, "must be initialized");
+  if (accel_table->is_empty()) {
     return false;
   }
 
@@ -476,7 +509,7 @@ bool NativeAccelTable::is_accel_native_call(CallNode* call) {
     return false;
   }
 
-  for (const auto& e : *_accel_table) {
+  for (const auto& e : *accel_table) {
     if (strcmp(e->_native_func_name, cl->_name) == 0) {
       return true;
     }
@@ -490,8 +523,8 @@ const NativeAccelUnit* NativeAccelTable::find_unit(aiext_handle_t handle) {
     return nullptr;
   }
 
-  assert(_loaded_units != nullptr, "must be initialized");
-  for (const auto& u : *_loaded_units) {
+  assert(loaded_units != nullptr, "must be initialized");
+  for (const auto& u : *loaded_units) {
     if (u->_aiext_handle == handle) {
       return u;
     }
