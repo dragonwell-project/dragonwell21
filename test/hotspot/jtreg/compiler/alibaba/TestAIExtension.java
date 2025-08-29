@@ -51,12 +51,12 @@ public class TestAIExtension {
     public static void main(String[] args) throws Exception {
         // These should work.
         testUnitLoadOk();                                        // Just `-version`.
+        testUnitLoadOk("-XX:AIExtensionUnit=");                  // No units.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1);  // A valid unit.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_2);  // A valid unit but no finalizer.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_ENVCALL_1); // A valid unit including some env calls.
 
         // Invalid acceleration unit name.
-        testUnitParseError("-XX:AIExtensionUnit=");
         testUnitParseError("-XX:AIExtensionUnit=?");
 
         // Duplicate units.

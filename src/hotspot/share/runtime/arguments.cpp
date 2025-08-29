@@ -69,9 +69,6 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif
-#if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
-#endif
 
 #include <limits>
 
@@ -2409,18 +2406,6 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
         }
       }
 #endif // !INCLUDE_JVMTI
-#if INCLUDE_AIEXT
-    } else if (match_option(option, "-XX:AIExtensionUnit", &tail)) {
-      log_debug(arguments)("AI-Extension unit: %s", option->optionString);
-      NativeAccelUnit* unit = NativeAccelUnit::parse_from_option(tail);
-      if (unit == nullptr) {
-        jio_fprintf(defaultStream::error_stream(),
-                    "Invalid AI-Extension option: %s\n", option->optionString);
-        return JNI_EINVAL;
-      } else if (!NativeAccelTable::add_unit(unit)) {
-        return JNI_EINVAL;
-      }
-#endif // INCLUDE_AIEXT
     // --enable_preview
     } else if (match_option(option, "--enable-preview")) {
       set_enable_preview();

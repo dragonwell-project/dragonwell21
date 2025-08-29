@@ -35,7 +35,7 @@
 
 class NativeAccelTable;
 
-// Entry for loaded native acceleration units.
+// Entry for loaded AI-Extension units.
 class NativeAccelUnit : public CHeapObj<mtCompiler> {
  private:
   friend class NativeAccelTable;
@@ -48,18 +48,15 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   // Optional parameter list.
   const char* _param_list;
 
-  // Handle of the loaded native acceleration unit library.
+  // Handle of the loaded AI-Extension unit library.
   void* _handle;
 
-  // Loads the extension unit and verify before run.
-  bool load_and_verify();
-
- public:
-  // Comparator for the native acceleration unit library entry.
+  // Comparator for the AI-Extension unit library entry.
   static int compare(NativeAccelUnit* const& u1, NativeAccelUnit* const& u2);
 
-  // Parses argument option string to construct a unit.
-  static NativeAccelUnit* parse_from_option(const char* arg_option);
+  // Parses the given argument string to construct a unit.
+  // The returned unit should be properly deleted before the VM exits.
+  static NativeAccelUnit* parse_from_arg(const char* arg);
 
   NativeAccelUnit(const char* feature, const char* version,
                   const char* param_list)
@@ -72,6 +69,10 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
     }
   }
 
+  // Loads the extension unit.
+  bool load();
+
+ public:
   ~NativeAccelUnit() {
     os::free((void*)_feature);
     os::free((void*)_version);
@@ -89,14 +90,14 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
  private:
   friend class NativeAccelTable;
 
-  // Comparator for the acceleration table entry.
-  static int compare(AccelCallEntry* const& e1, AccelCallEntry* const& e2);
-
   Symbol* _klass;
   Symbol* _method;
   Symbol* _signature;
   const char* _native_func_name;
   void* _native_func;
+
+  // Comparator for the acceleration table entry.
+  static int compare(AccelCallEntry* const& e1, AccelCallEntry* const& e2);
 
   // For finding entries.
   AccelCallEntry(Symbol* klass, Symbol* method, Symbol* signature)
@@ -132,26 +133,24 @@ class NativeAccelTable : public AllStatic {
   // does not need to be protected by locks.
   static GrowableArrayCHeap<AccelCallEntry*, mtCompiler>* _accel_table;
 
-  // Map for storing path of loaded native acceleration unit libraries and their
-  // handles.
+  // Map for loaded AI-Extension unit.
   //
   // The Map is initialized during startup, and will never be modified, so it
   // does not need to be protected by locks.
   static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* _loaded_units;
 
+  // Adds the given native acceleration unit to table.
+  static bool add_unit(NativeAccelUnit* unit);
+
  public:
-  // Loads AI-Extension units from parsed unit list, creates the acceleration
-  // table. Returns `false` on error.
+  // Loads AI-Extension units from parsed unit list.
+  // Returns `false` on error.
   static bool init();
 
   // Initializes AI-Extension after Java VM initialization.
   static bool post_init();
 
-  // Adds the given native acceleration unit to table,
-  // used when matching arguments.
-  static bool add_unit(NativeAccelUnit* unit);
-
-  // Deletes the acceleration table and frees all related resources.
+  // Deletes tables and frees all related resources.
   static void destroy();
 
   // Adds a new acceleration entry to table.

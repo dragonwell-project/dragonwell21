@@ -48,8 +48,7 @@ GrowableArrayCHeap<AccelCallEntry*, mtCompiler>*
     NativeAccelTable::_accel_table = nullptr;
 
 GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>*
-    NativeAccelTable::_loaded_units =
-        new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+    NativeAccelTable::_loaded_units = nullptr;
 
 int NativeAccelUnit::compare(NativeAccelUnit* const& u1,
                              NativeAccelUnit* const& u2) {
@@ -142,22 +141,21 @@ static bool parse_param_list(const char* str, char* param_list) {
   return true;
 }
 
-NativeAccelUnit* NativeAccelUnit::parse_from_option(const char* arg_option) {
+NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
   // The argument option has pattern `feature_version?param1=val1:param2=val2`.
   char feature[MAX_UNIT_COMPONENT_LEN + 1];
   char version[MAX_UNIT_COMPONENT_LEN + 1];
   char param_list[MAX_UNIT_PARAM_LIST_LEN + 1];
 
-  const char* option = arg_option + 1;  // Ignore the leading '=' chararcter.
   const char* pos;
   bool has_param_list = false;
-  if ((pos = strchr(option, '?')) != nullptr) {
+  if ((pos = strchr(arg, '?')) != nullptr) {
     has_param_list = true;
-    if (!parse_feature_and_version(option, pos - option, feature, version)) {
+    if (!parse_feature_and_version(arg, pos - arg, feature, version)) {
       return nullptr;
     }
   } else {
-    if (!parse_feature_and_version(option, strlen(option), feature, version)) {
+    if (!parse_feature_and_version(arg, strlen(arg), feature, version)) {
       return nullptr;
     }
   }
@@ -207,39 +205,44 @@ static void* load_unit(const char* path, bool silent) {
   return handle;
 }
 
-bool NativeAccelUnit::load_and_verify() {
-  const char* java_home = Arguments::get_java_home();
+bool NativeAccelUnit::load() {
+#if defined(AMD64)
+#define CPU_ARCH "x86-64"
+#elif defined(AARCH64)
+#define CPU_ARCH "aarch64"
+#else
+#error "Support only x86_64 and AArch64"
+#endif
+#define CPU_ARCH_LEN (sizeof(CPU_ARCH) - 1)
 
-  // Only x86_64 and AArch64 are supported.
-  const char* cpu_arch = AMD64_ONLY("x86-64") AARCH64_ONLY("aarch64") "";
-  NOT_AMD64(NOT_AARCH64(ShouldNotReachHere();))
+  const char* java_home = Arguments::get_java_home();
 
   // Check for `DRAGONWELL_AIEXT_HOME`, used for testing purpose.
   size_t lib_path_len;
-  const char* alt_ext_path = ::getenv("DRAGONWELL_AIEXT_HOME");
-  if (alt_ext_path != nullptr) {
+  const char* aiext_home = ::getenv("DRAGONWELL_AIEXT_HOME");
+  if (aiext_home != nullptr) {
     // Library path: `$DRAGONWELL_AIEXT_HOME/feature_ver_arch.so`.
-    lib_path_len = strlen(alt_ext_path) + strlen(_feature) + strlen(_version) +
-                   strlen(cpu_arch) + sizeof("/__.so") - 1;
+    lib_path_len = strlen(aiext_home) + strlen(_feature) + strlen(_version) +
+                   CPU_ARCH_LEN + sizeof("/__.so") - 1;
   } else {
     // Library path: `$JAVA_HOME/lib/ai-ext/feature_ver_arch.so`.
     lib_path_len = strlen(java_home) + strlen(_feature) + strlen(_version) +
-                   strlen(cpu_arch) + sizeof("/lib/ai-ext/__.so") - 1;
+                   CPU_ARCH_LEN + sizeof("/lib/ai-ext/__.so") - 1;
   }
 
   // Construct library path.
   char* buf = (char*)os::malloc(lib_path_len + 1, mtCompiler);
   assert(buf != nullptr, "OOM on native malloc");
-  if (alt_ext_path != nullptr) {
-    snprintf(buf, lib_path_len + 1, "%s/%s_%s_%s.so", alt_ext_path, _feature,
-             _version, cpu_arch);
+  if (aiext_home != nullptr) {
+    snprintf(buf, lib_path_len + 1, "%s/%s_%s_%s.so", aiext_home, _feature,
+             _version, CPU_ARCH);
   } else {
     snprintf(buf, lib_path_len + 1, "%s/lib/ai-ext/%s_%s_%s.so", java_home,
-             _feature, _version, cpu_arch);
+             _feature, _version, CPU_ARCH);
   }
 
   // Length of library path not including the trailing `_arch.so`.
-  size_t prefix_len = strlen(buf) - strlen(cpu_arch) - sizeof("_.so") + 1;
+  size_t prefix_len = lib_path_len - CPU_ARCH_LEN - sizeof("_.so") + 1;
 
   // Try to load with `arch` in path.
   void* lib_handle = load_unit(buf, true);
@@ -254,6 +257,9 @@ bool NativeAccelUnit::load_and_verify() {
   // Free the buffer.
   os::free(buf);
   return lib_handle != nullptr;
+
+#undef CPU_ARCH
+#undef CPU_ARCH_LEN
 }
 
 bool NativeAccelTable::add_unit(NativeAccelUnit* unit) {
@@ -289,20 +295,52 @@ bool NativeAccelTable::init() {
   }
 
   // Create tables.
-  assert(_accel_table == nullptr, "init should only be called once");
+  assert(_accel_table == nullptr && _loaded_units == nullptr,
+         "init should only be called once");
   _accel_table = new GrowableArrayCHeap<AccelCallEntry*, mtCompiler>();
+  _loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
 
+  // Parse AI-Extension units.
+  char* args = os::strdup(AIExtensionUnit);
+  size_t args_len = strlen(args);
+  char* arg = args;
+  while (arg < args + args_len) {
+    // Find the next unit.
+    char* p = arg;
+    while (*p != '\n' && *p != '\0') {
+      ++p;
+    }
+    *p = '\0';
+
+    // Parse the current unit.
+    NativeAccelUnit* unit = NativeAccelUnit::parse_from_arg(arg);
+    if (unit == nullptr) {
+      tty->print_cr("Error: Invalid AI-Extension option: %s", arg);
+      os::free(args);
+      return false;
+    }
+
+    // Add to the table.
+    if (!NativeAccelTable::add_unit(unit)) {
+      delete unit;
+      os::free(args);
+      return false;
+    }
+
+    arg = p + 1;
+  }
+  os::free(args);
+
+  // Check if there are any units.
   if (_loaded_units->is_empty()) {
-    ttyLocker ttyl;
-    tty->print_cr(
-        "Warning: AI-Extension unit is not provided in JVM arguments.");
+    warning("AI-Extension unit is not provided in JVM arguments");
     return true;
   }
 
+  // Load AI-Extension units.
   for (const auto& e : *_loaded_units) {
-    if (!e->load_and_verify()) {
-      ttyLocker ttyl;
-      tty->print_cr("Error: failed to load AI-Extension unit `%s_%s`",
+    if (!e->load()) {
+      tty->print_cr("Error: Failed to load AI-Extension unit `%s_%s`",
                     e->_feature, e->_version);
       return false;
     };
@@ -384,7 +422,12 @@ void NativeAccelTable::destroy() {
       }
     }
 
-    // Free and unload.
+    // Free the unit.
+    delete e;
+  }
+
+  // Free entries.
+  for (const auto& e : *_accel_table) {
     delete e;
   }
 
