@@ -132,22 +132,6 @@ static aiext_result_t set_jvm_flag_ccstr(const char* name, const char* value) {
 
 #undef DEF_SET_JVM_FLAG
 
-// Returns `true` if the given CPU feature is supported.
-static int support_cpu_feature(const char* feature) {
-  const char* cpu_feature = Abstract_VM_Version::features_string();
-  log_debug(aiext)("cpu features:%s", cpu_feature);
-  const char* loc = strstr(cpu_feature, feature);
-  int result = 0;
-  if (loc != nullptr) {
-    // check if it is surrounded by space or is the last feature
-    if (*(loc - 1) == ' ' &&
-        (*(loc + strlen(feature)) == ',' || *(loc + strlen(feature)) == 0)) {
-      result = 1;
-    }
-  }
-  return result;
-}
-
 // Registers native acceleration provider for specific Java method.
 static aiext_result_t register_naccel_provider(const char* klass,
                                                const char* method,
@@ -197,7 +181,6 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     set_jvm_flag_size_t,
     set_jvm_flag_double,
     set_jvm_flag_ccstr,
-    support_cpu_feature,
     register_naccel_provider,
     get_field_offset,
     get_unit_info,

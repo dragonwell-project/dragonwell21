@@ -80,9 +80,6 @@ typedef struct aiext_env {
   DECL_SET_JVM_FLAG(ccstr, const char*);
 #undef DECL_SET_JVM_FLAG
 
-  // Returns non-zero if the given CPU feature is supported.
-  int (*support_cpu_feature)(const char* feature);
-
   // Registers native acceleration provider for specific Java method.
   aiext_result_t (*register_naccel_provider)(const char* klass,
                                              const char* method,

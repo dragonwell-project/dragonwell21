@@ -73,18 +73,3 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
   // Check the new size.
   return new_size == size ? AIEXT_OK : AIEXT_ERROR;
 }
-
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
-  // Check CPU feature.
-#if defined(__x86_64__)
-  const char* feature = "avx2";
-#elif defined(__aarch64__)
-  const char* feature = "neon";
-#endif
-  int exist = env->support_cpu_feature(feature);
-  printf("Support %s? %s\n", feature, exist ? "true" : "false");
-
-  // Check invalid CPU feature.
-  exist = env->support_cpu_feature("invalid feature");
-  return exist ? AIEXT_ERROR : AIEXT_OK;
-}
