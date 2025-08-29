@@ -135,13 +135,13 @@ static aiext_result_t set_jvm_flag_ccstr(const char* name, const char* value) {
 #undef DEF_SET_JVM_FLAG
 
 // Registers native acceleration provider for specific Java method.
-static aiext_result_t register_naccel_provider(const char* klass,
-                                               const char* method,
-                                               const char* sig,
-                                               const char* native_func_name,
-                                               void* native_entry) {
+static aiext_result_t register_naccel_provider(
+    const char* klass, const char* method, const char* sig,
+    const char* native_func_name, void* func_or_data,
+    aiext_naccel_provider_t provider) {
+  // TODO: support provider.
   AccelCallEntry* entry = NativeAccelTable::add_entry(
-      klass, method, sig, native_func_name, native_entry);
+      klass, method, sig, native_func_name, func_or_data);
   return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
 }
 

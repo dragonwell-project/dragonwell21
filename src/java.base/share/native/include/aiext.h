@@ -43,8 +43,26 @@ typedef enum {
 // AI-Extension unit handle, for identification of a unit.
 typedef uint64_t aiext_handle_t;
 
-// API for AI Extension units.
-typedef struct aiext_env {
+// APIs for AI-Extension units.
+typedef struct aiext_env aiext_env_t;
+
+// Initializes AI-Extension unit.
+typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env,
+                                       aiext_handle_t handle);
+
+// Initializes AI-Extension unit after JVM's initialization.
+typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env);
+
+// Finalizes AI-Extension unit.
+typedef aiext_result_t (*aiext_finalize_t)(const aiext_env_t* env);
+
+// Native acceleration provider.
+typedef void* (*aiext_naccel_provider_t)(const aiext_env_t* env,
+                                         const char* native_func_name,
+                                         void* data);
+
+// Definition of AI-Extension APIs.
+struct aiext_env {
   // Returns JVM version string.
   aiext_result_t (*get_jvm_version)(char* buf, size_t buf_size);
 
@@ -85,7 +103,8 @@ typedef struct aiext_env {
                                              const char* method,
                                              const char* sig,
                                              const char* native_func_name,
-                                             void* native_entry);
+                                             void* func_or_data,
+                                             aiext_naccel_provider_t provider);
 
   // Gets field offset in a Java class, returns `-1` on failure.
   int64_t (*get_field_offset)(const char* klass, const char* method,
@@ -97,19 +116,7 @@ typedef struct aiext_env {
                                   char* version_buf, size_t version_buf_size,
                                   char* param_list_buf,
                                   size_t param_list_buf_size);
-} aiext_env_t;
-
-// API provided by AI Extension, these will be invoked by JVM:
-
-// Initializes AI-Extension unit.
-typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env,
-                                       aiext_handle_t handle);
-
-// Initializes AI-Extension unit after JVM's initialization.
-typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env);
-
-// Finalizes AI-Extension unit.
-typedef aiext_result_t (*aiext_finalize_t)(const aiext_env_t* env);
+};
 
 #ifdef __cplusplus
 }  // extern "C"
