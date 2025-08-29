@@ -41,7 +41,7 @@ typedef enum {
 } aiext_result_t;
 
 // AI-Extension unit handle, for identification of a unit.
-typedef unsigned long aiext_handle_t;
+typedef uint64_t aiext_handle_t;
 
 // API for AI Extension units.
 typedef struct aiext_env {
@@ -91,17 +91,19 @@ typedef struct aiext_env {
   int64_t (*get_field_offset)(const char* klass, const char* method,
                               const char* sig);
 
-  // Gets unit info, including name, version and parameter list.
-  aiext_result_t (*get_unit_info)(const aiext_handle_t handle, char* name_buf,
-                                  size_t name_buf_size, char* version_info,
-                                  size_t version_buf_size, char* param_list_buf,
+  // Gets unit info, including feature name, version and parameter list.
+  aiext_result_t (*get_unit_info)(const aiext_handle_t handle,
+                                  char* feature_buf, size_t feature_buf_size,
+                                  char* version_buf, size_t version_buf_size,
+                                  char* param_list_buf,
                                   size_t param_list_buf_size);
 } aiext_env_t;
 
 // API provided by AI Extension, these will be invoked by JVM:
 
 // Initializes AI-Extension unit.
-typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env);
+typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env,
+                                       aiext_handle_t handle);
 
 // Initializes AI-Extension unit after JVM's initialization.
 typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env);

@@ -29,7 +29,8 @@
 // Note that all functions in the library have nothing to do with JNI.
 #include "jni_md.h"
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
+                                            aiext_handle_t handle) {
   // This just an empty unit.
   return AIEXT_OK;
 }

@@ -27,7 +27,6 @@
 
 #include <string.h>
 
-#include "aiext.h"
 #include "classfile/symbolTable.hpp"
 #include "logging/log.hpp"
 #include "memory/resourceArea.hpp"
@@ -145,12 +144,12 @@ NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
   // The argument option has pattern `feature_version?param1=val1:param2=val2`.
   char feature[MAX_UNIT_COMPONENT_LEN + 1];
   char version[MAX_UNIT_COMPONENT_LEN + 1];
-  char param_list[MAX_UNIT_PARAM_LIST_LEN + 1];
+  char param_list_buf[MAX_UNIT_PARAM_LIST_LEN + 1];
+  char* param_list = nullptr;
 
   const char* pos;
-  bool has_param_list = false;
   if ((pos = strchr(arg, '?')) != nullptr) {
-    has_param_list = true;
+    param_list = param_list_buf;
     if (!parse_feature_and_version(arg, pos - arg, feature, version)) {
       return nullptr;
     }
@@ -160,11 +159,12 @@ NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
     }
   }
 
-  if (has_param_list && !parse_param_list(pos + 1, param_list)) {
+  if (param_list != nullptr && !parse_param_list(pos + 1, param_list)) {
     return nullptr;
   }
 
-  return new NativeAccelUnit(feature, version, param_list);
+  static aiext_handle_t next_handle = 0;
+  return new NativeAccelUnit(feature, version, param_list, next_handle++);
 }
 
 #undef MAX_UNIT_COMPONENT_LEN
@@ -172,7 +172,8 @@ NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
 
 // Utility helper to load an AI-Extension unit library from the given path.
 // Returns handle of loaded library, `nullptr` for failure.
-static void* load_unit(const char* path, bool silent) {
+static void* load_unit(const char* path, aiext_handle_t aiext_handle,
+                       bool silent) {
   // Try to load the library.
   char ebuf[1024];
   void* handle = os::dll_load(path, ebuf, sizeof(ebuf));
@@ -195,7 +196,7 @@ static void* load_unit(const char* path, bool silent) {
   }
 
   // Initialize the AI-Extension unit.
-  aiext_result_t result = init(&GLOBAL_AIEXT_ENV);
+  aiext_result_t result = init(&GLOBAL_AIEXT_ENV, aiext_handle);
   if (result != AIEXT_OK) {
     if (!silent) {
       tty->print_cr("Error: Could not initialize AI-Extension unit `%s`", path);
@@ -245,12 +246,12 @@ bool NativeAccelUnit::load() {
   size_t prefix_len = lib_path_len - CPU_ARCH_LEN - sizeof("_.so") + 1;
 
   // Try to load with `arch` in path.
-  void* lib_handle = load_unit(buf, true);
+  void* lib_handle = load_unit(buf, _aiext_handle, true);
   if (lib_handle == nullptr) {
     // Try without `arch`.
     buf[prefix_len] = 0;
     strcat(buf, ".so");
-    lib_handle = load_unit(buf, false);
+    lib_handle = load_unit(buf, _aiext_handle, false);
   }
   _handle = lib_handle;
 
@@ -412,18 +413,18 @@ AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
 
 void NativeAccelTable::destroy() {
   // Close all loaded libraries and free related resources.
-  for (const auto& e : *_loaded_units) {
-    if (e->_handle != nullptr) {
+  for (const auto& u : *_loaded_units) {
+    if (u->_handle != nullptr) {
       // Call the finalize function if present.
       aiext_finalize_t finalize =
-          (aiext_finalize_t)os::dll_lookup(e->_handle, "aiext_finalize");
+          (aiext_finalize_t)os::dll_lookup(u->_handle, "aiext_finalize");
       if (finalize != nullptr) {
         finalize(&GLOBAL_AIEXT_ENV);
       }
     }
 
     // Free the unit.
-    delete e;
+    delete u;
   }
 
   // Free entries.
@@ -483,6 +484,20 @@ bool NativeAccelTable::is_accel_native_call(CallNode* call) {
   return false;
 }
 #endif  // ASSERT
+
+const NativeAccelUnit* NativeAccelTable::find_unit(aiext_handle_t handle) {
+  if (!UseAIExtension) {
+    return nullptr;
+  }
+
+  assert(_loaded_units != nullptr, "must be initialized");
+  for (const auto& u : *_loaded_units) {
+    if (u->_aiext_handle == handle) {
+      return u;
+    }
+  }
+  return nullptr;
+}
 
 // Fills the given type field(s) by the given CI type.
 static void fill_type_field(const Type**& field, ciType* type, bool is_arg,

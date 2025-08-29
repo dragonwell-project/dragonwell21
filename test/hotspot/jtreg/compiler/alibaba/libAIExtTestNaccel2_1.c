@@ -34,7 +34,8 @@
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
+                                            aiext_handle_t handle) {
   return AIEXT_OK;
 }
 

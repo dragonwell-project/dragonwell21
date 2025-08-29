@@ -95,7 +95,7 @@ static aiext_result_t get_jvm_flag_ccstr(const char* name, char* buf,
       log_info(aiext)("Flag %s not found or type mismatch", name);     \
       return AIEXT_ERROR;                                              \
     }                                                                  \
-    auto result =                                                      \
+    JVMFlag::Error result =                                            \
         JVMFlagAccess::set_##n(flag, &value, JVMFlagOrigin::INTERNAL); \
     return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;        \
   }
@@ -107,7 +107,8 @@ static aiext_result_t set_jvm_flag_bool(const char* name, int value) {
     return AIEXT_ERROR;
   }
   bool b = !!value;
-  auto result = JVMFlagAccess::set_bool(flag, &b, JVMFlagOrigin::INTERNAL);
+  JVMFlag::Error result =
+      JVMFlagAccess::set_bool(flag, &b, JVMFlagOrigin::INTERNAL);
   return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;
 }
 
@@ -126,7 +127,8 @@ static aiext_result_t set_jvm_flag_ccstr(const char* name, const char* value) {
     log_info(aiext)("Flag %s not found or type mismatch", name);
     return AIEXT_ERROR;
   }
-  auto result = JVMFlagAccess::set_ccstr(flag, &value, JVMFlagOrigin::INTERNAL);
+  JVMFlag::Error result =
+      JVMFlagAccess::set_ccstr(flag, &value, JVMFlagOrigin::INTERNAL);
   return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;
 }
 
@@ -146,18 +148,37 @@ static aiext_result_t register_naccel_provider(const char* klass,
 // Gets field offset in a Java class, returns `-1` on failure.
 static int64_t get_field_offset(const char* klass, const char* method,
                                 const char* sig) {
-  // Unimplemented
+  // Unimplemented.
   return -1;
 }
 
-// Gets unit info, including name, version and parameter list.
-static aiext_result_t get_unit_info(const aiext_handle_t handle, char* name_buf,
-                                    size_t name_buf_size, char* version_info,
-                                    size_t version_buf_size,
+// Gets unit info, including feature name, version and parameter list.
+static aiext_result_t get_unit_info(const aiext_handle_t handle,
+                                    char* feature_buf, size_t feature_buf_size,
+                                    char* version_buf, size_t version_buf_size,
                                     char* param_list_buf,
                                     size_t param_list_buf_size) {
-  // Unimplemented
-  return AIEXT_ERROR;
+  // Find the given unit.
+  const NativeAccelUnit* unit = NativeAccelTable::find_unit(handle);
+  if (unit == nullptr) {
+    return AIEXT_ERROR;
+  }
+
+  // Copy to buffers.
+  if (feature_buf != nullptr && feature_buf_size > 0) {
+    snprintf(feature_buf, feature_buf_size, "%s", unit->feature());
+  }
+  if (version_buf != nullptr && version_buf_size > 0) {
+    snprintf(version_buf, version_buf_size, "%s", unit->version());
+  }
+  if (param_list_buf != nullptr && param_list_buf_size > 0) {
+    const char* param_list = unit->param_list();
+    if (param_list == nullptr) {
+      param_list = "";
+    }
+    snprintf(param_list_buf, param_list_buf_size, "%s", param_list);
+  }
+  return AIEXT_OK;
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {

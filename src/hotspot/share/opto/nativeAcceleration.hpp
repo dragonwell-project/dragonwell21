@@ -24,6 +24,7 @@
 #ifndef SHARE_OPTO_NATIVEACCELERATION_HPP
 #define SHARE_OPTO_NATIVEACCELERATION_HPP
 
+#include "aiext.h"
 #include "oops/symbol.hpp"
 #include "opto/callGenerator.hpp"
 #include "utilities/growableArray.hpp"
@@ -51,6 +52,9 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   // Handle of the loaded AI-Extension unit library.
   void* _handle;
 
+  // Handle for identifying AI-Extension units.
+  aiext_handle_t _aiext_handle;
+
   // Comparator for the AI-Extension unit library entry.
   static int compare(NativeAccelUnit* const& u1, NativeAccelUnit* const& u2);
 
@@ -59,13 +63,15 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   static NativeAccelUnit* parse_from_arg(const char* arg);
 
   NativeAccelUnit(const char* feature, const char* version,
-                  const char* param_list)
-      : _handle(nullptr) {
+                  const char* param_list, aiext_handle_t aiext_handle)
+      : _handle(nullptr), _aiext_handle(aiext_handle) {
     assert(feature != nullptr && version != nullptr, "sanity");
     _feature = os::strdup(feature);
     _version = os::strdup(version);
     if (param_list != nullptr) {
       _param_list = os::strdup(param_list);
+    } else {
+      _param_list = nullptr;
     }
   }
 
@@ -83,6 +89,15 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
       os::dll_unload(_handle);
     }
   }
+
+  // Returns the feature name.
+  const char* feature() const { return _feature; }
+
+  // Returns the version string.
+  const char* version() const { return _version; }
+
+  // Returns the parameter list (optional, can be `nullptr`).
+  const char* param_list() const { return _param_list; }
 };
 
 // Entry for accelerated Java method calls.
@@ -167,6 +182,9 @@ class NativeAccelTable : public AllStatic {
   // Returns `true` if the given call is a accelerated native call.
   static bool is_accel_native_call(CallNode* call);
 #endif  // ASSERT
+
+  // Finds AI-Extension unit by handle.
+  static const NativeAccelUnit* find_unit(aiext_handle_t handle);
 };
 
 // Call generator for accelerated Java method calls.

@@ -86,7 +86,8 @@ static void add_arrays(const void* this, int32_t* a, int32_t a_len, int32_t* b,
   }
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
+                                            aiext_handle_t handle) {
   return AIEXT_OK;
 }
 

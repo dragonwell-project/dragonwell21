@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "aiext.h"
 
@@ -45,10 +46,26 @@
 #define NPCHS_FMT PRIdPTR
 #endif
 
-JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
+                                            aiext_handle_t handle) {
+  // Check feature name, version and parameter list.
+  char feature[32], version[32], param[32];
+  aiext_result_t result =
+      env->get_unit_info(handle, feature, sizeof(feature), version,
+                         sizeof(version), param, sizeof(param));
+  if (result != AIEXT_OK) {
+    return result;
+  }
+  printf("aiext_init: feature=%s, version=%s, param=%s\n", feature, version,
+         param);
+  if (strcmp(feature, "libAIExtTestEnvCall") != 0 ||
+      strcmp(version, "1") != 0 || param[0] != '\0') {
+    return AIEXT_ERROR;
+  }
+
   // Read flag `NonProfiledCodeHeapSize`.
   NPCHS_TYPE size;
-  aiext_result_t result = env->GET_NPCHS("NonProfiledCodeHeapSize", &size);
+  result = env->GET_NPCHS("NonProfiledCodeHeapSize", &size);
   printf("Result %d, NonProfiledCodeHeapSize=%" NPCHS_FMT "\n", result, size);
   if (result != AIEXT_OK) {
     return result;
