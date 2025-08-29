@@ -42,7 +42,6 @@ typedef enum {
 
 // AI-Extension unit handle, for identification of a unit.
 typedef unsigned long aiext_handle_t;
-#define INVALID_HANDLE (0xffffffffffffffff)
 
 // API for AI Extension units.
 typedef struct aiext_env {
@@ -52,12 +51,34 @@ typedef struct aiext_env {
   // Returns current AI-Extension version.
   int (*get_aiext_version)();
 
-  // Gets JVM flag by name, the value is stored in `value_buf`.
-  aiext_result_t (*get_jvm_flag)(const char* flag_name, char* value_buf,
-                                 size_t buf_size);
+  // Gets JVM flag by name.
+#define DECL_GET_JVM_FLAG(n, t) \
+  aiext_result_t (*get_jvm_flag_##n)(const char* name, t* value)
+  DECL_GET_JVM_FLAG(bool, int);
+  DECL_GET_JVM_FLAG(int, int);
+  DECL_GET_JVM_FLAG(uint, unsigned int);
+  DECL_GET_JVM_FLAG(intx, intptr_t);
+  DECL_GET_JVM_FLAG(uintx, uintptr_t);
+  DECL_GET_JVM_FLAG(uint64_t, uint64_t);
+  DECL_GET_JVM_FLAG(size_t, size_t);
+  DECL_GET_JVM_FLAG(double, double);
+  aiext_result_t (*get_jvm_flag_ccstr)(const char* name, char* buf,
+                                       size_t buf_size);
+#undef DECL_GET_JVM_FLAG
 
-  // Sets JVM flag with new value string.
-  aiext_result_t (*set_jvm_flag)(const char* flag_name, const char* value);
+  // Sets JVM flag with new value.
+#define DECL_SET_JVM_FLAG(n, t) \
+  aiext_result_t (*set_jvm_flag_##n)(const char* name, t value)
+  DECL_SET_JVM_FLAG(bool, int);
+  DECL_SET_JVM_FLAG(int, int);
+  DECL_SET_JVM_FLAG(uint, unsigned int);
+  DECL_SET_JVM_FLAG(intx, intptr_t);
+  DECL_SET_JVM_FLAG(uintx, uintptr_t);
+  DECL_SET_JVM_FLAG(uint64_t, uint64_t);
+  DECL_SET_JVM_FLAG(size_t, size_t);
+  DECL_SET_JVM_FLAG(double, double);
+  DECL_SET_JVM_FLAG(ccstr, const char*);
+#undef DECL_SET_JVM_FLAG
 
   // Returns non-zero if the given CPU feature is supported.
   int (*support_cpu_feature)(const char* feature);

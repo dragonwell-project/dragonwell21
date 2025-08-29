@@ -21,6 +21,7 @@
  * questions.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,34 +33,44 @@
 // Note that all functions in the library have nothing to do with JNI.
 #include "jni_md.h"
 
+#if defined(__x86_64__)
+#define GET_NPCHS get_jvm_flag_uintx
+#define SET_NPCHS set_jvm_flag_uintx
+#define NPCHS_TYPE uintptr_t
+#define NPCHS_FMT PRIuPTR
+#elif defined(__aarch64__)
+#define GET_NPCHS get_jvm_flag_intx
+#define SET_NPCHS set_jvm_flag_intx
+#define NPCHS_TYPE intptr_t
+#define NPCHS_FMT PRIdPTR
+#endif
+
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env) {
   // Read flag `NonProfiledCodeHeapSize`.
-  char buf[4096];
-  aiext_result_t result =
-      env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
-  printf("Result %d, NonProfiledCodeHeapSize=%s\n", result, buf);
+  NPCHS_TYPE size;
+  aiext_result_t result = env->GET_NPCHS("NonProfiledCodeHeapSize", &size);
+  printf("Result %d, NonProfiledCodeHeapSize=%" NPCHS_FMT "\n", result, size);
   if (result != AIEXT_OK) {
     return result;
   }
 
   // Shrink `NonProfiledCodeHeapSize`.
-  long size = strtol(buf, NULL, 10);
-  size -= 4096 * 20;  // Reduce 80KB.
-  snprintf(buf, sizeof(buf), "%ld", size);
-  result = env->set_jvm_flag("NonProfiledCodeHeapSize", buf);
+  size -= 4096 * 20;
+  result = env->SET_NPCHS("NonProfiledCodeHeapSize", size);
   if (result != AIEXT_OK) {
     return result;
   }
 
   // Read again.
-  result = env->get_jvm_flag("NonProfiledCodeHeapSize", buf, sizeof(buf));
+  NPCHS_TYPE new_size;
+  result = env->GET_NPCHS("NonProfiledCodeHeapSize", &new_size);
   if (result != AIEXT_OK) {
     return result;
   }
-  printf("Result %d, NonProfiledCodeHeapSize=%s", result, buf);
+  printf("Result %d, NonProfiledCodeHeapSize=%" NPCHS_FMT "\n", result,
+         new_size);
 
   // Check the new size.
-  long new_size = strtol(buf, NULL, 10);
   return new_size == size ? AIEXT_OK : AIEXT_ERROR;
 }
 

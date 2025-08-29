@@ -34,8 +34,8 @@
 static int CurrentVersion = AIEXT_VERSION_1;
 
 // Returns JVM version string.
-static aiext_result_t aiext_get_jvm_version(char* buf, size_t buf_size) {
-  if (buf == nullptr || buf_size <= 0) {
+static aiext_result_t get_jvm_version(char* buf, size_t buf_size) {
+  if (buf == nullptr || buf_size == 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
   }
@@ -44,173 +44,96 @@ static aiext_result_t aiext_get_jvm_version(char* buf, size_t buf_size) {
 }
 
 // Returns current AI-Extension version.
-static int aiext_get_aiext_version() { return CurrentVersion; }
+static int get_aiext_version() { return CurrentVersion; }
 
-// Gets JVM flag by name, the value is stored in `value_buf`.
-static aiext_result_t aiext_get_jvm_flag(const char* flag_name, char* value_buf,
+#define DEF_GET_JVM_FLAG(n, t)                                         \
+  static aiext_result_t get_jvm_flag_##n(const char* name, t* value) { \
+    JVMFlag* flag = JVMFlag::find_flag(name);                          \
+    if (flag == nullptr || flag->type() != JVMFlag::TYPE_##n) {        \
+      log_info(aiext)("Flag %s not found or type mismatch", name);     \
+      return AIEXT_ERROR;                                              \
+    }                                                                  \
+    if (value == nullptr) {                                            \
+      log_info(aiext)("Invalid value pointer");                        \
+      return AIEXT_ERROR;                                              \
+    }                                                                  \
+    *value = flag->get_##n();                                          \
+    return AIEXT_OK;                                                   \
+  }
+
+DEF_GET_JVM_FLAG(bool, int)
+DEF_GET_JVM_FLAG(int, int)
+DEF_GET_JVM_FLAG(uint, unsigned int)
+DEF_GET_JVM_FLAG(intx, intptr_t)
+DEF_GET_JVM_FLAG(uintx, uintptr_t)
+DEF_GET_JVM_FLAG(uint64_t, uint64_t)
+DEF_GET_JVM_FLAG(size_t, size_t)
+DEF_GET_JVM_FLAG(double, double)
+
+static aiext_result_t get_jvm_flag_ccstr(const char* name, char* buf,
                                          size_t buf_size) {
-  if (value_buf == nullptr || buf_size <= 0) {
+  JVMFlag* flag = JVMFlag::find_flag(name);
+  if (flag == nullptr || (flag->type() != JVMFlag::TYPE_ccstr &&
+                          flag->type() != JVMFlag::TYPE_ccstrlist)) {
+    log_info(aiext)("Flag %s not found or type mismatch", name);
+    return AIEXT_ERROR;
+  }
+  if (buf == nullptr || buf_size == 0) {
     log_info(aiext)("No output buffer for return value");
     return AIEXT_ERROR;
   }
-  JVMFlag* flag = JVMFlag::find_flag(flag_name);
-  if (flag == nullptr) {
-    return AIEXT_ERROR;
-  }
-  switch ((JVMFlag::FlagType)flag->type()) {
-    case JVMFlag::TYPE_bool:
-      snprintf(value_buf, buf_size, "%s", flag->get_bool() ? "true" : "false");
-      break;
-    case JVMFlag::TYPE_int:
-      snprintf(value_buf, buf_size, INT32_FORMAT, flag->get_int());
-      break;
-    case JVMFlag::TYPE_uint:
-      snprintf(value_buf, buf_size, UINT32_FORMAT, flag->get_uint());
-      break;
-    case JVMFlag::TYPE_intx:
-      snprintf(value_buf, buf_size, INTX_FORMAT, flag->get_intx());
-      break;
-    case JVMFlag::TYPE_uintx:
-      snprintf(value_buf, buf_size, UINTX_FORMAT, flag->get_uintx());
-      break;
-    case JVMFlag::TYPE_uint64_t:
-      snprintf(value_buf, buf_size, UINTX_FORMAT, flag->get_uint64_t());
-      break;
-    case JVMFlag::TYPE_size_t:
-      snprintf(value_buf, buf_size, SIZE_FORMAT, flag->get_size_t());
-      break;
-    case JVMFlag::TYPE_double:
-      snprintf(value_buf, buf_size, "%.04f", flag->get_double());
-      break;
-    case JVMFlag::TYPE_ccstr:
-      snprintf(value_buf, buf_size, "%s", flag->get_ccstr());
-      break;
-    case JVMFlag::TYPE_ccstrlist:
-      // ccstrlist is seperated by '\n'
-      snprintf(value_buf, buf_size, "%s", flag->get_ccstr());
-      break;
-    default:
-      ShouldNotReachHere();
-      return AIEXT_ERROR;
-  }
+  snprintf(buf, buf_size, "%s", flag->get_ccstr());
   return AIEXT_OK;
 }
 
-// Sets JVM flag with new value string.
-static aiext_result_t aiext_set_jvm_flag(const char* flag_name,
-                                         const char* value) {
-  JVMFlag* flag = JVMFlag::find_flag(flag_name);
-  if (flag == nullptr || value == nullptr) {
-    return AIEXT_ERROR;
+#undef DEF_GET_JVM_FLAG
+
+#define DEF_SET_JVM_FLAG(n, t)                                         \
+  static aiext_result_t set_jvm_flag_##n(const char* name, t value) {  \
+    JVMFlag* flag = JVMFlag::find_flag(name);                          \
+    if (flag == nullptr || flag->type() != JVMFlag::TYPE_##n) {        \
+      log_info(aiext)("Flag %s not found or type mismatch", name);     \
+      return AIEXT_ERROR;                                              \
+    }                                                                  \
+    auto result =                                                      \
+        JVMFlagAccess::set_##n(flag, &value, JVMFlagOrigin::INTERNAL); \
+    return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;        \
   }
 
-  JVMFlag::Error result = JVMFlag::ERR_OTHER;
-  switch ((JVMFlag::FlagType)flag->type()) {
-    case JVMFlag::TYPE_bool: {
-      bool new_value = true;
-      if (strcmp(value, "true") == 0) {
-        new_value = true;
-      } else if (strcmp(value, "false") == 0) {
-        new_value = false;
-      } else {
-        log_error(aiext)("Not a valid boolean value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_bool(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_int: {
-      int new_value;
-      int read = sscanf(value, INT32_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid int value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_int(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_uint: {
-      uint new_value;
-      int read = sscanf(value, UINT32_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid uint value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_uint(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_intx: {
-      intx new_value;
-      int read = sscanf(value, INTX_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid intx value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_intx(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_uintx: {
-      uintx new_value;
-      int read = sscanf(value, UINTX_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid uintx value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_uintx(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_uint64_t: {
-      uint64_t new_value;
-      int read = sscanf(value, UINT64_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid uint64 value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result = JVMFlagAccess::set_uint64_t(flag, &new_value,
-                                           JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_size_t: {
-      size_t new_value;
-      int read = sscanf(value, SIZE_FORMAT, &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid size_t value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_size_t(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_double: {
-      double new_value;
-      int read = sscanf(value, "%lg", &new_value);
-      if (read != 1) {
-        log_error(aiext)("Not a valid double value : %s", value);
-        return AIEXT_ERROR;
-      }
-      result =
-          JVMFlagAccess::set_double(flag, &new_value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    case JVMFlag::TYPE_ccstr:
-    case JVMFlag::TYPE_ccstrlist: {
-      result = JVMFlagAccess::set_ccstr(flag, &value, JVMFlagOrigin::INTERNAL);
-      break;
-    }
-    default:
-      ShouldNotReachHere();
-      return AIEXT_ERROR;
+static aiext_result_t set_jvm_flag_bool(const char* name, int value) {
+  JVMFlag* flag = JVMFlag::find_flag(name);
+  if (flag == nullptr || flag->type() != JVMFlag::TYPE_bool) {
+    log_info(aiext)("Flag %s not found or type mismatch", name);
+    return AIEXT_ERROR;
   }
+  bool b = !!value;
+  auto result = JVMFlagAccess::set_bool(flag, &b, JVMFlagOrigin::INTERNAL);
   return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;
 }
 
+DEF_SET_JVM_FLAG(int, int)
+DEF_SET_JVM_FLAG(uint, unsigned int)
+DEF_SET_JVM_FLAG(intx, intptr_t)
+DEF_SET_JVM_FLAG(uintx, uintptr_t)
+DEF_SET_JVM_FLAG(uint64_t, uint64_t)
+DEF_SET_JVM_FLAG(size_t, size_t)
+DEF_SET_JVM_FLAG(double, double)
+
+static aiext_result_t set_jvm_flag_ccstr(const char* name, const char* value) {
+  JVMFlag* flag = JVMFlag::find_flag(name);
+  if (flag == nullptr || (flag->type() != JVMFlag::TYPE_ccstr &&
+                          flag->type() != JVMFlag::TYPE_ccstrlist)) {
+    log_info(aiext)("Flag %s not found or type mismatch", name);
+    return AIEXT_ERROR;
+  }
+  auto result = JVMFlagAccess::set_ccstr(flag, &value, JVMFlagOrigin::INTERNAL);
+  return result == JVMFlag::SUCCESS ? AIEXT_OK : AIEXT_ERROR;
+}
+
+#undef DEF_SET_JVM_FLAG
+
 // Returns `true` if the given CPU feature is supported.
-static int aiext_support_cpu_feature(const char* feature) {
+static int support_cpu_feature(const char* feature) {
   const char* cpu_feature = Abstract_VM_Version::features_string();
   log_debug(aiext)("cpu features:%s", cpu_feature);
   const char* loc = strstr(cpu_feature, feature);
@@ -226,41 +149,58 @@ static int aiext_support_cpu_feature(const char* feature) {
 }
 
 // Registers native acceleration provider for specific Java method.
-static aiext_result_t aiext_register_naccel_provider(
-    const char* klass, const char* method, const char* sig,
-    const char* native_func_name, void* native_entry) {
+static aiext_result_t register_naccel_provider(const char* klass,
+                                               const char* method,
+                                               const char* sig,
+                                               const char* native_func_name,
+                                               void* native_entry) {
   AccelCallEntry* entry = NativeAccelTable::add_entry(
       klass, method, sig, native_func_name, native_entry);
   return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
 }
 
 // Gets field offset in a Java class, returns `-1` on failure.
-static int64_t aiext_get_field_offset(const char* klass, const char* method,
-                                      const char* sig) {
+static int64_t get_field_offset(const char* klass, const char* method,
+                                const char* sig) {
   // Unimplemented
   return -1;
 }
 
 // Gets unit info, including name, version and parameter list.
-static aiext_result_t aiext_get_unit_info(const aiext_handle_t handle,
-                                          char* name_buf, size_t name_buf_size,
-                                          char* version_info,
-                                          size_t version_buf_size,
-                                          char* param_list_buf,
-                                          size_t param_list_buf_size) {
+static aiext_result_t get_unit_info(const aiext_handle_t handle, char* name_buf,
+                                    size_t name_buf_size, char* version_info,
+                                    size_t version_buf_size,
+                                    char* param_list_buf,
+                                    size_t param_list_buf_size) {
   // Unimplemented
   return AIEXT_ERROR;
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
-    aiext_get_jvm_version,
-    aiext_get_aiext_version,
-    aiext_get_jvm_flag,
-    aiext_set_jvm_flag,
-    aiext_support_cpu_feature,
-    aiext_register_naccel_provider,
-    aiext_get_field_offset,
-    aiext_get_unit_info,
+    get_jvm_version,
+    get_aiext_version,
+    get_jvm_flag_bool,
+    get_jvm_flag_int,
+    get_jvm_flag_uint,
+    get_jvm_flag_intx,
+    get_jvm_flag_uintx,
+    get_jvm_flag_uint64_t,
+    get_jvm_flag_size_t,
+    get_jvm_flag_double,
+    get_jvm_flag_ccstr,
+    set_jvm_flag_bool,
+    set_jvm_flag_int,
+    set_jvm_flag_uint,
+    set_jvm_flag_intx,
+    set_jvm_flag_uintx,
+    set_jvm_flag_uint64_t,
+    set_jvm_flag_size_t,
+    set_jvm_flag_double,
+    set_jvm_flag_ccstr,
+    support_cpu_feature,
+    register_naccel_provider,
+    get_field_offset,
+    get_unit_info,
 };
 
 #endif  // INCLUDE_AIEXT
