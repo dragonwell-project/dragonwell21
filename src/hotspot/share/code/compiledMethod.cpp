@@ -52,9 +52,9 @@
 
 CompiledMethod::CompiledMethod(Method* method, const char* name, CompilerType type, int size,
                                int header_size, CodeBuffer* cb, int frame_complete_offset, int frame_size,
-                               OopMapSet* oop_maps, bool caller_must_gc_arguments)
+                               OopMapSet* oop_maps, bool caller_must_gc_arguments, int mutable_data_size)
   : CodeBlob(name, CodeBlobKind::Nmethod, type, cb, size, header_size,
-             frame_complete_offset, frame_size, oop_maps, caller_must_gc_arguments),
+             frame_complete_offset, frame_size, oop_maps, caller_must_gc_arguments, mutable_data_size),
     _deoptimization_status(not_marked),
     _deoptimization_generation(0),
     _method(method),
