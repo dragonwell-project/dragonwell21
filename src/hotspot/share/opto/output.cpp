@@ -3353,6 +3353,7 @@ void PhaseOutput::install_code(ciMethod*         target,
                                      has_unsafe_access,
                                      SharedRuntime::is_wide_vector(C->max_vector_size()),
                                      C->has_monitors(),
+                                     C->alloc_in_non_profiled_hot_code_heap(),
                                      0,
                                      C->rtm_state());
 

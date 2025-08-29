@@ -39,6 +39,7 @@
 #include "oops/oop.inline.hpp"
 #include "prims/forte.hpp"
 #include "prims/jvmtiExport.hpp"
+#include "runtime/globals_extension.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/javaFrameAnchor.hpp"
@@ -336,7 +337,13 @@ void* VtableBlob::operator new(size_t s, unsigned size) throw() {
   // this context as we hold the CompiledICLocker. So we just don't handle code
   // cache exhaustion here; we leave that for a later allocation that does not
   // hold the CompiledICLocker.
-  return CodeCache::allocate(size, CodeBlobType::NonNMethod, false /* handle_alloc_failure */);
+  CodeBlobType code_blob_type;
+  if (AllocIVtableStubInNonProfiledHotCodeHeap && NonProfiledHotCodeHeapSize) {
+    code_blob_type = CodeBlobType::MethodHotNonProfiled;
+  } else {
+    code_blob_type = CodeBlobType::NonNMethod;
+  }
+  return CodeCache::allocate(size, code_blob_type, false /* handle_alloc_failure */);
 }
 
 VtableBlob::VtableBlob(const char* name, int size) :
@@ -367,6 +374,8 @@ VtableBlob* VtableBlob::create(const char* name, int buffer_size) {
       return nullptr;
     }
     blob = new (size) VtableBlob(name, size);
+    // Logging NonProfiledHotCodeHeap activities
+    CodeCache::trace_non_profiled_hot_code_heap_activities(tty, "Allocate", blob, size);
     CodeCache_lock->unlock();
   }
   // Track memory usage statistic after releasing CodeCache_lock

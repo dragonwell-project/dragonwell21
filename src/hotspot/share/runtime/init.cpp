@@ -50,6 +50,9 @@
 #if INCLUDE_JVMCI
 #include "jvmci/jvmci.hpp"
 #endif
+#ifdef COMPILER2
+#include "opto/nativeAcceleration.hpp"
+#endif // COMPILER2
 
 // Initialization done by VM thread in vm_init_globals()
 void check_ThreadShadow();
@@ -143,6 +146,13 @@ jint init_globals() {
   InterfaceSupport_init();
   VMRegImpl::set_regName();  // need this before generate_stubs (for printing oop maps).
   SharedRuntime::generate_stubs();
+
+#ifdef COMPILER2
+  if (!NativeAccelTable::init()) {
+    return JNI_EINVAL;
+  }
+#endif // COMPILER2
+
   return JNI_OK;
 }
 
@@ -198,6 +208,9 @@ void exit_globals() {
       SymbolTable::dump(tty);
       StringTable::dump(tty);
     }
+#ifdef COMPILER2
+    NativeAccelTable::destroy();
+#endif // COMPILER2
     ostream_exit();
 #ifdef LEAK_SANITIZER
     {

@@ -34,6 +34,7 @@
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
  * @run main/othervm -Xbootclasspath/a:. -Xmixed -XX:+UnlockDiagnosticVMOptions
+ *                   -XX:NonProfiledHotCodeHeapSize=0
  *                   -XX:+WhiteBoxAPI -XX:-UseCounterDecay
  *                   -XX:CompileCommand=compileonly,compiler.whitebox.SimpleTestCaseHelper::*
  *                   compiler.whitebox.GetNMethodTest

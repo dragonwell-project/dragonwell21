@@ -38,6 +38,23 @@
                                                                                \
   product(bool, ReplaceLLMemBarWithLoadAcquire, false,                         \
           "Replace LoadLoad membar with load-acquire")                         \
+                                                                               \
+  product(bool, UseNativeAcceleration, false,                                  \
+          "Accelerate typical workloads by replacing critical Java methods "   \
+          "with native implementations. Currently supports Elasticsearch")     \
+                                                                               \
+  product(ccstrlist, NativeAccelerationUnit, "", EXPERIMENTAL,                 \
+          "Load additional native acceleration units")                         \
+                                                                               \
+  product(bool, TraceNonProfiledHotCodeHeapActivities, false, DIAGNOSTIC,      \
+          "Trace activities of NonProfiledHotCodeHeap")                        \
+                                                                               \
+  product(uintx, NonProfiledHotCodeHeapSize, 0,                                \
+          "Size of hot code heap with non-profiled methods (in bytes)")        \
+          range(0, max_uintx)                                                  \
+                                                                               \
+  product(bool, AllocIVtableStubInNonProfiledHotCodeHeap, false,               \
+          "Allocate itable/vtable in NonProfiledHotCodeHeap")                  \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
 

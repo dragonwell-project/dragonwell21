@@ -544,6 +544,7 @@ nmethod* nmethod::new_native_nmethod(const methodHandle& method,
   OopMapSet* oop_maps,
   int exception_handler) {
   code_buffer->finalize_oop_references(method);
+
   // create nmethod
   nmethod* nm = nullptr;
   int native_nmethod_size = CodeBlob::allocation_size(code_buffer, sizeof(nmethod));
@@ -594,7 +595,8 @@ nmethod* nmethod::new_nmethod(const methodHandle& method,
   ExceptionHandlerTable* handler_table,
   ImplicitExceptionTable* nul_chk_table,
   AbstractCompiler* compiler,
-  CompLevel comp_level
+  CompLevel comp_level,
+  bool alloc_in_non_profiled_hot_code_heap
 #if INCLUDE_JVMCI
   , char* speculations,
   int speculations_len,
@@ -634,7 +636,9 @@ nmethod* nmethod::new_nmethod(const methodHandle& method,
   {
     MutexLocker mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
 
-    nm = new (nmethod_size, comp_level)
+    CodeBlobType code_blob_type = CodeCache::get_code_blob_type(method, comp_level, alloc_in_non_profiled_hot_code_heap);
+
+    nm = new (nmethod_size, code_blob_type)
     nmethod(method(), compiler->type(), nmethod_size, immutable_data_size, mutable_data_size,
             compile_id, entry_bci, immutable_data, offsets, orig_pc_offset,
             debug_info, dependencies, code_buffer, frame_size, oop_maps,
@@ -670,6 +674,9 @@ nmethod* nmethod::new_nmethod(const methodHandle& method,
         }
       }
       NOT_PRODUCT(if (nm != nullptr)  note_java_nmethod(nm));
+
+      // Logging NonProfiledHotCodeHeap activities
+      CodeCache::trace_non_profiled_hot_code_heap_activities(tty, "Allocate", nm, nmethod_size);
     }
   }
   // Do verification and logging outside CodeCache_lock.
@@ -847,8 +854,8 @@ nmethod::nmethod(
   }
 }
 
-void* nmethod::operator new(size_t size, int nmethod_size, int comp_level) throw () {
-  return CodeCache::allocate(nmethod_size, CodeCache::get_code_blob_type(comp_level));
+void* nmethod::operator new(size_t size, int nmethod_size, CodeBlobType code_blob_type) throw () {
+  return CodeCache::allocate(nmethod_size, code_blob_type);
 }
 
 void* nmethod::operator new(size_t size, int nmethod_size, bool allow_NonNMethod_space) throw () {

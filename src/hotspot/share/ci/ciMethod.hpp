@@ -42,6 +42,7 @@ class Arena;
 class BCEscapeAnalyzer;
 class InlineTree;
 class xmlStream;
+class AccelCallEntry;
 
 // Whether profiling found an oop to be always, never or sometimes
 // null
@@ -84,6 +85,9 @@ class ciMethod : public ciMetadata {
   int _interpreter_throwout_count;
   int _inline_instructions_size;
   int _size_of_parameters;
+
+  // Native acceleration.
+  const AccelCallEntry* _accel_call_entry;
 
   bool _uses_monitors;
   bool _balanced_monitors;
@@ -190,6 +194,9 @@ class ciMethod : public ciMetadata {
   int interpreter_invocation_count() const       { check_is_loaded(); return _interpreter_invocation_count; }
   int interpreter_throwout_count() const         { check_is_loaded(); return _interpreter_throwout_count; }
   int size_of_parameters() const                 { check_is_loaded(); return _size_of_parameters; }
+
+  // Native acceleration.
+  const AccelCallEntry* accel_call_entry() const { check_is_loaded(); return _accel_call_entry; }
 
   // Code size for inlining decisions.
   int code_size_for_inlining();
