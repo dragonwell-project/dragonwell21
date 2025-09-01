@@ -203,9 +203,7 @@ void exit_globals() {
       StringTable::dump(tty);
     }
 #if INCLUDE_AIEXT
-    if (UseAIExtension) {
-      NativeAccelTable::destroy();
-    }
+    NativeAccelTable::destroy();
 #endif // INCLUDE_AIEXT
     ostream_exit();
 #ifdef LEAK_SANITIZER

@@ -464,7 +464,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   if (ergo_result != JNI_OK) return ergo_result;
 
 #if INCLUDE_AIEXT
-  if (UseAIExtension && !NativeAccelTable::init()) {
+  if (!NativeAccelTable::init()) {
     return JNI_EINVAL;
   }
 #endif // INCLUDE_AIEXT
@@ -818,7 +818,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   WatcherThread::run_all_tasks();
 
 #if INCLUDE_AIEXT
-  if (UseAIExtension && !NativeAccelTable::post_init()) {
+  if (!NativeAccelTable::post_init()) {
     // Failed to perform post initialization for AI-Extension units,
     // just exit VM.
     vm_exit(1);
