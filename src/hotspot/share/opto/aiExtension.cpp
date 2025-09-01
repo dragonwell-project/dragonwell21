@@ -284,6 +284,14 @@ int AccelCallEntry::compare(AccelCallEntry* const& e1,
                                            : 0;
 }
 
+void* AccelCallEntry::get_native_func() const {
+  if (_provider == nullptr) {
+    return _func_or_data;
+  } else {
+    return _provider(&GLOBAL_AIEXT_ENV, _native_func_name, _func_or_data);
+  }
+}
+
 // Adds the given native acceleration unit to table.
 static bool add_unit(AIExtUnit* unit) {
   assert(loaded_units != nullptr, "must be initialized");
@@ -391,15 +399,14 @@ bool AIExt::post_init() {
   return true;
 }
 
-AccelCallEntry* AIExt::add_entry(const char* klass, const char* method,
-                                 const char* signature,
-                                 const char* native_func_name,
-                                 void* native_entry) {
+bool AIExt::add_entry(const char* klass, const char* method,
+                      const char* signature, const char* native_func_name,
+                      void* func_or_data, aiext_naccel_provider_t provider) {
   if (klass == nullptr || method == nullptr || signature == nullptr ||
       native_func_name == nullptr || native_func_name[0] == '\0' ||
-      native_entry == nullptr) {
+      (func_or_data == nullptr && provider == nullptr)) {
     log_error(aiext)("Invalid entry information");
-    return nullptr;
+    return false;
   }
 
   // Create symbols.
@@ -420,14 +427,14 @@ AccelCallEntry* AIExt::add_entry(const char* klass, const char* method,
     tty->print_cr(
         "Error: Duplicate native acceleration entry found for %s::%s%s", klass,
         method, signature);
-    return nullptr;
+    return false;
   }
 
   // Create entry and add to table.
-  AccelCallEntry* entry = new AccelCallEntry(klass_sym, method_sym, sig_sym,
-                                             native_func_name, native_entry);
+  AccelCallEntry* entry = new AccelCallEntry(
+      klass_sym, method_sym, sig_sym, native_func_name, func_or_data, provider);
   accel_table->insert_before(index, entry);
-  return entry;
+  return true;
 }
 
 void AIExt::destroy() {
@@ -627,7 +634,7 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   const TypeFunc* func_type = TypeFunc::make(args_tuple, ret_tuple);
 
   // Create call node.
-  void* native_func = callee->accel_call_entry()->native_func();
+  void* native_func = callee->accel_call_entry()->get_native_func();
   const char* name = callee->accel_call_entry()->native_func_name();
   CallNode* call;
   if (has_fp_type) {

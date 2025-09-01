@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2025 Alibaba Group Holding Limited. All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -18,7 +19,6 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- *
  */
 
 #if INCLUDE_AIEXT
@@ -139,10 +139,9 @@ static aiext_result_t register_naccel_provider(
     const char* klass, const char* method, const char* sig,
     const char* native_func_name, void* func_or_data,
     aiext_naccel_provider_t provider) {
-  // TODO: support provider.
-  AccelCallEntry* entry =
-      AIExt::add_entry(klass, method, sig, native_func_name, func_or_data);
-  return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
+  bool result = AIExt::add_entry(klass, method, sig, native_func_name,
+                                 func_or_data, provider);
+  return result ? AIEXT_OK : AIEXT_ERROR;
 }
 
 // Gets field offset in a Java class, returns `-1` on failure.

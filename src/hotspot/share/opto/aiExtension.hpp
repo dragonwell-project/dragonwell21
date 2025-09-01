@@ -108,7 +108,8 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
   Symbol* _method;
   Symbol* _signature;
   const char* _native_func_name;
-  void* _native_func;
+  void* _func_or_data;
+  aiext_naccel_provider_t _provider;
 
   // Comparator for the acceleration table entry.
   static int compare(AccelCallEntry* const& e1, AccelCallEntry* const& e2);
@@ -119,22 +120,26 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
         _method(method),
         _signature(signature),
         _native_func_name(nullptr),
-        _native_func(nullptr) {}
+        _func_or_data(nullptr),
+        _provider(nullptr) {}
 
   AccelCallEntry(Symbol* klass, Symbol* method, Symbol* signature,
-                 const char* native_func_name, void* native_func)
+                 const char* native_func_name, void* func_or_data,
+                 aiext_naccel_provider_t provider)
       : _klass(klass),
         _method(method),
         _signature(signature),
         _native_func_name(native_func_name),
-        _native_func(native_func) {}
+        _func_or_data(func_or_data),
+        _provider(provider) {}
 
  public:
+  // Returns the native function pointer.
+  // This method may call the provider function.
+  void* get_native_func() const;
+
   // Returns the native function name.
   const char* native_func_name() const { return _native_func_name; }
-
-  // Returns the native function pointer.
-  void* native_func() const { return _native_func; }
 };
 
 // The AI-Extension feature.
@@ -151,10 +156,9 @@ class AIExt : public AllStatic {
   static void destroy();
 
   // Adds a new acceleration entry to table.
-  static AccelCallEntry* add_entry(const char* klass, const char* method,
-                                   const char* signature,
-                                   const char* native_func_name,
-                                   void* native_entry);
+  static bool add_entry(const char* klass, const char* method,
+                        const char* signature, const char* native_func_name,
+                        void* func_or_data, aiext_naccel_provider_t provider);
 
   // Finds the acceleration entry for a given method.
   static const AccelCallEntry* find(Symbol* klass, Symbol* method,
