@@ -21,7 +21,7 @@
  * questions.
  */
 
-#if INCLUDE_AIEXT
+#if defined(INCLUDE_AIEXT) && INCLUDE_AIEXT
 
 #include "aiext.h"
 
@@ -206,4 +206,4 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     get_unit_info,
 };
 
-#endif  // INCLUDE_AIEXT
+#endif  // defined(INCLUDE_AIEXT) && INCLUDE_AIEXT

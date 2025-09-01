@@ -56,7 +56,7 @@ m4_define(jvm_features_deprecated, m4_normalize(
 ))
 
 # Feature descriptions
-m4_define(jvm_feature_desc_aiext, [enable alibaba AI-Extension framework])
+m4_define(jvm_feature_desc_aiext, [enable Alibaba AI-Extension framework])
 m4_define(jvm_feature_desc_cds, [enable class data sharing (CDS)])
 m4_define(jvm_feature_desc_compiler1, [enable hotspot compiler C1])
 m4_define(jvm_feature_desc_compiler2, [enable hotspot compiler C2])
