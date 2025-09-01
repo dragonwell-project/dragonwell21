@@ -24,7 +24,7 @@
 /**
  * @test TestAIExtension
  * @summary Check that HotSpot can replace Java methods with user-provided native functions
- * @requires vm.compiler2.enabled
+ * @requires vm.aiext
  * @library /test/lib /
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
