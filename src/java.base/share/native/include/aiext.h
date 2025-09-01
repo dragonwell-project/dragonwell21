@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "jni.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,9 @@ struct aiext_env {
                                   char* version_buf, size_t version_buf_size,
                                   char* param_list_buf,
                                   size_t param_list_buf_size);
+
+  // Get JNI interface
+  JNIEnv* (*get_jni_env)();
 };
 
 #ifdef __cplusplus

@@ -45,6 +45,7 @@ public class TestAIExtension {
     private static final String UNIT_NACCEL_2 = "libAIExtTestNaccel_2";
     private static final String UNIT_NACCEL2_1 = "libAIExtTestNaccel2_1";
     private static final String UNIT_ENVCALL_1 = "libAIExtTestEnvCall_1";
+    private static final String UNIT_JNICALL_1 = "libAIExtTestJNICall_1";
 
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 
@@ -55,6 +56,10 @@ public class TestAIExtension {
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1);  // A valid unit.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_2);  // A valid unit but no finalizer.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_ENVCALL_1); // A valid unit including some env calls.
+        // A valid unit including jni call
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_JNICALL_1)
+            .shouldContain("JNI call is success")
+            .shouldContain("output from java thread");
 
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=?");
@@ -98,9 +103,10 @@ public class TestAIExtension {
         testMethodCompile("add_arrays", "3", "1", "2", "2").shouldContain("3\n3\n1\n");
     }
 
-    private static void testUnitLoadOk(String... commands) throws Exception {
+    private static OutputAnalyzer testUnitLoadOk(String... commands) throws Exception {
         OutputAnalyzer output = getJavaVersionOutput(commands);
         output.shouldHaveExitValue(0);
+        return output;
     }
 
     private static void testUnitParseError(String... commands) throws Exception {
@@ -245,5 +251,19 @@ public class TestAIExtension {
         private static int add(int a, int b) { return 0; }
         private static double add(double a, double b) { return 0; }
         private void add(int[] a, int[] b) {}
+    }
+
+    // It will be invoked by JNI call
+    public static class JNITestClass {
+        public static void test_method() {
+            new Thread(() -> {
+                try {
+                    System.out.println("output from java thread");
+                    Thread.currentThread().sleep(1000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
     }
 }

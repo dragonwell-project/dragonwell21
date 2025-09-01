@@ -817,14 +817,6 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   //   take a while to process their first tick).
   WatcherThread::run_all_tasks();
 
-#if INCLUDE_AIEXT
-  if (!AIExt::post_init()) {
-    // Failed to perform post initialization for AI-Extension units,
-    // just exit VM.
-    vm_exit(1);
-  }
-#endif // INCLUDE_AIEXT
-
   create_vm_timer.end();
 #ifdef ASSERT
   _vm_complete = true;

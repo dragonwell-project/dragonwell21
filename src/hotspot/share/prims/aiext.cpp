@@ -180,6 +180,11 @@ static aiext_result_t get_unit_info(const aiext_handle_t handle,
   return AIEXT_OK;
 }
 
+// Gets JNI environment.
+static JNIEnv* get_jni_env() {
+  return JavaThread::current()->jni_environment();
+}
+
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     get_jvm_version,
     get_aiext_version,
@@ -204,6 +209,7 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     register_naccel_provider,
     get_field_offset,
     get_unit_info,
+    get_jni_env,
 };
 
 #endif  // defined(INCLUDE_AIEXT) && INCLUDE_AIEXT
