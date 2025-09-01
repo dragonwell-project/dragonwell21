@@ -26,7 +26,7 @@
 #include "aiext.h"
 
 #include "logging/log.hpp"
-#include "opto/nativeAcceleration.hpp"
+#include "opto/aiExtension.hpp"
 #include "precompiled.hpp"
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
@@ -140,8 +140,8 @@ static aiext_result_t register_naccel_provider(
     const char* native_func_name, void* func_or_data,
     aiext_naccel_provider_t provider) {
   // TODO: support provider.
-  AccelCallEntry* entry = NativeAccelTable::add_entry(
-      klass, method, sig, native_func_name, func_or_data);
+  AccelCallEntry* entry =
+      AIExt::add_entry(klass, method, sig, native_func_name, func_or_data);
   return entry == nullptr ? AIEXT_ERROR : AIEXT_OK;
 }
 
@@ -159,7 +159,7 @@ static aiext_result_t get_unit_info(const aiext_handle_t handle,
                                     char* param_list_buf,
                                     size_t param_list_buf_size) {
   // Find the given unit.
-  const NativeAccelUnit* unit = NativeAccelTable::find_unit(handle);
+  const AIExtUnit* unit = AIExt::find_unit(handle);
   if (unit == nullptr) {
     return AIEXT_ERROR;
   }

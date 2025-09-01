@@ -58,7 +58,7 @@
 #include "oops/method.hpp"
 #endif
 #if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
+#include "opto/aiExtension.hpp"
 #endif
 
 // ciMethod
@@ -110,8 +110,7 @@ ciMethod::ciMethod(const methodHandle& h_m, ciInstanceKlass* holder) :
 
 #if INCLUDE_AIEXT
   // Get entry of accelerated call.
-  _accel_call_entry = NativeAccelTable::find(h_m->klass_name(), h_m->name(),
-                                             h_m->signature());
+  _accel_call_entry = AIExt::find(h_m->klass_name(), h_m->name(), h_m->signature());
 #endif // INCLUDE_AIEXT
 
   ciEnv *env = CURRENT_ENV;

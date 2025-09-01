@@ -51,7 +51,7 @@
 #include "jvmci/jvmci.hpp"
 #endif
 #if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
+#include "opto/aiExtension.hpp"
 #endif
 
 // Initialization done by VM thread in vm_init_globals()
@@ -203,7 +203,7 @@ void exit_globals() {
       StringTable::dump(tty);
     }
 #if INCLUDE_AIEXT
-    NativeAccelTable::destroy();
+    AIExt::destroy();
 #endif // INCLUDE_AIEXT
     ostream_exit();
 #ifdef LEAK_SANITIZER

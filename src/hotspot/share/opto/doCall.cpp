@@ -46,7 +46,7 @@
 #include "jfr/jfr.hpp"
 #endif
 #if INCLUDE_AIEXT
-#include "opto/nativeAcceleration.hpp"
+#include "opto/aiExtension.hpp"
 #endif
 
 void trace_type_profile(Compile* C, ciMethod *method, int depth, int bci, ciMethod *prof_method, ciKlass *prof_klass, int site_count, int receiver_count) {

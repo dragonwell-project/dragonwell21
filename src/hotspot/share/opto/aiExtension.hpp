@@ -21,8 +21,8 @@
  * questions.
  */
 
-#ifndef SHARE_OPTO_NATIVEACCELERATION_HPP
-#define SHARE_OPTO_NATIVEACCELERATION_HPP
+#ifndef SHARE_OPTO_AIEXTENSION_HPP
+#define SHARE_OPTO_AIEXTENSION_HPP
 
 #include "aiext.h"
 #include "oops/symbol.hpp"
@@ -33,12 +33,12 @@
 #error "This file should not be included if `aiext` is not enabled"
 #endif  // !INCLUDE_AIEXT
 
-class NativeAccelTable;
+class AIExt;
 
 // Entry for loaded AI-Extension units.
-class NativeAccelUnit : public CHeapObj<mtCompiler> {
+class AIExtUnit : public CHeapObj<mtCompiler> {
  private:
-  friend class NativeAccelTable;
+  friend class AIExt;
 
   // Strings parsed from argument option:
   // Feature name.
@@ -55,14 +55,14 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   aiext_handle_t _aiext_handle;
 
   // Comparator for the AI-Extension unit library entry.
-  static int compare(NativeAccelUnit* const& u1, NativeAccelUnit* const& u2);
+  static int compare(AIExtUnit* const& u1, AIExtUnit* const& u2);
 
   // Parses the given argument string to construct a unit.
   // The returned unit should be properly deleted before the VM exits.
-  static NativeAccelUnit* parse_from_arg(const char* arg);
+  static AIExtUnit* parse_from_arg(const char* arg);
 
-  NativeAccelUnit(const char* feature, const char* version,
-                  const char* param_list, aiext_handle_t aiext_handle)
+  AIExtUnit(const char* feature, const char* version, const char* param_list,
+            aiext_handle_t aiext_handle)
       : _handle(nullptr), _aiext_handle(aiext_handle) {
     assert(feature != nullptr && version != nullptr, "sanity");
     _feature = os::strdup(feature);
@@ -78,7 +78,7 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
   bool load();
 
  public:
-  ~NativeAccelUnit() {
+  ~AIExtUnit() {
     os::free((void*)_feature);
     os::free((void*)_version);
     if (_param_list != nullptr) {
@@ -102,7 +102,7 @@ class NativeAccelUnit : public CHeapObj<mtCompiler> {
 // Entry for accelerated Java method calls.
 class AccelCallEntry : public CHeapObj<mtCompiler> {
  private:
-  friend class NativeAccelTable;
+  friend class AIExt;
 
   Symbol* _klass;
   Symbol* _method;
@@ -137,8 +137,8 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
   void* native_func() const { return _native_func; }
 };
 
-// The native acceleration table.
-class NativeAccelTable : public AllStatic {
+// The AI-Extension feature.
+class AIExt : public AllStatic {
  public:
   // Loads AI-Extension units from parsed unit list.
   // Returns `false` on error.
@@ -166,7 +166,7 @@ class NativeAccelTable : public AllStatic {
 #endif  // ASSERT
 
   // Finds AI-Extension unit by handle.
-  static const NativeAccelUnit* find_unit(aiext_handle_t handle);
+  static const AIExtUnit* find_unit(aiext_handle_t handle);
 };
 
 // Call generator for accelerated Java method calls.
@@ -183,4 +183,4 @@ class AccelCallGenerator : public InlineCallGenerator {
   JVMState* generate(JVMState* jvms) override;
 };
 
-#endif  // SHARE_OPTO_NATIVEACCELERATION_HPP
+#endif  // SHARE_OPTO_AIEXTENSION_HPP

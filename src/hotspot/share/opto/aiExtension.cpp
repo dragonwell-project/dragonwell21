@@ -23,7 +23,7 @@
 
 #if INCLUDE_AIEXT
 
-#include "opto/nativeAcceleration.hpp"
+#include "opto/aiExtension.hpp"
 
 #include <string.h>
 
@@ -49,7 +49,7 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV;
 //
 // This map is initialized during startup, and will never be modified, so it
 // does not need to be protected by locks.
-static GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>* loaded_units = nullptr;
+static GrowableArrayCHeap<AIExtUnit*, mtCompiler>* loaded_units = nullptr;
 
 // The acceleration table, which is sorted by the class name, method name
 // and signature.
@@ -60,8 +60,7 @@ static GrowableArrayCHeap<AccelCallEntry*, mtCompiler>* accel_table = nullptr;
 // Mutex for acceleration table.
 static Mutex* accel_table_lock = nullptr;
 
-int NativeAccelUnit::compare(NativeAccelUnit* const& u1,
-                             NativeAccelUnit* const& u2) {
+int AIExtUnit::compare(AIExtUnit* const& u1, AIExtUnit* const& u2) {
   // Skip parameter list, and multiple versions for same feature is not allowed.
   return strcmp(u1->_feature, u2->_feature);
 }
@@ -151,7 +150,7 @@ static bool parse_param_list(const char* str, char* param_list) {
   return true;
 }
 
-NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
+AIExtUnit* AIExtUnit::parse_from_arg(const char* arg) {
   // The argument option has pattern `feature_version?param1=val1:param2=val2`.
   char feature[MAX_UNIT_COMPONENT_LEN + 1];
   char version[MAX_UNIT_COMPONENT_LEN + 1];
@@ -175,7 +174,7 @@ NativeAccelUnit* NativeAccelUnit::parse_from_arg(const char* arg) {
   }
 
   static aiext_handle_t next_handle = 0;
-  return new NativeAccelUnit(feature, version, param_list, next_handle++);
+  return new AIExtUnit(feature, version, param_list, next_handle++);
 }
 
 #undef MAX_UNIT_COMPONENT_LEN
@@ -217,7 +216,7 @@ static void* load_unit(const char* path, aiext_handle_t aiext_handle,
   return handle;
 }
 
-bool NativeAccelUnit::load() {
+bool AIExtUnit::load() {
 #if defined(AMD64)
 #define CPU_ARCH "x86-64"
 #elif defined(AARCH64)
@@ -286,12 +285,11 @@ int AccelCallEntry::compare(AccelCallEntry* const& e1,
 }
 
 // Adds the given native acceleration unit to table.
-static bool add_unit(NativeAccelUnit* unit) {
+static bool add_unit(AIExtUnit* unit) {
   assert(loaded_units != nullptr, "must be initialized");
   bool found;
   int index =
-      loaded_units->find_sorted<NativeAccelUnit*, NativeAccelUnit::compare>(
-          unit, found);
+      loaded_units->find_sorted<AIExtUnit*, AIExtUnit::compare>(unit, found);
   if (found) {
     tty->print_cr("Error: Duplicate AI-Extension unit `%s_%s`", unit->feature(),
                   unit->version());
@@ -301,7 +299,7 @@ static bool add_unit(NativeAccelUnit* unit) {
   return true;
 }
 
-bool NativeAccelTable::init() {
+bool AIExt::init() {
   // Quit if AI extension is not enabled.
   if (!UseAIExtension) {
     return true;
@@ -312,7 +310,7 @@ bool NativeAccelTable::init() {
   // `os::init_2`, which is called after this. Just leave them null.
   assert(loaded_units == nullptr && accel_table == nullptr,
          "init should only be called once");
-  loaded_units = new GrowableArrayCHeap<NativeAccelUnit*, mtCompiler>();
+  loaded_units = new GrowableArrayCHeap<AIExtUnit*, mtCompiler>();
   accel_table = new GrowableArrayCHeap<AccelCallEntry*, mtCompiler>();
 
   // Parse AI-Extension units.
@@ -328,7 +326,7 @@ bool NativeAccelTable::init() {
     *p = '\0';
 
     // Parse the current unit.
-    NativeAccelUnit* unit = NativeAccelUnit::parse_from_arg(arg);
+    AIExtUnit* unit = AIExtUnit::parse_from_arg(arg);
     if (unit == nullptr) {
       tty->print_cr("Error: Invalid AI-Extension option: %s", arg);
       os::free(args);
@@ -363,7 +361,7 @@ bool NativeAccelTable::init() {
   return true;
 }
 
-bool NativeAccelTable::post_init() {
+bool AIExt::post_init() {
   if (!UseAIExtension) {
     return true;
   }
@@ -393,11 +391,10 @@ bool NativeAccelTable::post_init() {
   return true;
 }
 
-AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
-                                            const char* method,
-                                            const char* signature,
-                                            const char* native_func_name,
-                                            void* native_entry) {
+AccelCallEntry* AIExt::add_entry(const char* klass, const char* method,
+                                 const char* signature,
+                                 const char* native_func_name,
+                                 void* native_entry) {
   if (klass == nullptr || method == nullptr || signature == nullptr ||
       native_func_name == nullptr || native_func_name[0] == '\0' ||
       native_entry == nullptr) {
@@ -433,7 +430,7 @@ AccelCallEntry* NativeAccelTable::add_entry(const char* klass,
   return entry;
 }
 
-void NativeAccelTable::destroy() {
+void AIExt::destroy() {
   if (!UseAIExtension) {
     return;
   }
@@ -467,8 +464,8 @@ void NativeAccelTable::destroy() {
   delete accel_table_lock;
 }
 
-const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
-                                             Symbol* signature) {
+const AccelCallEntry* AIExt::find(Symbol* klass, Symbol* method,
+                                  Symbol* signature) {
   if (!UseAIExtension) {
     return nullptr;
   }
@@ -494,7 +491,7 @@ const AccelCallEntry* NativeAccelTable::find(Symbol* klass, Symbol* method,
 }
 
 #ifdef ASSERT
-bool NativeAccelTable::is_accel_native_call(CallNode* call) {
+bool AIExt::is_accel_native_call(CallNode* call) {
   if (!UseAIExtension) {
     return false;
   }
@@ -518,7 +515,7 @@ bool NativeAccelTable::is_accel_native_call(CallNode* call) {
 }
 #endif  // ASSERT
 
-const NativeAccelUnit* NativeAccelTable::find_unit(aiext_handle_t handle) {
+const AIExtUnit* AIExt::find_unit(aiext_handle_t handle) {
   if (!UseAIExtension) {
     return nullptr;
   }
