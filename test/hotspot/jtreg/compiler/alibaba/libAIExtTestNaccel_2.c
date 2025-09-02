@@ -23,12 +23,6 @@
 
 #include "aiext.h"
 
-// We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
-// to prevent the linker from hiding the functions in this library.
-//
-// Note that all functions in the library have nothing to do with JNI.
-#include "jni_md.h"
-
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
                                             aiext_handle_t handle) {
   // This just an empty unit.

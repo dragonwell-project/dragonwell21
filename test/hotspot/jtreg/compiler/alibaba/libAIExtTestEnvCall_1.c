@@ -28,12 +28,6 @@
 
 #include "aiext.h"
 
-// We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
-// to prevent the linker from hiding the functions in this library.
-//
-// Note that all functions in the library have nothing to do with JNI.
-#include "jni_md.h"
-
 #if defined(__x86_64__)
 #define GET_NPCHS get_jvm_flag_uintx
 #define SET_NPCHS set_jvm_flag_uintx

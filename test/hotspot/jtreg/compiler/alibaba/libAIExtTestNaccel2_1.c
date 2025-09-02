@@ -25,12 +25,6 @@
 
 #include "aiext.h"
 
-// We just use `JNIEXPORT` and `JNICALL` macros from the JNI header,
-// to prevent the linker from hiding the functions in this library.
-//
-// Note that all functions in the library have nothing to do with JNI.
-#include "jni_md.h"
-
 // For ()V static method.
 static void hello() { printf("Hello again from native library!\n"); }
 

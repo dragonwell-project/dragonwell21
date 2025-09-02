@@ -66,9 +66,9 @@ int AIExtUnit::compare(AIExtUnit* const& u1, AIExtUnit* const& u2) {
 }
 
 // Max length of feature name and version string.
-#define MAX_UNIT_COMPONENT_LEN 50
+#define MAX_UNIT_COMPONENT_LEN 64
 // Max length of parameter list.
-#define MAX_UNIT_PARAM_LIST_LEN 200
+#define MAX_UNIT_PARAM_LIST_LEN 1024
 
 // Parses feature and version from the given string with the given length,
 // and stores them into the given buffers. Returns `false` on failure.

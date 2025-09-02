@@ -46,6 +46,7 @@ public class TestAIExtension {
     private static final String UNIT_NACCEL2_1 = "libAIExtTestNaccel2_1";
     private static final String UNIT_ENVCALL_1 = "libAIExtTestEnvCall_1";
     private static final String UNIT_JNICALL_1 = "libAIExtTestJNICall_1";
+    private static final String UNIT_INITERR_1 = "libAIExtTestInitError_1";
 
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 
@@ -59,6 +60,13 @@ public class TestAIExtension {
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_JNICALL_1)  // A valid unit including JNI calls.
             .shouldContain("JNI call is success")
             .shouldContain("Output from Java thread");
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1); // Another valid units.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + // Valid unit with one parameter.
+                       "?init_error=0");
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + // Valid unit with multiple parameters.
+                       "?init_error=0:post_init_error=0");
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + // Valid unit with multiple parameters.
+                       "?init_error=0:post_init_error=0:whatever=xxx");
 
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=?");
@@ -81,6 +89,12 @@ public class TestAIExtension {
                            "-XX:AIExtensionUnit=?");
         testUnitParseError("-XX:AIExtensionUnit=?",
                            "-XX:AIExtensionUnit=" + UNIT_NACCEL_1);
+        
+        // Error when performing initialization/post-initialization.
+        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + "?init_error=1")
+            .shouldContain("Returning error in `aiext_init`...");
+        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + "?post_init_error=1")
+            .shouldContain("Returning error in `aiext_post_init`...");
 
         // Test method compilation.
         testMethodCompile("hello").shouldContain("Hello from");
