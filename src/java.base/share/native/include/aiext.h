@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include "jni.h"
 
 #ifdef __cplusplus

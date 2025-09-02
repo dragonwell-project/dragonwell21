@@ -35,10 +35,12 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
   aiext_result_t result = AIEXT_ERROR;
   JNIEnv* jni = env->get_jni_env();
-  if (jni == NULL) return AIEXT_ERROR;
+  if (jni == NULL) {
+    return AIEXT_ERROR;
+  }
 
-  // test JNI invocation
-  const char* test="test_string";
+  // Test JNI invocation.
+  const char* test = "test_string";
   jstring str = (*jni)->NewStringUTF(jni, test);
   jsize len = (*jni)->GetStringUTFLength(jni, str);
   if (len != (jsize)strlen(test)) {
@@ -47,14 +49,14 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
     fprintf(stdout, "JNI call is success\n");
   }
 
-  // test java method invocation
+  // Test Java method invocation.
   jclass testclass = (*jni)->FindClass(jni, "TestAIExtension$JNITestClass");
   if (testclass == NULL) {
     fprintf(stderr, "Can not find test class\n");
     return AIEXT_ERROR;
   }
 
-  jmethodID m = (*jni)->GetStaticMethodID(jni, testclass, "test_method", "()V");
+  jmethodID m = (*jni)->GetStaticMethodID(jni, testclass, "testMethod", "()V");
   if (m == NULL) {
     fprintf(stderr, "Can not find method\n");
     return AIEXT_ERROR;

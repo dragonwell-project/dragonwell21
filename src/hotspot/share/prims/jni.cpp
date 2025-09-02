@@ -65,7 +65,6 @@
 #include "oops/symbol.hpp"
 #include "oops/typeArrayKlass.hpp"
 #include "oops/typeArrayOop.inline.hpp"
-#include "opto/aiExtension.hpp"
 #include "prims/jniCheck.hpp"
 #include "prims/jniExport.hpp"
 #include "prims/jniFastGetField.hpp"
@@ -101,6 +100,9 @@
 #endif
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
+#endif
+#if INCLUDE_AIEXT
+#include "opto/aiExtension.hpp"
 #endif
 
 static jint CurrentVersion = JNI_VERSION_21;
@@ -3628,7 +3630,7 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
     ThreadStateTransition::transition_from_vm(thread, _thread_in_native);
     MACOS_AARCH64_ONLY(thread->enable_wx(WXExec));
 #if INCLUDE_AIEXT
-    if (UseAIExtension && !AIExt::post_init()) {
+    if (!AIExt::post_init()) {
       // Failed to perform post initialization for AI-Extension units,
       // just exit VM.
       vm_exit(1);

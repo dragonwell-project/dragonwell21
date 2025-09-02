@@ -56,10 +56,9 @@ public class TestAIExtension {
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1);  // A valid unit.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_2);  // A valid unit but no finalizer.
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_ENVCALL_1); // A valid unit including some env calls.
-        // A valid unit including jni call
-        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_JNICALL_1)
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_JNICALL_1)  // A valid unit including JNI calls.
             .shouldContain("JNI call is success")
-            .shouldContain("output from java thread");
+            .shouldContain("Output from Java thread");
 
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=?");
@@ -253,12 +252,12 @@ public class TestAIExtension {
         private void add(int[] a, int[] b) {}
     }
 
-    // It will be invoked by JNI call
+    // This will be invoked by JNI calls.
     public static class JNITestClass {
-        public static void test_method() {
+        public static void testMethod() {
             new Thread(() -> {
                 try {
-                    System.out.println("output from java thread");
+                    System.out.println("Output from Java thread");
                     Thread.currentThread().sleep(1000);
                 } catch (Exception e) {
                     e.printStackTrace();
