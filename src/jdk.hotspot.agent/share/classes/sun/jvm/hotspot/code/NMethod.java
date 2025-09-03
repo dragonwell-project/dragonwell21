@@ -47,7 +47,6 @@ public class NMethod extends CompiledMethod {
   private static CIntegerField exceptionOffsetField;
   private static CIntegerField origPCOffsetField;
   private static CIntegerField stubOffsetField;
-  private static CIntField     metadataOffsetField;
   private static CIntField     handlerTableOffsetField;
   private static CIntField     nulChkTableOffsetField;
   private static CIntegerField scopesPCsOffsetField;
@@ -84,7 +83,6 @@ public class NMethod extends CompiledMethod {
     exceptionOffsetField        = type.getCIntegerField("_exception_offset");
     origPCOffsetField           = type.getCIntegerField("_orig_pc_offset");
     stubOffsetField             = type.getCIntegerField("_stub_offset");
-    metadataOffsetField         = new CIntField(type.getCIntegerField("_metadata_offset"), 0);
     scopesPCsOffsetField        = type.getCIntegerField("_scopes_pcs_offset");
     scopesDataOffsetField       = type.getCIntegerField("_scopes_data_offset");
     handlerTableOffsetField     = new CIntField(type.getCIntegerField("_handler_table_offset"), 0);
@@ -120,10 +118,7 @@ public class NMethod extends CompiledMethod {
   public Address stubBegin()            { return headerBegin().addOffsetTo(getStubOffset());         }
   public Address stubEnd()              { return dataBegin();                                        }
   public Address oopsBegin()            { return dataBegin();                                        }
-  public Address oopsEnd()              { return dataBegin().addOffsetTo(getMetadataOffset());       }
-  public Address metadataBegin()        { return dataBegin().addOffsetTo(getMetadataOffset());       }
-
-  public Address metadataEnd()          { return dataEnd();                                          }
+  public Address oopsEnd()              { return dataEnd();                                          }
 
   public Address immutableDataBegin()   { return immutableDataField.getValue(addr);                         }
   public Address immutableDataEnd()     { return immutableDataBegin().addOffsetTo(getImmutableDataSize());  }
@@ -137,6 +132,9 @@ public class NMethod extends CompiledMethod {
   public Address scopesDataEnd()        { return immutableDataBegin().addOffsetTo(getScopesPCsOffset());    }
   public Address scopesPCsBegin()       { return immutableDataBegin().addOffsetTo(getScopesPCsOffset());    }
   public Address scopesPCsEnd()         { return immutableDataEnd();                                        }
+
+  public Address metadataBegin()        { return mutableDataBegin().addOffsetTo(getRelocationSize());   }
+  public Address metadataEnd()          { return mutableDataEnd();                                      }
 
   public int getImmutableDataSize()     { return (int) immutableDataSizeField.getValue(addr);        }
   public int constantsSize()            { return (int) constantsEnd()   .minus(constantsBegin());    }
@@ -507,7 +505,6 @@ public class NMethod extends CompiledMethod {
   private int getEntryBCI()           { return (int) entryBCIField          .getValue(addr); }
   private int getExceptionOffset()    { return (int) exceptionOffsetField   .getValue(addr); }
   private int getStubOffset()         { return (int) stubOffsetField        .getValue(addr); }
-  private int getMetadataOffset()     { return (int) metadataOffsetField    .getValue(addr); }
   private int getScopesDataOffset()   { return (int) scopesDataOffsetField  .getValue(addr); }
   private int getScopesPCsOffset()    { return (int) scopesPCsOffsetField   .getValue(addr); }
   private int getHandlerTableOffset() { return (int) handlerTableOffsetField.getValue(addr); }

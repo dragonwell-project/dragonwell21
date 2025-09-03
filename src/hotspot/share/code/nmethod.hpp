@@ -34,30 +34,27 @@ class DebugInformationRecorder;
 class JvmtiThreadState;
 class OopIterateClosure;
 
-// nmethods (native methods) are the compiled code versions of Java methods.
+//  - Header                 (the nmethod structure)
+//  - Constant part          (doubles, longs and floats used in nmethod)
+//  - Code part:
+//    - Code body
+//    - Exception handler
+//    - Stub code
+//    - OOP table
 //
-// An nmethod contains:
-//  - header                 (the nmethod structure)
-//  [Relocation]
-//  - relocation information
-//  - constant part          (doubles, longs and floats used in nmethod)
-//  - oop table
-//  [Code]
-//  - code body
-//  - exception handler
-//  - stub code
-//  [Debugging information]
-//  - oop array
-//  - data array
-//  - pcs
-//  [Exception handler table]
-//  - handler entry point array
-//  [Implicit Null Pointer exception table]
-//  - implicit null table array
-//  [Speculations]
-//  - encoded speculations array
-//  [JVMCINMethodData]
-//  - meta data for JVMCI compiled nmethod
+// As a CodeBlob, an nmethod references [mutable data] allocated on the C heap:
+//  - CodeBlob relocation data
+//  - Metainfo
+//  - JVMCI data
+//
+// An nmethod references [immutable data] allocated on C heap:
+//  - Dependency assertions data
+//  - Implicit null table array
+//  - Handler entry point array
+//  - Debugging information:
+//    - Scopes data array
+//    - Scopes pcs array
+//  - JVMCI speculations array
 
 #if INCLUDE_JVMCI
 class FailedSpeculation;
@@ -226,11 +223,11 @@ class nmethod : public CompiledMethod {
   // Offset (from insts_end) of the unwind handler if it exists
   int16_t  _unwind_handler_offset;
 
-  // Offsets in mutable data section
-  // _oops_offset == _data_offset,  offset where embedded oop table begins (inside data)
-  uint16_t _metadata_offset; // embedded meta data table
+  uint16_t _oops_size;
 #if INCLUDE_JVMCI
-  uint16_t _jvmci_data_offset;
+  // _metadata_size is not specific to JVMCI. In the non-JVMCI case, it can be derived as:
+  // _metadata_size = mutable_data_size - relocation_size
+  uint16_t _metadata_size;
 #endif
 
   // Offset in immutable data section
@@ -289,13 +286,15 @@ class nmethod : public CompiledMethod {
           int frame_size,
           ByteSize basic_lock_owner_sp_offset, /* synchronized natives only */
           ByteSize basic_lock_sp_offset,       /* synchronized natives only */
-          OopMapSet* oop_maps);
+          OopMapSet* oop_maps,
+          int mutable_data_size);
 
   // For normal JIT compiled code
   nmethod(Method* method,
           CompilerType type,
           int nmethod_size,
           int immutable_data_size,
+          int mutable_data_size,
           int compile_id,
           int entry_bci,
           address immutable_data,
@@ -389,22 +388,21 @@ class nmethod : public CompiledMethod {
   address insts_begin           () const { return           code_begin()   ; }
   address insts_end             () const { return           header_begin() + _stub_offset             ; }
   address stub_begin            () const { return           header_begin() + _stub_offset             ; }
-  address stub_end              () const { return           data_begin()   ; }
+  address stub_end              () const { return           code_end()   ; }
   address exception_begin       () const { return           header_begin() + _exception_offset        ; }
   address unwind_handler_begin  () const { return _unwind_handler_offset != -1 ? (insts_end() - _unwind_handler_offset) : nullptr; }
+  oop*    oops_begin            () const { return (oop*)    data_begin(); }
+  oop*    oops_end              () const { return (oop*)    data_end(); }
 
   // mutable data
-  oop*    oops_begin            () const { return (oop*)        data_begin(); }
-  oop*    oops_end              () const { return (oop*)       (data_begin() + _metadata_offset)      ; }
-
-  Metadata** metadata_begin     () const { return (Metadata**) (data_begin() + _metadata_offset)      ; }
+  Metadata** metadata_begin     () const { return (Metadata**) (mutable_data_begin() + _relocation_size); }
 
 #if INCLUDE_JVMCI
-  Metadata** metadata_end       () const { return (Metadata**) (data_begin() + _jvmci_data_offset)    ; }
-  address jvmci_data_begin      () const { return               data_begin() + _jvmci_data_offset     ; }
-  address jvmci_data_end        () const { return               data_end(); }
+  Metadata** metadata_end       () const { return (Metadata**) (mutable_data_begin() + _relocation_size + _metadata_size); }
+  address jvmci_data_begin      () const { return               mutable_data_begin() + _relocation_size + _metadata_size; }
+  address jvmci_data_end        () const { return               mutable_data_end(); }
 #else
-  Metadata** metadata_end       () const { return (Metadata**)  data_end(); }
+  Metadata** metadata_end       () const { return (Metadata**)  mutable_data_end(); }
 #endif
 
   // immutable data
