@@ -21,8 +21,6 @@
  * questions.
  */
 
-#if defined(INCLUDE_AIEXT) && INCLUDE_AIEXT
-
 #include "aiext.h"
 
 #include "logging/log.hpp"
@@ -212,4 +210,3 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     get_jni_env,
 };
 
-#endif  // defined(INCLUDE_AIEXT) && INCLUDE_AIEXT

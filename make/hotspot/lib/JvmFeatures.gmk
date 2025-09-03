@@ -165,6 +165,9 @@ endif
 
 ifeq ($(call check-jvm-feature, aiext), true)
   JVM_CFLAGS_FEATURES += -DINCLUDE_AIEXT=1
+else
+  JVM_CFLAGS_FEATURES += -DINCLUDE_AIEXT=0
+  JVM_EXCLUDE_FILES += aiext.cpp aiExtension.cpp
 endif
 
 ################################################################################
