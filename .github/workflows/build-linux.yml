@@ -61,6 +61,15 @@ on:
       make-arguments:
         required: false
         type: string
+      build-aiext:
+        required: false
+        type: string
+        default: 'false'
+    secrets:
+      aiextpk:
+        required: false
+      aiextsk:
+        required: false
 
 jobs:
   build-linux:
@@ -102,6 +111,14 @@ jobs:
             echo 'suffix=:${{ inputs.apt-architecture }}' >> $GITHUB_OUTPUT
           fi
 
+      - name: 'Set ai-ext config'
+        id: aiext-config
+        run: |
+          # Set a proper suffix for packages if using a different architecture
+          if [[ '${{ inputs.build-aiext }}' = 'true' ]]; then
+            echo 'aiext-config=--with-jvm-features=aiext' >> $GITHUB_OUTPUT
+          fi
+
       # Upgrading apt to solve libc6 installation bugs, see JDK-8260460.
       - name: 'Install toolchain and dependencies'
         run: |
@@ -119,6 +136,7 @@ jobs:
           bash configure
           --with-conf-name=${{ inputs.platform }}
           ${{ matrix.flags }}
+          ${{ steps.aiext-config.outputs.aiext-config }}
           --with-version-opt=${GITHUB_ACTOR}-${GITHUB_SHA}
           --with-boot-jdk=${{ steps.bootjdk.outputs.path }}
           --with-jtreg=${{ steps.jtreg.outputs.path }}
@@ -143,3 +161,6 @@ jobs:
         with:
           platform: ${{ inputs.platform }}
           debug-suffix: '${{ matrix.suffix }}'
+          build-aiext: '${{ inputs.build-aiext }}'
+          aiextsk: '${{ secrets.aiextsk }}'
+          aiextpk: '${{ secrets.aiextpk }}'

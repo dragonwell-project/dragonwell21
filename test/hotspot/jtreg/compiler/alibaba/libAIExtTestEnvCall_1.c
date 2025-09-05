@@ -38,6 +38,13 @@
 #define SET_NPCHS set_jvm_flag_intx
 #define NPCHS_TYPE intptr_t
 #define NPCHS_FMT PRIdPTR
+#else
+// AI-Extension will not enable on other platforms,
+// just pick a type to make this file compile.
+#define GET_NPCHS get_jvm_flag_intx
+#define SET_NPCHS set_jvm_flag_intx
+#define NPCHS_TYPE intptr_t
+#define NPCHS_FMT PRIdPTR
 #endif
 
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,

@@ -778,8 +778,11 @@
   product(bool, UseStoreStoreForCtor, true, DIAGNOSTIC,                     \
           "Use StoreStore barrier instead of Release barrier at the end "   \
           "of constructors")                                                \
+                                                                            \
+  product(bool, InlineSecondarySupersTest, true, DIAGNOSTIC,                \
+          "Inline the secondary supers hash lookup.")                       \
 
-// end of C2_FLAGS
+ // end of C2_FLAGS
 
 DECLARE_FLAGS(C2_FLAGS)
 

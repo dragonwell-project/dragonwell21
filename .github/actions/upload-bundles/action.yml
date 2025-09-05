@@ -32,6 +32,13 @@ inputs:
   debug-suffix:
     description: 'File name suffix denoting debug level, possibly empty'
     required: false
+  build-aiext:
+    required: false
+    default: 'false'
+  aiextsk:
+    required: false
+  aiextpk:
+    required: false
 
 runs:
   using: composite
@@ -59,6 +66,44 @@ runs:
         fi
         if [[ "$tests_bundle" != "" ]]; then
           mv "$tests_bundle" "bundles/tests-${{ inputs.platform }}${{ inputs.debug-suffix }}.tar.gz"
+        fi
+
+        if [ "${{ inputs.build-aiext }}" == "true" ]; then
+          cd bundles
+          echo "${{ inputs.aiextsk }}" > sk
+          echo "${{ inputs.aiextpk }}" > pk
+          base64 -d sk > sk.bin
+          base64 -d pk > pk.bin
+          wget -q https://dragonwell.oss-cn-shanghai.aliyuncs.com/tools/signutil -O signutil
+          chmod +x signutil
+          if [ -f "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.zip" ]; then
+            rm -rf tmp_zip
+            mkdir -p tmp_zip
+            unzip "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.zip" -d tmp_zip
+            rm -rf "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.zip"
+            libjvm_path=$(find tmp_zip -iname libjvm.so | head -n 1)
+            ./signutil sign sk.bin ${libjvm_path}
+            ./signutil verify pk.bin ${libjvm_path}
+            cd tmp_zip
+            zip -r ../"jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.zip" .
+            cd ..
+            rm -rf tmp_zip
+          fi
+          if [ -f "bundles/jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.tar.gz" ]; then
+            rm -rf tmp_tar
+            mkdir -p tmp_tar
+            tar xf "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.tar.gz" -C tmp_tar
+            rm -rf "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.tar.gz"
+            libjvm_path=$(find tmp_tar -iname libjvm.so | head -n 1)
+            ./signutil sign sk.bin ${libjvm_path}
+            ./signutil verify pk.bin ${libjvm_path}
+            cd tmp_tar
+            tar zcf "jdk-${{ inputs.platform }}${{ inputs.debug-suffix }}.tar.gz" *
+            cd ..
+            rm -rf tmp_tar
+          fi
+          rm -rf sk* pk*
+          cd ..
         fi
 
         if [[ "$jdk_bundle_zip$jdk_bundle_tar_gz$symbols_bundle$tests_bundle" != "" ]]; then

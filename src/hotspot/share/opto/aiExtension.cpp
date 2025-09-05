@@ -21,8 +21,6 @@
  * questions.
  */
 
-#if defined(INCLUDE_AIEXT) && INCLUDE_AIEXT
-
 #include "opto/aiExtension.hpp"
 
 #include <string.h>
@@ -699,4 +697,3 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   return kit.transfer_exceptions_into_jvms();
 }
 
-#endif  // defined(INCLUDE_AIEXT) && INCLUDE_AIEXT
