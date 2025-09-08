@@ -30,8 +30,8 @@
  * @author  Mandy Chung
  *
  * @modules jdk.management
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=0 MemoryTest 2 3 5
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=10m MemoryTest 2 3 6
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=0 MemoryTest 2 3 5
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=10m MemoryTest 2 3 6
  */
 
 /*
@@ -43,8 +43,8 @@
  * @author  Mandy Chung
  *
  * @modules jdk.management
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseZGC -XX:-ZGenerational MemoryTest 2 1 5
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseZGC -XX:-ZGenerational MemoryTest 2 1 6
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseZGC -XX:-ZGenerational MemoryTest 2 1 5
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseZGC -XX:-ZGenerational MemoryTest 2 1 6
  */
 
 /*
@@ -56,8 +56,8 @@
  * @author  Mandy Chung
  *
  * @modules jdk.management
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseZGC -XX:+ZGenerational MemoryTest 4 2 5
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseZGC -XX:+ZGenerational MemoryTest 4 2 6
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseZGC -XX:+ZGenerational MemoryTest 4 2 5
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseZGC -XX:+ZGenerational MemoryTest 4 2 6
  */
 
 /*
@@ -69,8 +69,8 @@
  * @author  Mandy Chung
  *
  * @modules jdk.management
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=0 MemoryTest 2 1 5
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=10m MemoryTest 2 1 6
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=0 MemoryTest 2 1 5
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=10m MemoryTest 2 1 6
  */
 
 /*
@@ -82,8 +82,8 @@
  * @author  Mandy Chung
  *
  * @modules jdk.management
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseG1GC MemoryTest 3 3 5
- * @run main/othervm -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseG1GC MemoryTest 3 3 6
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=0 -XX:+UseG1GC MemoryTest 3 3 5
+ * @run main/othervm -XX:+SegmentedCodeCache -XX:NonProfiledHotCodeHeapSize=10m -XX:+UseG1GC MemoryTest 3 3 6
  */
 
 /*
