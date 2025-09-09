@@ -28,25 +28,6 @@
 
 #include "aiext.h"
 
-#if defined(__x86_64__)
-#define GET_NPCHS get_jvm_flag_uintx
-#define SET_NPCHS set_jvm_flag_uintx
-#define NPCHS_TYPE uintptr_t
-#define NPCHS_FMT PRIuPTR
-#elif defined(__aarch64__)
-#define GET_NPCHS get_jvm_flag_intx
-#define SET_NPCHS set_jvm_flag_intx
-#define NPCHS_TYPE intptr_t
-#define NPCHS_FMT PRIdPTR
-#else
-// AI-Extension will not enable on other platforms,
-// just pick a type to make this file compile.
-#define GET_NPCHS get_jvm_flag_intx
-#define SET_NPCHS set_jvm_flag_intx
-#define NPCHS_TYPE intptr_t
-#define NPCHS_FMT PRIdPTR
-#endif
-
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
                                             aiext_handle_t handle) {
   // Check feature name, version and parameter list.
@@ -65,28 +46,27 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
   }
 
   // Read flag `NonProfiledCodeHeapSize`.
-  NPCHS_TYPE size;
-  result = env->GET_NPCHS("NonProfiledCodeHeapSize", &size);
-  printf("Result %d, NonProfiledCodeHeapSize=%" NPCHS_FMT "\n", result, size);
+  uintptr_t size;
+  result = env->get_jvm_flag_uintx("NonProfiledCodeHeapSize", &size);
+  printf("Result %d, NonProfiledCodeHeapSize=%" PRIuPTR "\n", result, size);
   if (result != AIEXT_OK) {
     return result;
   }
 
   // Shrink `NonProfiledCodeHeapSize`.
   size -= 4096 * 20;
-  result = env->SET_NPCHS("NonProfiledCodeHeapSize", size);
+  result = env->set_jvm_flag_uintx("NonProfiledCodeHeapSize", size);
   if (result != AIEXT_OK) {
     return result;
   }
 
   // Read again.
-  NPCHS_TYPE new_size;
-  result = env->GET_NPCHS("NonProfiledCodeHeapSize", &new_size);
+  uintptr_t new_size;
+  result = env->get_jvm_flag_uintx("NonProfiledCodeHeapSize", &new_size);
   if (result != AIEXT_OK) {
     return result;
   }
-  printf("Result %d, NonProfiledCodeHeapSize=%" NPCHS_FMT "\n", result,
-         new_size);
+  printf("Result %d, NonProfiledCodeHeapSize=%" PRIuPTR "\n", result, new_size);
 
   // Check the new size.
   return new_size == size ? AIEXT_OK : AIEXT_ERROR;
