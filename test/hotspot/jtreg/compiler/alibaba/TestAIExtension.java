@@ -138,6 +138,7 @@ public class TestAIExtension {
     private static OutputAnalyzer getJavaVersionOutput(String... commands) throws Exception {
         ArrayList<String> args = new ArrayList<>(List.of(
             "-Xlog:aiext=debug",
+            "-XX:+UnlockExperimentalVMOptions",
             "-XX:+UseAIExtension"
         ));
         args.addAll(List.of(commands));
@@ -156,6 +157,7 @@ public class TestAIExtension {
             "-XX:+WhiteBoxAPI",
             "-XX:-BackgroundCompilation",
             // "-XX:CompileCommand=print,TestAIExtension$Launcher::dispatch", // For debugging.
+            "-XX:+UnlockExperimentalVMOptions",
             "-XX:+UseAIExtension",
             "-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
             Launcher.class.getName()

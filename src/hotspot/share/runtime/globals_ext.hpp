@@ -49,10 +49,10 @@
   product(bool, AllocIVtableStubInNonProfiledHotCodeHeap, false,               \
           "Allocate itable/vtable in NonProfiledHotCodeHeap")                  \
                                                                                \
-  AIEXT_ONLY(product(bool, UseAIExtension, false,                              \
+  AIEXT_ONLY(product(bool, UseAIExtension, false, EXPERIMENTAL,                \
                      "Enable Alibaba Dragonwell AI Extension"))                \
                                                                                \
-  AIEXT_ONLY(product(ccstrlist, AIExtensionUnit, "",                           \
+  AIEXT_ONLY(product(ccstrlist, AIExtensionUnit, "", EXPERIMENTAL,             \
                      "Load external AI-Extension units"))                      \
 
 #endif // SHARE_RUNTIME_GLOBALS_EXT_HPP
