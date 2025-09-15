@@ -150,9 +150,9 @@ static int64_t get_field_offset(const char* klass, const char* method,
 }
 
 // Gets unit info, including feature name, version and parameter list.
-static aiext_result_t get_unit_info(const aiext_handle_t handle,
-                                    char* feature_buf, size_t feature_buf_size,
-                                    char* version_buf, size_t version_buf_size,
+static aiext_result_t get_unit_info(aiext_handle_t handle, char* feature_buf,
+                                    size_t feature_buf_size, char* version_buf,
+                                    size_t version_buf_size,
                                     char* param_list_buf,
                                     size_t param_list_buf_size) {
   // Find the given unit.

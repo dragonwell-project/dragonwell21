@@ -87,7 +87,8 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
+                                                 aiext_handle_t handle) {
   if (post_init_error) {
     printf("Returning error in `aiext_post_init`...\n");
     return AIEXT_ERROR;

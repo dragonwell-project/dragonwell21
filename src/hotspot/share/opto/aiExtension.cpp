@@ -379,17 +379,17 @@ bool AIExt::post_init() {
                 "Native acceleration table lock");
 
   // Invoke post initialization.
-  for (const auto& e : *loaded_units) {
-    assert(e->_handle != nullptr, "handle should be set");
+  for (const auto& u : *loaded_units) {
+    assert(u->_handle != nullptr, "handle should be set");
     aiext_post_init_t post_init =
-        (aiext_post_init_t)os::dll_lookup(e->_handle, "aiext_post_init");
+        (aiext_post_init_t)os::dll_lookup(u->_handle, "aiext_post_init");
     if (post_init != nullptr) {
-      aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV);
+      aiext_result_t result = post_init(&GLOBAL_AIEXT_ENV, u->_aiext_handle);
       if (result != AIEXT_OK) {
         tty->print_cr(
             "Error: Could not initialize AI-Extension unit after JVM "
             "initialization: `%s_%s`",
-            e->_feature, e->_version);
+            u->_feature, u->_version);
         return false;
       }
     }
@@ -422,9 +422,7 @@ bool AIExt::add_entry(const char* klass, const char* method,
       accel_table->find_sorted<AccelCallEntry*, AccelCallEntry::compare>(&key,
                                                                          found);
   if (found) {
-    tty->print_cr(
-        "Error: Duplicate native acceleration entry found for %s::%s%s", klass,
-        method, signature);
+    tty->print_cr("Error: Duplicate native acceleration entry found");
     return false;
   }
 
@@ -451,7 +449,7 @@ void AIExt::destroy() {
     aiext_finalize_t finalize =
         (aiext_finalize_t)os::dll_lookup(u->_handle, "aiext_finalize");
     if (finalize != nullptr) {
-      finalize(&GLOBAL_AIEXT_ENV);
+      finalize(&GLOBAL_AIEXT_ENV, u->_aiext_handle);
     }
 
     // Free the unit.
@@ -696,4 +694,3 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   // Done.
   return kit.transfer_exceptions_into_jvms();
 }
-
