@@ -82,7 +82,7 @@ public class TestAIExtension {
         // Duplicate entries in different units.
         testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
                           "-XX:AIExtensionUnit=" + UNIT_NACCEL2_1)
-            .shouldContain("Duplicate native acceleration entry found for");
+            .shouldContain("Duplicate native acceleration entry found");
 
         // Some units are invalid.
         testUnitParseError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,

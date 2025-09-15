@@ -32,7 +32,8 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
+                                                 aiext_handle_t handle) {
   aiext_result_t result = AIEXT_ERROR;
   JNIEnv* jni = env->get_jni_env();
   if (jni == NULL) {
