@@ -85,7 +85,8 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
+                                                 aiext_handle_t handle) {
 #define REPLACE_WITH_NATIVE(k, m, s, fn, f)                    \
   do {                                                         \
     aiext_result_t res;                                        \
@@ -122,7 +123,7 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_finalize(const aiext_env_t* env) {
+JNIEXPORT void JNICALL aiext_finalize(const aiext_env_t* env,
+                                      aiext_handle_t handle) {
   printf("aiext_finalize\n");
-  return AIEXT_OK;
 }

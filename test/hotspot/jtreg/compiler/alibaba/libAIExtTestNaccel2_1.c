@@ -33,7 +33,8 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
   return AIEXT_OK;
 }
 
-JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env) {
+JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
+                                                 aiext_handle_t handle) {
   return env->register_naccel_provider("TestAIExtension$Launcher", "hello",
                                        "()V", "hello", hello, NULL);
 }

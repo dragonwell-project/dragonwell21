@@ -53,10 +53,11 @@ typedef aiext_result_t (*aiext_init_t)(const aiext_env_t* env,
                                        aiext_handle_t handle);
 
 // Initializes AI-Extension unit after JVM's initialization.
-typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env);
+typedef aiext_result_t (*aiext_post_init_t)(const aiext_env_t* env,
+                                            aiext_handle_t handle);
 
 // Finalizes AI-Extension unit.
-typedef aiext_result_t (*aiext_finalize_t)(const aiext_env_t* env);
+typedef void (*aiext_finalize_t)(const aiext_env_t* env, aiext_handle_t handle);
 
 // Native acceleration provider.
 typedef void* (*aiext_naccel_provider_t)(const aiext_env_t* env,
@@ -114,10 +115,9 @@ struct aiext_env {
 
   // Gets unit info, including feature name, version and parameter list.
   // `handle` is provided by the JVM in the `aiext_init` function.
-  aiext_result_t (*get_unit_info)(const aiext_handle_t handle,
-                                  char* feature_buf, size_t feature_buf_size,
-                                  char* version_buf, size_t version_buf_size,
-                                  char* param_list_buf,
+  aiext_result_t (*get_unit_info)(aiext_handle_t handle, char* feature_buf,
+                                  size_t feature_buf_size, char* version_buf,
+                                  size_t version_buf_size, char* param_list_buf,
                                   size_t param_list_buf_size);
 
   // Get JNI interface
