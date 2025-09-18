@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.BooleanSupplier;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 import jdk.test.lib.management.InputArguments;
 import jdk.test.lib.process.ExitCode;
@@ -104,7 +106,7 @@ public abstract class CommandLineOptionTest {
             String wrongWarningMessage, ExitCode exitCode,
             boolean addTestVMOptions, String... options)
                     throws Throwable {
-        List<String> finalOptions = new ArrayList<>();
+        Set<String> finalOptions = new LinkedHashSet();
         if (addTestVMOptions) {
             Collections.addAll(finalOptions, InputArguments.getVmInputArgs());
             Collections.addAll(finalOptions, Utils.getTestJavaOpts());

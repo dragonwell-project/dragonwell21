@@ -59,6 +59,7 @@ import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -235,7 +236,7 @@ public final class Utils {
      * @return The combination of JTReg test java options and user args.
      */
     public static String[] prependTestJavaOpts(String... userArgs) {
-        List<String> opts = new ArrayList<String>();
+        Set<String> opts = new LinkedHashSet<String>();
         Collections.addAll(opts, getTestJavaOpts());
         Collections.addAll(opts, userArgs);
         return opts.toArray(new String[0]);
