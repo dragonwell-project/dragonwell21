@@ -38,6 +38,7 @@ import compiler.whitebox.CompilerWhiteBoxTest;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.List;
 
 public class TestAIExtension {
@@ -68,16 +69,16 @@ public class TestAIExtension {
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + // Valid unit with multiple parameters.
                        "?init_error=0:post_init_error=0:whatever=xxx");
 
+        // Duplicate units, but okay.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                       "-XX:AIExtensionUnit=" + UNIT_NACCEL_1)
+            .shouldContain("Ignoring duplicate AI-Extension unit");
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                       "-XX:AIExtensionUnit=" + UNIT_NACCEL_2)
+            .shouldContain("Ignoring duplicate AI-Extension unit");
+
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=?");
-
-        // Duplicate units.
-        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
-                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_1)
-            .shouldContain("Duplicate AI-Extension unit");
-        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
-                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_2)
-            .shouldContain("Duplicate AI-Extension unit");
 
         // Duplicate entries in different units.
         testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
@@ -114,6 +115,14 @@ public class TestAIExtension {
         testMethodCompile("add_ints", "47", "48").shouldContain("95");
         testMethodCompile("add_doubles", "47", "48").shouldContain("95.00");
         testMethodCompile("add_arrays", "3", "1", "2", "2").shouldContain("3\n3\n1\n");
+        testMethodCompile("add_to_int", "49").shouldContain("49");
+        testMethodCompile("add_to_double", "50").shouldContain("50.00");
+        testMethodCompile("should_skip").shouldContain("Skipped twice");
+        testMethodCompileInDifferentOopLayouts((oa) -> oa.shouldContain("Hello\nworld\n!\n"),
+                                               "read_strs");
+        testMethodCompile("add_to_static_int", "34").shouldContain("46");
+        testMethodCompileInDifferentOopLayouts((oa) -> oa.shouldContain("A\nB\n"),
+                                               "check_static_enum");
     }
 
     private static OutputAnalyzer testUnitLoadOk(String... commands) throws Exception {
@@ -144,14 +153,40 @@ public class TestAIExtension {
         args.addAll(List.of(commands));
         args.add("-version");
 
-        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
         return ProcessTools.executeCommand(pb);
     }
 
     private static OutputAnalyzer testMethodCompile(String... testArgs) throws Exception {
-        ArrayList<String> args = new ArrayList<>(List.of(
+        return testMethodCompile(null, testArgs);
+    }
+
+    private static void testMethodCompileInDifferentOopLayouts(
+        Consumer<OutputAnalyzer> checker,
+        String... testArgs
+    ) throws Exception {
+        String[][] jvmArgSets = new String[][]{
+            new String[]{"-XX:-UseCompressedOops", "-XX:-UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:-UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:-UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:+UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:-UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:+UseCompactObjectHeaders"},
+        };
+        for (String[] jvmArgs : jvmArgSets) {
+            OutputAnalyzer output = testMethodCompile(jvmArgs, testArgs);
+            checker.accept(output);
+        }
+    }
+
+    private static OutputAnalyzer testMethodCompile(String[] jvmArgs, String... testArgs) throws Exception {
+        ArrayList<String> args = new ArrayList<>();
+        if (jvmArgs != null) {
+            args.addAll(List.of(jvmArgs));
+        }
+        args.addAll(List.of(
             "-Xbootclasspath/a:.",
             "-XX:+UnlockDiagnosticVMOptions",
             "-XX:+WhiteBoxAPI",
@@ -164,7 +199,7 @@ public class TestAIExtension {
         ));
         args.addAll(List.of(testArgs));
 
-        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
 
@@ -176,6 +211,7 @@ public class TestAIExtension {
     public static class Launcher {
         public static void main(String[] args) throws Exception {
             // Call the dispatch method to make classes to be loaded.
+            skip_counter = 0;
             dispatch(args);
 
             // Compile it with C2.
@@ -187,6 +223,9 @@ public class TestAIExtension {
 
             // Then call it again.
             dispatch(args);
+            if (skip_counter == 2) {
+                System.out.println("Skipped twice");
+            }
         }
 
         private static void dispatch(String[] args) {
@@ -248,6 +287,44 @@ public class TestAIExtension {
                     }
                     break;
                 }
+                case "add_to_int": {
+                    int i = Integer.parseInt(args[1]);
+
+                    Launcher l = new Launcher();
+                    l.add_to_int(i);
+
+                    System.out.println(l.x_int);
+                    break;
+                }
+                case "add_to_double": {
+                    double d = Double.parseDouble(args[1]);
+
+                    Launcher l = new Launcher();
+                    l.add_to_double(d);
+
+                    System.out.printf("%.2f\n", l.x_double);
+                    break;
+                }
+                case "should_skip": {
+                    should_skip();
+                    break;
+                }
+                case "read_strs": {
+                    Launcher l = new Launcher();
+                    l.read_strs();
+                    break;
+                }
+                case "add_to_static_int": {
+                    int i = Integer.parseInt(args[1]);
+                    add_to_static_int(i);
+                    System.out.println(static_int);
+                    break;
+                }
+                case "check_static_enum": {
+                    check_static_enum();
+                    System.out.println(static_enum.name());
+                    break;
+                }
                 default: {
                     throw new RuntimeException("Unknown test: " + args[0]);
                 }
@@ -266,6 +343,26 @@ public class TestAIExtension {
         private static int add(int a, int b) { return 0; }
         private static double add(double a, double b) { return 0; }
         private void add(int[] a, int[] b) {}
+
+        private int x_int = 0;
+        private double x_double = 0;
+        private void add_to_int(int i) {}
+        private void add_to_double(double d) {}
+
+        private static int skip_counter = 0;
+        private static void should_skip() { skip_counter++; }
+
+        private String[] strs = {"Hello", "world", "!"};
+        private void read_strs() {}
+
+        private static int static_int = 12;
+        private static void add_to_static_int(int i) {}
+
+        enum TestEnum {
+            A, B, C
+        }
+        private static TestEnum static_enum = TestEnum.A;
+        private static void check_static_enum() {}
     }
 
     // This will be invoked by JNI calls.

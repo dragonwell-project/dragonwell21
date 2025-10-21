@@ -34,13 +34,30 @@ extern "C" {
 #endif
 
 // Versions of AI-Extension.
-#define AIEXT_VERSION_1 0xBABA0001
+// The numerical value of the lower version is guaranteed to be less than that
+// of the higher version.
+#define AIEXT_VERSION_1 0xBABA0001U
+#define AIEXT_VERSION_2 0xBABA0002U
 
 // The result of initializing AI-Extension unit.
 typedef enum {
   AIEXT_OK,
   AIEXT_ERROR,
 } aiext_result_t;
+
+// Type of a Java value.
+typedef enum {
+  AIEXT_TYPE_BOOLEAN = 4,
+  AIEXT_TYPE_CHAR = 5,
+  AIEXT_TYPE_FLOAT = 6,
+  AIEXT_TYPE_DOUBLE = 7,
+  AIEXT_TYPE_BYTE = 8,
+  AIEXT_TYPE_SHORT = 9,
+  AIEXT_TYPE_INT = 10,
+  AIEXT_TYPE_LONG = 11,
+  AIEXT_TYPE_OBJECT = 12,
+  AIEXT_TYPE_ARRAY = 13,
+} aiext_value_type_t;
 
 // AI-Extension unit handle, for identification of a unit.
 typedef uint64_t aiext_handle_t;
@@ -70,7 +87,7 @@ struct aiext_env {
   aiext_result_t (*get_jvm_version)(char* buf, size_t buf_size);
 
   // Returns current AI-Extension version.
-  int (*get_aiext_version)();
+  unsigned int (*get_aiext_version)();
 
   // Gets JVM flag by name.
 #define DECL_GET_JVM_FLAG(n, t) \
@@ -109,10 +126,6 @@ struct aiext_env {
                                              void* func_or_data,
                                              aiext_naccel_provider_t provider);
 
-  // Gets field offset in a Java class, returns `-1` on failure.
-  int64_t (*get_field_offset)(const char* klass, const char* method,
-                              const char* sig);
-
   // Gets unit info, including feature name, version and parameter list.
   // `handle` is provided by the JVM in the `aiext_init` function.
   aiext_result_t (*get_unit_info)(aiext_handle_t handle, char* feature_buf,
@@ -120,8 +133,32 @@ struct aiext_env {
                                   size_t version_buf_size, char* param_list_buf,
                                   size_t param_list_buf_size);
 
-  // Get JNI interface
+  // Gets JNI interface
   JNIEnv* (*get_jni_env)();
+
+  // Gets Java array layout of the given element type, including element size in
+  // bytes, length offset in bytes and data offset in bytes.
+  // The offset of length are same for all array types, and the size of length
+  // should always be 4 bytes.
+  aiext_result_t (*get_array_layout)(aiext_value_type_t elem_type,
+                                     size_t* length_offset, size_t* data_offset,
+                                     size_t* elem_size);
+
+  // Gets the layout of narrow oop. A non-null narrow oop can be decode to a raw
+  // pointer by `base + (oop << shift)`.
+  aiext_result_t (*get_narrow_oop_layout)(uint32_t* null, uintptr_t* base,
+                                          size_t* shift);
+
+  // Gets field offset in bytes in a Java class, returns `-1` on failure.
+  int (*get_field_offset)(const char* klass, const char* field,
+                          const char* sig);
+
+  // Gets address of the given static field in a Java class,
+  // returns `nullptr` on failure.
+  // The address is only valid when calling this API.
+  // Program should not cache the address.
+  void* (*get_static_field_addr)(const char* klass, const char* field,
+                                 const char* sig);
 };
 
 #ifdef __cplusplus
