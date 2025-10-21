@@ -133,6 +133,12 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
         _func_or_data(func_or_data),
         _provider(provider) {}
 
+  ~AccelCallEntry() {
+    if (_native_func_name != nullptr) {
+      os::free((void*)_native_func_name);
+    }
+  }
+
  public:
   // Returns the native function pointer.
   // This method may call the provider function.
@@ -177,10 +183,13 @@ class AIExt : public AllStatic {
 class AccelCallGenerator : public InlineCallGenerator {
  private:
   bool _is_virtual;
+  void* _native_func;
 
  public:
-  AccelCallGenerator(ciMethod* m, bool is_virtual)
-      : InlineCallGenerator(m), _is_virtual(is_virtual) {}
+  AccelCallGenerator(ciMethod* m, bool is_virtual, void* native_func)
+      : InlineCallGenerator(m),
+        _is_virtual(is_virtual),
+        _native_func(native_func) {}
 
   bool is_virtual() const override { return _is_virtual; }
 

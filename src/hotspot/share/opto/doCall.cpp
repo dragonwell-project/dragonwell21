@@ -129,7 +129,10 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
   // Handle native acceleration before intrinsic, to make sure we can always
   // call the replaced version of the current method.
   if (callee->accel_call_entry() != nullptr) {
-    return new AccelCallGenerator(callee, call_does_dispatch);
+    void* native_func = callee->accel_call_entry()->get_native_func();
+    if (native_func != nullptr) {
+      return new AccelCallGenerator(callee, call_does_dispatch, native_func);
+    }
   }
 #endif // INCLUDE_AIEXT
 
