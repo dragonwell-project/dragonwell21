@@ -110,8 +110,8 @@ struct aiext_env {
                                              aiext_naccel_provider_t provider);
 
   // Gets field offset in a Java class, returns `-1` on failure.
-  int64_t (*get_field_offset)(const char* klass, const char* method,
-                              const char* sig);
+  int (*get_field_offset)(const char* klass, const char* field,
+                          const char* sig);
 
   // Gets unit info, including feature name, version and parameter list.
   // `handle` is provided by the JVM in the `aiext_init` function.

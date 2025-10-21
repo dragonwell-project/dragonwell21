@@ -23,11 +23,21 @@
 
 #include "aiext.h"
 
+#include <string.h>
+
+#include "classfile/javaClasses.hpp"
+#include "classfile/symbolTable.hpp"
+#include "classfile/systemDictionary.hpp"
 #include "logging/log.hpp"
+#include "oops/oop.inline.hpp"
+#include "oops/symbolHandle.hpp"
 #include "opto/aiExtension.hpp"
 #include "precompiled.hpp"
+#include "runtime/fieldDescriptor.inline.hpp"
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
+#include "runtime/handles.inline.hpp"
+#include "runtime/javaThread.hpp"
 
 static int CurrentVersion = AIEXT_VERSION_1;
 
@@ -143,10 +153,107 @@ static aiext_result_t register_naccel_provider(
 }
 
 // Gets field offset in a Java class, returns `-1` on failure.
-static int64_t get_field_offset(const char* klass, const char* method,
-                                const char* sig) {
-  // Unimplemented.
-  return -1;
+static int get_field_offset(const char* klass, const char* field,
+                            const char* sig) {
+  // Get the current Java thread.
+  Thread* thread = Thread::current();
+  if (!thread->is_Java_thread()) {
+    log_info(aiext)("Current thread is not a Java thread");
+    return -1;
+  }
+  JavaThread* THREAD = JavaThread::cast(thread);
+
+  // Get class name symbol.
+  if (klass == nullptr || (int)strlen(klass) > Symbol::max_length()) {
+    log_info(aiext)("Invalid class name %s",
+                    klass == nullptr ? "<null>" : klass);
+    return -1;
+  }
+  TempNewSymbol class_name = SymbolTable::new_symbol(klass);
+
+  // Get class loader.
+  Handle protection_domain;
+  Handle loader(THREAD, SystemDictionary::java_system_loader());
+  Klass* k = THREAD->security_get_caller_class(0);
+  if (k != nullptr) {
+    loader = Handle(THREAD, k->class_loader());
+  }
+
+  // Extract pending exception.
+  struct PendingExceptionGuard {
+    JavaThread* thread;
+    Handle pending_exception;
+    const char* exception_file;
+    int exception_line;
+
+    PendingExceptionGuard(TRAPS) {
+      thread = THREAD;
+      pending_exception = Handle(THREAD, PENDING_EXCEPTION);
+      exception_file = THREAD->exception_file();
+      exception_line = THREAD->exception_line();
+      CLEAR_PENDING_EXCEPTION;
+    }
+
+    ~PendingExceptionGuard() {
+      // Restore pending exception.
+      if (pending_exception.not_null()) {
+        thread->set_pending_exception(pending_exception(), exception_file,
+                                      exception_line);
+      }
+    }
+
+    void log(const char* op) const {
+      if (log_is_enabled(Info, aiext)) {
+        oop ex = thread->pending_exception();
+        log_info(aiext)(
+            "Exception while %s, %s: %s", op, ex->klass()->external_name(),
+            java_lang_String::as_utf8_string(java_lang_Throwable::message(ex)));
+      }
+    }
+  } guard(THREAD);
+
+  // Find class from the class loader.
+  k = SystemDictionary::resolve_or_null(class_name, loader, protection_domain,
+                                        THREAD);
+  if (HAS_PENDING_EXCEPTION) {
+    guard.log("resolving class");
+    k = nullptr;
+    CLEAR_PENDING_EXCEPTION;
+  }
+
+  // Bail out if class not found, or not an instance class.
+  if (k == nullptr) {
+    log_info(aiext)("Class %s not found", klass);
+    return -1;
+  }
+  if (!k->is_instance_klass()) {
+    log_info(aiext)("Class %s is not an instance class", klass);
+    return -1;
+  }
+
+  // Initialize the class.
+  k->initialize(THREAD);
+  if (HAS_PENDING_EXCEPTION) {
+    guard.log("initializing class");
+    CLEAR_PENDING_EXCEPTION;
+    return -1;
+  }
+
+  // The class should have been loaded, so the field and signature
+  // should already be in the symbol table.
+  // If they're not there, the field doesn't exist.
+  TempNewSymbol field_name = SymbolTable::probe(field, (int)strlen(field));
+  TempNewSymbol sig_name = SymbolTable::probe(sig, (int)strlen(sig));
+  fieldDescriptor fd;
+  if (field_name == nullptr || sig_name == nullptr ||
+      InstanceKlass::cast(k)->find_field(field_name, sig_name, false, &fd) ==
+          nullptr) {
+    log_info(aiext)("Non-static field %s.%s not found in class %s", field, sig,
+                    klass);
+    return -1;
+  }
+
+  return fd.offset();
 }
 
 // Gets unit info, including feature name, version and parameter list.
@@ -184,8 +291,11 @@ static JNIEnv* get_jni_env() {
 }
 
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
+    // Version.
     get_jvm_version,
     get_aiext_version,
+
+    // JVM flag access.
     get_jvm_flag_bool,
     get_jvm_flag_int,
     get_jvm_flag_uint,
@@ -204,9 +314,14 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     set_jvm_flag_size_t,
     set_jvm_flag_double,
     set_jvm_flag_ccstr,
+
+    // Native acceleration.
     register_naccel_provider,
     get_field_offset,
+
+    // Unit information.
     get_unit_info,
+
+    // JNI.
     get_jni_env,
 };
-
