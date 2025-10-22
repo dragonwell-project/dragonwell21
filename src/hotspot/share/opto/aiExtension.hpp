@@ -177,10 +177,13 @@ class AIExt : public AllStatic {
 class AccelCallGenerator : public InlineCallGenerator {
  private:
   bool _is_virtual;
+  void* _native_func;
 
  public:
-  AccelCallGenerator(ciMethod* m, bool is_virtual)
-      : InlineCallGenerator(m), _is_virtual(is_virtual) {}
+  AccelCallGenerator(ciMethod* m, bool is_virtual, void* native_func)
+      : InlineCallGenerator(m),
+        _is_virtual(is_virtual),
+        _native_func(native_func) {}
 
   bool is_virtual() const override { return _is_virtual; }
 

@@ -630,14 +630,13 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   const TypeFunc* func_type = TypeFunc::make(args_tuple, ret_tuple);
 
   // Create call node.
-  void* native_func = callee->accel_call_entry()->get_native_func();
   const char* name = callee->accel_call_entry()->native_func_name();
   CallNode* call;
   if (has_fp_type) {
-    call = new CallLeafNode(func_type, (address)native_func, name,
+    call = new CallLeafNode(func_type, (address)_native_func, name,
                             TypePtr::BOTTOM);
   } else {
-    call = new CallLeafNoFPNode(func_type, (address)native_func, name,
+    call = new CallLeafNoFPNode(func_type, (address)_native_func, name,
                                 TypePtr::BOTTOM);
   }
 
