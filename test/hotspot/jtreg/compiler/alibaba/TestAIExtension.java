@@ -114,6 +114,9 @@ public class TestAIExtension {
         testMethodCompile("add_ints", "47", "48").shouldContain("95");
         testMethodCompile("add_doubles", "47", "48").shouldContain("95.00");
         testMethodCompile("add_arrays", "3", "1", "2", "2").shouldContain("3\n3\n1\n");
+        testMethodCompile("add_to_int", "49").shouldContain("49");
+        testMethodCompile("add_to_double", "50").shouldContain("50.00");
+        testMethodCompile("should_skip").shouldContain("Skipped twice");
     }
 
     private static OutputAnalyzer testUnitLoadOk(String... commands) throws Exception {
@@ -176,6 +179,7 @@ public class TestAIExtension {
     public static class Launcher {
         public static void main(String[] args) throws Exception {
             // Call the dispatch method to make classes to be loaded.
+            skip_counter = 0;
             dispatch(args);
 
             // Compile it with C2.
@@ -187,6 +191,9 @@ public class TestAIExtension {
 
             // Then call it again.
             dispatch(args);
+            if (skip_counter == 2) {
+                System.out.println("Skipped twice");
+            }
         }
 
         private static void dispatch(String[] args) {
@@ -248,6 +255,28 @@ public class TestAIExtension {
                     }
                     break;
                 }
+                case "add_to_int": {
+                    int i = Integer.parseInt(args[1]);
+
+                    Launcher l = new Launcher();
+                    l.add_to_int(i);
+
+                    System.out.println(l.x_int);
+                    break;
+                }
+                case "add_to_double": {
+                    double d = Double.parseDouble(args[1]);
+
+                    Launcher l = new Launcher();
+                    l.add_to_double(d);
+
+                    System.out.printf("%.2f\n", l.x_double);
+                    break;
+                }
+                case "should_skip": {
+                    should_skip();
+                    break;
+                }
                 default: {
                     throw new RuntimeException("Unknown test: " + args[0]);
                 }
@@ -266,6 +295,14 @@ public class TestAIExtension {
         private static int add(int a, int b) { return 0; }
         private static double add(double a, double b) { return 0; }
         private void add(int[] a, int[] b) {}
+
+        private int x_int = 0;
+        private double x_double = 0;
+        private void add_to_int(int i) {}
+        private void add_to_double(double d) {}
+
+        private static int skip_counter = 0;
+        private static void should_skip() { skip_counter++; }
     }
 
     // This will be invoked by JNI calls.

@@ -21,11 +21,32 @@
  * questions.
  */
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include "aiext.h"
+
+static int offset_x_int, offset_x_double;
+
+static void* native_provider(const aiext_env_t* env,
+                             const char* native_func_name, void* data) {
+  if (offset_x_int == 0) {
+    offset_x_int =
+        env->get_field_offset("TestAIExtension$Launcher", "x_int", "I");
+  }
+  if (offset_x_double == 0) {
+    offset_x_double =
+        env->get_field_offset("TestAIExtension$Launcher", "x_double", "D");
+  }
+  printf("Compiling `%s`, offset_x_int=%d, offset_x_double=%d\n",
+         native_func_name, offset_x_int, offset_x_double);
+  if (offset_x_int < 0 || offset_x_double < 0) {
+    return NULL;
+  }
+  return data;
+}
 
 // For ()V static method.
 static void hello() { printf("Hello from native library!\n"); }
@@ -80,6 +101,22 @@ static void add_arrays(const void* this, int32_t* a, int32_t a_len, int32_t* b,
   }
 }
 
+// Adds the given integer to object's field.
+// For (I)V method.
+static void add_to_int(void* this, int32_t i) {
+  assert(offset_x_int > 0 && "Invalid field offset");
+  int32_t* x_int = (int32_t*)((char*)this + offset_x_int);
+  *x_int += i;
+}
+
+// Adds the given double to object's field.
+// For (D)V method.
+static void add_to_double(void* this, double d) {
+  assert(offset_x_double > 0 && "Invalid field offset");
+  double* x_double = (double*)((char*)this + offset_x_double);
+  *x_double += d;
+}
+
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
                                             aiext_handle_t handle) {
   return AIEXT_OK;
@@ -87,39 +124,45 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
                                                  aiext_handle_t handle) {
-#define REPLACE_WITH_NATIVE(k, m, s, fn, f)                    \
-  do {                                                         \
-    aiext_result_t res;                                        \
-    res = env->register_naccel_provider(k, m, s, fn, f, NULL); \
-    if (res != AIEXT_OK) {                                     \
-      return res;                                              \
-    }                                                          \
+#define REPLACE_WITH_NATIVE(m, s, f)                                          \
+  do {                                                                        \
+    aiext_result_t res;                                                       \
+    res = env->register_naccel_provider("TestAIExtension$Launcher", m, s, #f, \
+                                        f, NULL);                             \
+    if (res != AIEXT_OK) {                                                    \
+      return res;                                                             \
+    }                                                                         \
+  } while (0)
+#define REPLACE_WITH_PROVIDER(m, s, f)                                        \
+  do {                                                                        \
+    aiext_result_t res;                                                       \
+    res = env->register_naccel_provider("TestAIExtension$Launcher", m, s, #f, \
+                                        f, native_provider);                  \
+    if (res != AIEXT_OK) {                                                    \
+      return res;                                                             \
+    }                                                                         \
   } while (0)
 
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "()V", "hello",
-                      hello);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(I)V", "hello_int",
-                      hello_int);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(J)V", "hello_long",
-                      hello_long);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(F)V",
-                      "hello_float", hello_float);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(D)V",
-                      "hello_double", hello_double);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "([B)V",
-                      "hello_bytes", hello_bytes);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello",
-                      "(Ljava/lang/Object;)V", "hello_object", hello_object);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "hello", "(S)V",
-                      "hello_short_method", hello_short_method);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "(II)I", "add_ints",
-                      add_ints);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "(DD)D", "add_doubles",
-                      add_doubles);
-  REPLACE_WITH_NATIVE("TestAIExtension$Launcher", "add", "([I[I)V",
-                      "add_arrays", add_arrays);
+  REPLACE_WITH_NATIVE("hello", "()V", hello);
+  REPLACE_WITH_NATIVE("hello", "(I)V", hello_int);
+  REPLACE_WITH_NATIVE("hello", "(J)V", hello_long);
+  REPLACE_WITH_NATIVE("hello", "(F)V", hello_float);
+  REPLACE_WITH_NATIVE("hello", "(D)V", hello_double);
+  REPLACE_WITH_NATIVE("hello", "([B)V", hello_bytes);
+  REPLACE_WITH_NATIVE("hello", "(Ljava/lang/Object;)V", hello_object);
+  REPLACE_WITH_NATIVE("hello", "(S)V", hello_short_method);
+
+  REPLACE_WITH_NATIVE("add", "(II)I", add_ints);
+  REPLACE_WITH_NATIVE("add", "(DD)D", add_doubles);
+  REPLACE_WITH_NATIVE("add", "([I[I)V", add_arrays);
+
+  REPLACE_WITH_PROVIDER("add_to_int", "(I)V", add_to_int);
+  REPLACE_WITH_PROVIDER("add_to_double", "(D)V", add_to_double);
+
+  REPLACE_WITH_PROVIDER("should_skip", "()V", NULL);
 
 #undef REPLACE_WITH_NATIVE
+#undef REPLACE_WITH_PROVIDER
   return AIEXT_OK;
 }
 
