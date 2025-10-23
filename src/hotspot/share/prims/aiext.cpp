@@ -37,6 +37,7 @@
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
 #include "runtime/handles.inline.hpp"
+#include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/javaThread.hpp"
 
 static int CurrentVersion = AIEXT_VERSION_1;
@@ -171,14 +172,6 @@ static int get_field_offset(const char* klass, const char* field,
   }
   TempNewSymbol class_name = SymbolTable::new_symbol(klass);
 
-  // Get class loader.
-  Handle protection_domain;
-  Handle loader(THREAD, SystemDictionary::java_system_loader());
-  Klass* k = THREAD->security_get_caller_class(0);
-  if (k != nullptr) {
-    loader = Handle(THREAD, k->class_loader());
-  }
-
   // Extract pending exception.
   struct PendingExceptionGuard {
     JavaThread* thread;
@@ -210,13 +203,24 @@ static int get_field_offset(const char* klass, const char* field,
             java_lang_String::as_utf8_string(java_lang_Throwable::message(ex)));
       }
     }
-  } guard(THREAD);
+  } except_guard(THREAD);
+
+  // Transition thread state to VM.
+  ThreadInVMfromNative state_guard(THREAD);
+
+  // Get class loader.
+  Handle protection_domain;
+  Handle loader(THREAD, SystemDictionary::java_system_loader());
+  Klass* k = THREAD->security_get_caller_class(0);
+  if (k != nullptr) {
+    loader = Handle(THREAD, k->class_loader());
+  }
 
   // Find class from the class loader.
   k = SystemDictionary::resolve_or_null(class_name, loader, protection_domain,
                                         THREAD);
   if (HAS_PENDING_EXCEPTION) {
-    guard.log("resolving class");
+    except_guard.log("resolving class");
     k = nullptr;
     CLEAR_PENDING_EXCEPTION;
   }
@@ -234,7 +238,7 @@ static int get_field_offset(const char* klass, const char* field,
   // Initialize the class.
   k->initialize(THREAD);
   if (HAS_PENDING_EXCEPTION) {
-    guard.log("initializing class");
+    except_guard.log("initializing class");
     CLEAR_PENDING_EXCEPTION;
     return -1;
   }
