@@ -26,6 +26,7 @@
  * @test
  * @summary Test miscellanous functionality related to JVM running in docker container
  * @requires docker.support
+ * @requires !vm.asan
  * @library /test/lib
  * @modules java.base/jdk.internal.misc
  *          java.management
@@ -117,7 +118,9 @@ public class TestMisc {
             "Maximum Memory Usage",
             "memory_max_usage_in_bytes",
             "maximum number of tasks",
-            "current number of tasks"
+            "current number of tasks",
+            "rss_usage_in_bytes",
+            "cache_usage_in_bytes"
         };
 
         for (String s : expectedToContain) {

@@ -295,6 +295,10 @@ public class WhiteBox {
   public native void NMTFreeArena(long arena);
   public native void NMTArenaMalloc(long arena, long size);
 
+  // Sanitizers
+  public native boolean isAsanEnabled();
+  public native boolean isUbsanEnabled();
+
   // Compiler
   public native boolean isC2OrJVMCIIncluded();
   public native boolean isJVMCISupportedByGC();
@@ -729,6 +733,7 @@ public class WhiteBox {
   public native void printOsInfo();
   public native long hostPhysicalMemory();
   public native long hostPhysicalSwap();
+  public native int hostCPUs();
 
   // Decoder
   public native void disableElfSectionCache();
