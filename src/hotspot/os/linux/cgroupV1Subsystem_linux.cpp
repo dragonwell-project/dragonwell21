@@ -320,7 +320,7 @@ jlong CgroupV1MemoryController::cache_usage_in_bytes() {
     return OSCONTAINER_ERROR;
   }
   log_trace(os, container)("Cache usage is: " JULONG_FORMAT, cache);
-  return cache;
+  return (jlong)cache;
 }
 
 jlong CgroupV1MemoryController::kernel_memory_usage_in_bytes() {
