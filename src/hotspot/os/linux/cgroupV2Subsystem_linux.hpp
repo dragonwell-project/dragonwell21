@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Red Hat Inc.
+ * Copyright (c) 2020, 2024, Red Hat Inc.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,16 +64,16 @@ class CgroupV2CpuController: public CgroupCpuController {
     bool is_read_only() override {
       return reader()->is_read_only();
     }
-    const char* subsystem_path() {
+    const char* subsystem_path() override {
       return reader()->subsystem_path();
     }
     bool needs_hierarchy_adjustment() override {
       return reader()->needs_hierarchy_adjustment();
     }
-    void set_subsystem_path(const char* cgroup_path) {
+    void set_subsystem_path(const char* cgroup_path) override {
       reader()->set_subsystem_path(cgroup_path);
     }
-    const char* mount_point() { return reader()->mount_point(); }
+    const char* mount_point() override { return reader()->mount_point(); }
     const char* cgroup_path() override { return reader()->cgroup_path(); }
 };
 
@@ -97,16 +97,16 @@ class CgroupV2MemoryController final: public CgroupMemoryController {
     bool is_read_only() override {
       return reader()->is_read_only();
     }
-    const char* subsystem_path() {
+    const char* subsystem_path() override {
       return reader()->subsystem_path();
     }
     bool needs_hierarchy_adjustment() override {
       return reader()->needs_hierarchy_adjustment();
     }
-    void set_subsystem_path(const char* cgroup_path) {
+    void set_subsystem_path(const char* cgroup_path) override {
       reader()->set_subsystem_path(cgroup_path);
     }
-    const char* mount_point() { return reader()->mount_point(); }
+    const char* mount_point() override { return reader()->mount_point(); }
     const char* cgroup_path() override { return reader()->cgroup_path(); }
 };
 
@@ -135,8 +135,8 @@ class CgroupV2Subsystem: public CgroupSubsystem {
     const char * container_type() override {
       return "cgroupv2";
     }
-    CachingCgroupController<CgroupMemoryController>* memory_controller() { return _memory; }
-    CachingCgroupController<CgroupCpuController>* cpu_controller() { return _cpu; }
+    CachingCgroupController<CgroupMemoryController>* memory_controller() override { return _memory; }
+    CachingCgroupController<CgroupCpuController>* cpu_controller() override { return _cpu; }
 };
 
 #endif // CGROUP_V2_SUBSYSTEM_LINUX_HPP

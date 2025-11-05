@@ -31,6 +31,7 @@
  *          not by the host system.
  * @requires (docker.support & os.maxMemory >= 2g)
  * @modules java.base/jdk.internal.platform
+ * @requires !vm.asan
  * @library /test/lib
  * @modules java.base/jdk.internal.misc
  *          java.management

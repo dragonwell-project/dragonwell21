@@ -83,9 +83,12 @@ requires.properties= \
     vm.compiler1.enabled \
     vm.compiler2.enabled \
     vm.musl \
+    vm.asan \
+    vm.ubsan \
     vm.flagless \
     vm.aiext \
     docker.support \
+    systemd.support \
     jdk.containerized
 
 # Minimum jtreg version

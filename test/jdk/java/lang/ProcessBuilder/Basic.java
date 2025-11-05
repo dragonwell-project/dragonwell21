@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
  *      6464154 6523983 6206031 4960438 6631352 6631966 6850957 6850958
  *      4947220 7018606 7034570 4244896 5049299 8003488 8054494 8058464
  *      8067796 8224905 8263729 8265173 8272600 8231297 8282219 8285517
+ *      8368192
  * @key intermittent
  * @summary Basic tests for Process and Environment Variable code
  * @modules java.base/java.lang:open
@@ -36,8 +37,8 @@
  * @requires !vm.musl
  * @requires vm.flagless
  * @library /test/lib
- * @run main/othervm/native/timeout=300 -Djava.security.manager=allow Basic
- * @run main/othervm/native/timeout=300 -Djava.security.manager=allow -Djdk.lang.Process.launchMechanism=fork Basic
+ * @run main/othervm/native/timeout=360 -Djava.security.manager=allow Basic
+ * @run main/othervm/native/timeout=360 -Djava.security.manager=allow -Djdk.lang.Process.launchMechanism=fork Basic
  * @author Martin Buchholz
  */
 
@@ -209,7 +210,7 @@ public class Basic {
 
     private static final Runtime runtime = Runtime.getRuntime();
 
-    private static final String[] winEnvCommand = {"cmd.exe", "/c", "set"};
+    private static final String[] winEnvCommand = {"cmd.exe", "/d", "/c", "set"};
 
     private static String winEnvFilter(String env) {
         return env.replaceAll("\r", "")
@@ -772,30 +773,29 @@ public class Basic {
         return Pattern.compile(regex).matcher(str).find();
     }
 
-    private static String matchAndExtract(String str, String regex) {
-        Matcher matcher = Pattern.compile(regex).matcher(str);
-        if (matcher.find()) {
-            return matcher.group();
-        } else {
-            return "";
-        }
+    // Return the string with the matching regex removed
+    private static String matchAndRemove(String str, String regex) {
+        return Pattern.compile(regex)
+                .matcher(str)
+                .replaceAll("");
     }
 
     /* Only used for Mac OS X --
-     * Mac OS X (may) add the variable __CF_USER_TEXT_ENCODING to an empty
-     * environment. The environment variable JAVA_MAIN_CLASS_<pid> may also
-     * be set in Mac OS X.
-     * Remove them both from the list of env variables
+     * Mac OS X (may) add the variables: __CF_USER_TEXT_ENCODING, JAVA_MAIN_CLASS_<pid>,
+     * and TMPDIR.
+     * Remove them from the list of env variables
      */
     private static String removeMacExpectedVars(String vars) {
         // Check for __CF_USER_TEXT_ENCODING
-        String cleanedVars = vars.replace("__CF_USER_TEXT_ENCODING="
-                                            +cfUserTextEncoding+",","");
+        String cleanedVars = matchAndRemove(vars,
+                "__CF_USER_TEXT_ENCODING=" + cfUserTextEncoding + ",");
         // Check for JAVA_MAIN_CLASS_<pid>
-        String javaMainClassStr
-                = matchAndExtract(cleanedVars,
-                                    "JAVA_MAIN_CLASS_\\d+=Basic.JavaChild,");
-        return cleanedVars.replace(javaMainClassStr,"");
+        cleanedVars = matchAndRemove(cleanedVars,
+                "JAVA_MAIN_CLASS_\\d+=Basic.JavaChild,");
+        // Check and remove TMPDIR
+        cleanedVars = matchAndRemove(cleanedVars,
+                "TMPDIR=[^,]*,");
+        return cleanedVars;
     }
 
     /* Only used for AIX --
@@ -1914,7 +1914,9 @@ public class Basic {
         // Test Runtime.exec(...envp...) with envstrings without any `='
         //----------------------------------------------------------------
         try {
-            String[] cmdp = {"echo"};
+            // In Windows CMD (`cmd.exe`), `echo/` outputs a newline (i.e., an empty line).
+            // Wrapping it with `cmd.exe /c` ensures compatibility in both native Windows and Cygwin environments.
+            String[] cmdp = Windows.is() ? new String[]{"cmd.exe", "/c", "echo/"} : new String[]{"echo"};
             String[] envp = {"Hello", "World"}; // Yuck!
             Process p = Runtime.getRuntime().exec(cmdp, envp);
             equal(commandOutput(p), "\n");
