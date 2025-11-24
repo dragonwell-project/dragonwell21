@@ -225,7 +225,8 @@ static int get_field_offset(const char* klass, const char* field,
     CLEAR_PENDING_EXCEPTION;
   }
 
-  // Bail out if class not found, or not an instance class.
+  // Bail out if class not found, or not an instance class,
+  // or is not initialized.
   if (k == nullptr) {
     log_info(aiext)("Class %s not found", klass);
     return -1;
@@ -234,12 +235,9 @@ static int get_field_offset(const char* klass, const char* field,
     log_info(aiext)("Class %s is not an instance class", klass);
     return -1;
   }
-
-  // Initialize the class.
-  k->initialize(THREAD);
-  if (HAS_PENDING_EXCEPTION) {
-    except_guard.log("initializing class");
-    CLEAR_PENDING_EXCEPTION;
+  InstanceKlass* ik = InstanceKlass::cast(k);
+  if (!ik->is_initialized()) {
+    log_info(aiext)("Class %s is not initialized", klass);
     return -1;
   }
 
@@ -250,8 +248,7 @@ static int get_field_offset(const char* klass, const char* field,
   TempNewSymbol sig_name = SymbolTable::probe(sig, (int)strlen(sig));
   fieldDescriptor fd;
   if (field_name == nullptr || sig_name == nullptr ||
-      InstanceKlass::cast(k)->find_field(field_name, sig_name, false, &fd) ==
-          nullptr) {
+      ik->find_field(field_name, sig_name, false, &fd) == nullptr) {
     log_info(aiext)("Non-static field %s.%s not found in class %s", field, sig,
                     klass);
     return -1;

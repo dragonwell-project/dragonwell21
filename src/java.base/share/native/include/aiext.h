@@ -109,7 +109,7 @@ struct aiext_env {
                                              void* func_or_data,
                                              aiext_naccel_provider_t provider);
 
-  // Gets field offset in a Java class, returns `-1` on failure.
+  // Gets field offset in bytes in a Java class, returns `-1` on failure.
   int (*get_field_offset)(const char* klass, const char* field,
                           const char* sig);
 
