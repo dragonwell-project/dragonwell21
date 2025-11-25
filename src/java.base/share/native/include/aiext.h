@@ -42,6 +42,20 @@ typedef enum {
   AIEXT_ERROR,
 } aiext_result_t;
 
+// Type of a Java value.
+typedef enum {
+  AIEXT_TYPE_BOOLEAN = 4,
+  AIEXT_TYPE_CHAR = 5,
+  AIEXT_TYPE_FLOAT = 6,
+  AIEXT_TYPE_DOUBLE = 7,
+  AIEXT_TYPE_BYTE = 8,
+  AIEXT_TYPE_SHORT = 9,
+  AIEXT_TYPE_INT = 10,
+  AIEXT_TYPE_LONG = 11,
+  AIEXT_TYPE_OBJECT = 12,
+  AIEXT_TYPE_ARRAY = 13,
+} aiext_value_type_t;
+
 // AI-Extension unit handle, for identification of a unit.
 typedef uint64_t aiext_handle_t;
 
@@ -122,6 +136,13 @@ struct aiext_env {
 
   // Get JNI interface
   JNIEnv* (*get_jni_env)();
+
+  // Get Java array layout of the given type, including element size in bytes,
+  // length offset in bytes and data offset in bytes. The size of length should
+  // always be 4 bytes.
+  aiext_result_t (*get_array_layout)(aiext_value_type_t type,
+                                     size_t* length_offset, size_t* data_offset,
+                                     size_t* elem_size);
 };
 
 #ifdef __cplusplus

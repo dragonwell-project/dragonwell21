@@ -25,6 +25,7 @@
 
 #include <string.h>
 
+#include "precompiled.hpp"
 #include "classfile/javaClasses.hpp"
 #include "classfile/symbolTable.hpp"
 #include "classfile/systemDictionary.hpp"
@@ -32,7 +33,6 @@
 #include "oops/oop.inline.hpp"
 #include "oops/symbolHandle.hpp"
 #include "opto/aiExtension.hpp"
-#include "precompiled.hpp"
 #include "runtime/fieldDescriptor.inline.hpp"
 #include "runtime/flags/jvmFlag.hpp"
 #include "runtime/flags/jvmFlagAccess.hpp"
@@ -291,6 +291,69 @@ static JNIEnv* get_jni_env() {
   return JavaThread::current()->jni_environment();
 }
 
+// Converts `aiext_value_type_t` to `BasicType`.
+static aiext_result_t to_basic_type(aiext_value_type_t type, BasicType& bt) {
+  switch (type) {
+    case AIEXT_TYPE_BOOLEAN:
+      bt = T_BOOLEAN;
+      break;
+    case AIEXT_TYPE_CHAR:
+      bt = T_CHAR;
+      break;
+    case AIEXT_TYPE_FLOAT:
+      bt = T_FLOAT;
+      break;
+    case AIEXT_TYPE_DOUBLE:
+      bt = T_DOUBLE;
+      break;
+    case AIEXT_TYPE_BYTE:
+      bt = T_BYTE;
+      break;
+    case AIEXT_TYPE_SHORT:
+      bt = T_SHORT;
+      break;
+    case AIEXT_TYPE_INT:
+      bt = T_INT;
+      break;
+    case AIEXT_TYPE_LONG:
+      bt = T_LONG;
+      break;
+    case AIEXT_TYPE_OBJECT:
+      bt = T_OBJECT;
+      break;
+    case AIEXT_TYPE_ARRAY:
+      bt = T_ARRAY;
+      break;
+    default:
+      log_info(aiext)("Invalid value type %d", type);
+      return AIEXT_ERROR;
+  }
+  return AIEXT_OK;
+}
+
+// Gets Java array layout.
+static aiext_result_t get_array_layout(aiext_value_type_t type,
+                                       size_t* length_offset,
+                                       size_t* data_offset, size_t* elem_size) {
+  BasicType bt;
+  aiext_result_t result = to_basic_type(type, bt);
+  if (result != AIEXT_OK) {
+    return result;
+  }
+
+  if (length_offset != nullptr) {
+    *length_offset = arrayOopDesc::length_offset_in_bytes();
+  }
+  if (data_offset != nullptr) {
+    *data_offset = arrayOopDesc::base_offset_in_bytes(bt);
+  }
+  if (elem_size != nullptr) {
+    *elem_size = type2aelembytes(bt);
+  }
+
+  return AIEXT_OK;
+}
+
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     // Version.
     get_jvm_version,
@@ -325,4 +388,7 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
 
     // JNI.
     get_jni_env,
+
+    // Object/pointer layout.
+    get_array_layout,
 };
