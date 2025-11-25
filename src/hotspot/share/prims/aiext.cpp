@@ -30,6 +30,7 @@
 #include "classfile/symbolTable.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "logging/log.hpp"
+#include "oops/compressedOops.hpp"
 #include "oops/oop.inline.hpp"
 #include "oops/symbolHandle.hpp"
 #include "opto/aiExtension.hpp"
@@ -354,6 +355,21 @@ static aiext_result_t get_array_layout(aiext_value_type_t type,
   return AIEXT_OK;
 }
 
+// Gets the layout of narrow oop.
+static aiext_result_t get_narrow_oop_layout(uint32_t* null, uintptr_t* base,
+                                            size_t* shift) {
+  if (null != nullptr) {
+    *null = (uint32_t)narrowOop::null;
+  }
+  if (base != nullptr) {
+    *base = (uintptr_t)CompressedOops::base();
+  }
+  if (shift != nullptr) {
+    *shift = CompressedOops::shift();
+  }
+  return AIEXT_OK;
+}
+
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     // Version.
     get_jvm_version,
@@ -391,4 +407,5 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
 
     // Object/pointer layout.
     get_array_layout,
+    get_narrow_oop_layout,
 };

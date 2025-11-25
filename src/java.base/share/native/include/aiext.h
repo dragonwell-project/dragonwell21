@@ -134,15 +134,20 @@ struct aiext_env {
                                   size_t version_buf_size, char* param_list_buf,
                                   size_t param_list_buf_size);
 
-  // Get JNI interface
+  // Gets JNI interface
   JNIEnv* (*get_jni_env)();
 
-  // Get Java array layout of the given type, including element size in bytes,
+  // Gets Java array layout of the given type, including element size in bytes,
   // length offset in bytes and data offset in bytes. The size of length should
   // always be 4 bytes.
   aiext_result_t (*get_array_layout)(aiext_value_type_t type,
                                      size_t* length_offset, size_t* data_offset,
                                      size_t* elem_size);
+
+  // Gets the layout of narrow oop. A non-null narrow oop can be decode to a raw
+  // pointer by `base + (oop << shift)`.
+  aiext_result_t (*get_narrow_oop_layout)(uint32_t* null, uintptr_t* base,
+                                          size_t* shift);
 };
 
 #ifdef __cplusplus
