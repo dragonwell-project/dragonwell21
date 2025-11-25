@@ -117,6 +117,33 @@ public class TestAIExtension {
         testMethodCompile("add_to_int", "49").shouldContain("49");
         testMethodCompile("add_to_double", "50").shouldContain("50.00");
         testMethodCompile("should_skip").shouldContain("Skipped twice");
+
+        // `read_strs` relies on Java array and oops layout, so we need to
+        // test different combinations of options that may affect the layout.
+        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
+                                       "-XX:-UseCompressedClassPointers",
+                                       "-XX:-UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
+                                       "-XX:+UseCompressedClassPointers",
+                                       "-XX:-UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
+                                       "-XX:+UseCompressedClassPointers",
+                                       "-XX:+UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
+                                       "-XX:-UseCompressedClassPointers",
+                                       "-XX:-UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
+                                       "-XX:+UseCompressedClassPointers",
+                                       "-XX:-UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
+                                       "-XX:+UseCompressedClassPointers",
+                                       "-XX:+UseCompactObjectHeaders"},
+                          "read_strs").shouldContain("Hello\nworld\n!\n");
     }
 
     private static OutputAnalyzer testUnitLoadOk(String... commands) throws Exception {
@@ -154,7 +181,15 @@ public class TestAIExtension {
     }
 
     private static OutputAnalyzer testMethodCompile(String... testArgs) throws Exception {
-        ArrayList<String> args = new ArrayList<>(List.of(
+        return testMethodCompile(null, testArgs);
+    }
+
+    private static OutputAnalyzer testMethodCompile(String[] jvmArgs, String... testArgs) throws Exception {
+        ArrayList<String> args = new ArrayList<>();
+        if (jvmArgs != null) {
+            args.addAll(List.of(jvmArgs));
+        }
+        args.addAll(List.of(
             "-Xbootclasspath/a:.",
             "-XX:+UnlockDiagnosticVMOptions",
             "-XX:+WhiteBoxAPI",
@@ -277,6 +312,11 @@ public class TestAIExtension {
                     should_skip();
                     break;
                 }
+                case "read_strs": {
+                    Launcher l = new Launcher();
+                    l.read_strs();
+                    break;
+                }
                 default: {
                     throw new RuntimeException("Unknown test: " + args[0]);
                 }
@@ -303,6 +343,9 @@ public class TestAIExtension {
 
         private static int skip_counter = 0;
         private static void should_skip() { skip_counter++; }
+
+        private String[] strs = {"Hello", "world", "!"};
+        private void read_strs() {}
     }
 
     // This will be invoked by JNI calls.

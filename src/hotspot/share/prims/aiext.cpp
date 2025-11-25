@@ -333,11 +333,11 @@ static aiext_result_t to_basic_type(aiext_value_type_t type, BasicType& bt) {
 }
 
 // Gets Java array layout.
-static aiext_result_t get_array_layout(aiext_value_type_t type,
+static aiext_result_t get_array_layout(aiext_value_type_t elem_type,
                                        size_t* length_offset,
                                        size_t* data_offset, size_t* elem_size) {
   BasicType bt;
-  aiext_result_t result = to_basic_type(type, bt);
+  aiext_result_t result = to_basic_type(elem_type, bt);
   if (result != AIEXT_OK) {
     return result;
   }

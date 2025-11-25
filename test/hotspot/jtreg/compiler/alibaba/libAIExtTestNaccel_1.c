@@ -28,7 +28,15 @@
 
 #include "aiext.h"
 
-static int offset_x_int, offset_x_double;
+static size_t obj_array_len_offset, obj_array_data_offset, obj_array_elem_size;
+static size_t byte_array_len_offset, byte_array_data_offset,
+    byte_array_elem_size;
+
+static uint32_t narrow_null;
+static uintptr_t narrow_base;
+static size_t narrow_shift;
+
+static int offset_x_int, offset_x_double, offset_strs, offset_string_value;
 
 static void* native_provider(const aiext_env_t* env,
                              const char* native_func_name, void* data) {
@@ -40,12 +48,36 @@ static void* native_provider(const aiext_env_t* env,
     offset_x_double =
         env->get_field_offset("TestAIExtension$Launcher", "x_double", "D");
   }
-  printf("Compiling `%s`, offset_x_int=%d, offset_x_double=%d\n",
-         native_func_name, offset_x_int, offset_x_double);
-  if (offset_x_int < 0 || offset_x_double < 0) {
+  if (offset_strs == 0) {
+    offset_strs = env->get_field_offset("TestAIExtension$Launcher", "strs",
+                                        "[Ljava/lang/String;");
+  }
+  if (offset_string_value == 0) {
+    offset_string_value =
+        env->get_field_offset("java/lang/String", "value", "[B");
+  }
+  printf(
+      "Compiling `%s`, offset_x_int=%d, offset_x_double=%d, "
+      "offset_strs=%d, offset_string_value=%d\n",
+      native_func_name, offset_x_int, offset_x_double);
+  if (offset_x_int < 0 || offset_x_double < 0 || offset_strs < 0 ||
+      offset_string_value < 0) {
     return NULL;
   }
   return data;
+}
+
+static void* get_raw_pointer(void* oop) {
+  if (obj_array_elem_size < sizeof(void*)) {
+    // Narrow oop layout.
+    uint32_t narrow = *(uint32_t*)oop;
+    if (narrow == narrow_null) {
+      return NULL;
+    }
+    return (void*)(narrow_base + ((uintptr_t)narrow << narrow_shift));
+  } else {
+    return *(void**)oop;
+  }
 }
 
 // For ()V static method.
@@ -117,6 +149,37 @@ static void add_to_double(void* this, double d) {
   *x_double += d;
 }
 
+// Reads the string array and prints it out.
+// For ()V method.
+static void read_strs(void* this) {
+  assert(offset_strs > 0 && offset_string_value > 0 && "Invalid field offset");
+
+  // Get pointer to the string array.
+  void* strs = get_raw_pointer((char*)this + offset_strs);
+  assert(strs != NULL && "Invalid string array");
+
+  // Traverse the string array.
+  int32_t strs_len = *(int32_t*)((char*)strs + obj_array_len_offset);
+  for (int32_t i = 0; i < strs_len; i++) {
+    void* str = get_raw_pointer((char*)strs + obj_array_data_offset +
+                                i * obj_array_elem_size);
+    assert(str != NULL && "Invalid string");
+
+    // Get pointer to the string's byte array.
+    void* value = get_raw_pointer((char*)str + offset_string_value);
+    assert(value != NULL && "Invalid string's byte array");
+
+    // Print the string's byte array.
+    int32_t value_len = *(int32_t*)((char*)value + byte_array_len_offset);
+    for (int32_t j = 0; j < value_len; j++) {
+      char c =
+          *((char*)value + byte_array_data_offset + j * byte_array_elem_size);
+      putchar(c);
+    }
+    putchar('\n');
+  }
+}
+
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
                                             aiext_handle_t handle) {
   return AIEXT_OK;
@@ -124,6 +187,25 @@ JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
 
 JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
                                                  aiext_handle_t handle) {
+  // Get array layout.
+  aiext_result_t res;
+  res = env->get_array_layout(AIEXT_TYPE_OBJECT, &obj_array_len_offset,
+                              &obj_array_data_offset, &obj_array_elem_size);
+  if (res != AIEXT_OK) {
+    return res;
+  }
+  res = env->get_array_layout(AIEXT_TYPE_BYTE, &byte_array_len_offset,
+                              &byte_array_data_offset, &byte_array_elem_size);
+  if (res != AIEXT_OK) {
+    return res;
+  }
+
+  // Get narrow oop layout.
+  res = env->get_narrow_oop_layout(&narrow_null, &narrow_base, &narrow_shift);
+  if (res != AIEXT_OK) {
+    return res;
+  }
+
 #define REPLACE_WITH_NATIVE(m, s, f)                                          \
   do {                                                                        \
     aiext_result_t res;                                                       \
@@ -160,6 +242,8 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
   REPLACE_WITH_PROVIDER("add_to_double", "(D)V", add_to_double);
 
   REPLACE_WITH_PROVIDER("should_skip", "()V", NULL);
+
+  REPLACE_WITH_PROVIDER("read_strs", "()V", read_strs);
 
 #undef REPLACE_WITH_NATIVE
 #undef REPLACE_WITH_PROVIDER
