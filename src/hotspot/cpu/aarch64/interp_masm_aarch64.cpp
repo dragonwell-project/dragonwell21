@@ -443,12 +443,24 @@ void InterpreterMacroAssembler::jump_from_interpreted(Register method, Register 
     // interp_only_mode if these events CAN be enabled.
     ldrw(rscratch1, Address(rthread, JavaThread::interp_only_mode_offset()));
     cbzw(rscratch1, run_compiled_code);
+#if INCLUDE_OPT_META_SIZE
+    ldrw(rscratch1, Address(method, Method::interpreter_entry_offset()));
+    mov(rscratch2, CodeCache::low_bound());
+    add(rscratch1, rscratch1, rscratch2);
+#else
     ldr(rscratch1, Address(method, Method::interpreter_entry_offset()));
+#endif
     br(rscratch1);
     bind(run_compiled_code);
   }
 
+#if INCLUDE_OPT_META_SIZE
+  ldrw(rscratch1, Address(method, Method::from_interpreted_offset()));
+  mov(rscratch2, CodeCache::low_bound());
+  add(rscratch1, rscratch1, rscratch2);
+#else
   ldr(rscratch1, Address(method, Method::from_interpreted_offset()));
+#endif
   br(rscratch1);
 }
 

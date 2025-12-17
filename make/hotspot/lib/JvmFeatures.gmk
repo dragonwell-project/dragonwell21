@@ -170,6 +170,10 @@ else
   JVM_EXCLUDE_FILES += aiext.cpp aiExtension.cpp
 endif
 
+ifneq ($(call check-jvm-feature, opt-meta-size), true)
+  JVM_CFLAGS_FEATURES += -DINCLUDE_OPT_META_SIZE=0
+endif
+
 ################################################################################
 
 ifeq ($(call check-jvm-feature, link-time-opt), true)

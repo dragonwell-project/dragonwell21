@@ -111,14 +111,26 @@ void MethodHandles::jump_from_method_handle(MacroAssembler* _masm, Register meth
 
     __ ldrw(rscratch1, Address(rthread, JavaThread::interp_only_mode_offset()));
     __ cbzw(rscratch1, run_compiled_code);
+#if INCLUDE_OPT_META_SIZE
+    __ ldrw(rscratch1, Address(method, Method::interpreter_entry_offset()));
+    __ mov(rscratch2, CodeCache::low_bound());
+    __ add(rscratch1, rscratch1, rscratch2);
+#else
     __ ldr(rscratch1, Address(method, Method::interpreter_entry_offset()));
+#endif
     __ br(rscratch1);
     __ BIND(run_compiled_code);
   }
 
   const ByteSize entry_offset = for_compiler_entry ? Method::from_compiled_offset() :
                                                      Method::from_interpreted_offset();
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(method, entry_offset));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1,Address(method, entry_offset));
+#endif
   __ br(rscratch1);
   __ bind(L_no_such_method);
   __ far_jump(RuntimeAddress(StubRoutines::throw_AbstractMethodError_entry()));

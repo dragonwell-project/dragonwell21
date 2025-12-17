@@ -240,7 +240,13 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Symbol* signature,
 
   __ push_cont_fastpath(rthread);
 
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#endif
   __ blr(rscratch1);
 
   __ pop_cont_fastpath(rthread);

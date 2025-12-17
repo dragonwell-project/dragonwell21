@@ -47,7 +47,7 @@ m4_define(jvm_features_valid, m4_normalize( \
     cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check \
     jvmci jvmti link-time-opt management minimal opt-size parallelgc \
     serialgc services shenandoahgc static-build vm-structs zero zgc \
-    aiext \
+    aiext opt-meta-size \
 ))
 
 # Deprecated JVM features (these are ignored, but with a warning)
@@ -71,6 +71,7 @@ m4_define(jvm_feature_desc_link_time_opt, [enable link time optimization])
 m4_define(jvm_feature_desc_management, [enable java.lang.management API support])
 m4_define(jvm_feature_desc_minimal, [support building variant 'minimal'])
 m4_define(jvm_feature_desc_opt_size, [optimize the JVM library for size])
+m4_define(jvm_feature_desc_opt_meta_size, [optimize metaspace object size])
 m4_define(jvm_feature_desc_parallelgc, [include the parallel garbage collector])
 m4_define(jvm_feature_desc_serialgc, [include the serial garbage collector])
 m4_define(jvm_feature_desc_services, [enable diagnostic services and client attaching])
@@ -315,6 +316,28 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_JVMCI],
 ])
 
 ###############################################################################
+# Check if the feature 'opt-meta-size' is available on this platform.
+#
+AC_DEFUN_ONCE([JVM_FEATURES_CHECK_OPT_META_SIZE],
+[
+  JVM_FEATURES_CHECK_AVAILABILITY(opt-meta-size, [
+    AC_MSG_CHECKING([if platform is supported by Opt-Meta-Size])
+    if test "x$OPENJDK_TARGET_OS" = xlinux; then
+      if test "x$OPENJDK_TARGET_CPU" = "xx86_64" || \
+         test "x$OPENJDK_TARGET_CPU" = "xaarch64"; then
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no, $OPENJDK_TARGETT_OS-$OPENJDK_TARGET_CPU])
+        AVAILABLE=false
+      fi
+    else
+      AC_MSG_RESULT([no, $OPENJDK_TARGETT_OS-$OPENJDK_TARGET_CPU])
+      AVAILABLE=false
+    fi
+  ])
+])
+
+###############################################################################
 # Check if the feature 'shenandoahgc' is available on this platform.
 #
 AC_DEFUN_ONCE([JVM_FEATURES_CHECK_SHENANDOAHGC],
@@ -419,6 +442,7 @@ AC_DEFUN_ONCE([JVM_FEATURES_PREPARE_PLATFORM],
   JVM_FEATURES_CHECK_CDS
   JVM_FEATURES_CHECK_DTRACE
   JVM_FEATURES_CHECK_JVMCI
+  JVM_FEATURES_CHECK_OPT_META_SIZE
   JVM_FEATURES_CHECK_SHENANDOAHGC
   JVM_FEATURES_CHECK_STATIC_BUILD
   JVM_FEATURES_CHECK_ZGC
@@ -451,11 +475,11 @@ AC_DEFUN([JVM_FEATURES_PREPARE_VARIANT],
 
   # Check which features should be off by default for this JVM variant.
   if test "x$variant" = "xclient"; then
-    JVM_FEATURES_VARIANT_FILTER="compiler2 jvmci link-time-opt opt-size aiext"
+    JVM_FEATURES_VARIANT_FILTER="compiler2 jvmci link-time-opt opt-size aiext opt-meta-size"
   elif test "x$variant" = "xminimal"; then
     JVM_FEATURES_VARIANT_FILTER="cds compiler2 dtrace epsilongc g1gc \
         jfr jni-check jvmci jvmti management parallelgc services \
-        shenandoahgc vm-structs zgc aiext"
+        shenandoahgc vm-structs zgc aiext opt-meta-size"
     if test "x$OPENJDK_TARGET_CPU" = xarm ; then
       JVM_FEATURES_VARIANT_FILTER="$JVM_FEATURES_VARIANT_FILTER opt-size"
     else
@@ -465,7 +489,7 @@ AC_DEFUN([JVM_FEATURES_PREPARE_VARIANT],
     fi
   elif test "x$variant" = "xcore"; then
     JVM_FEATURES_VARIANT_FILTER="compiler1 compiler2 jvmci \
-        link-time-opt opt-size aiext"
+        link-time-opt opt-size aiext opt-meta-size"
   elif test "x$variant" = "xzero"; then
     JVM_FEATURES_VARIANT_FILTER="jfr link-time-opt opt-size"
   else

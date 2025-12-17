@@ -1134,9 +1134,17 @@ void Method::clear_code() {
   // this may be null if c2i adapters have not been made yet
   // Only should happen at allocate time.
   if (adapter() == nullptr) {
+#if INCLUDE_OPT_META_SIZE
+    set_from_compiled_entry(nullptr);
+#else
     _from_compiled_entry    = nullptr;
+#endif
   } else {
+#if INCLUDE_OPT_META_SIZE
+    set_from_compiled_entry(adapter()->get_c2i_entry());
+#else
     _from_compiled_entry    = adapter()->get_c2i_entry();
+#endif
   }
   OrderAccess::storestore();
   _from_interpreted_entry = _i2i_entry;
@@ -1166,9 +1174,15 @@ void Method::unlink_method() {
   Arguments::assert_is_dumping_archive();
   _code = nullptr;
   _adapter = nullptr;
+#if INCLUDE_OPT_META_SIZE
+  _i2i_entry = 0;
+  _from_compiled_entry = 0;
+  _from_interpreted_entry = 0;
+#else
   _i2i_entry = nullptr;
   _from_compiled_entry = nullptr;
   _from_interpreted_entry = nullptr;
+#endif
 
   if (is_native()) {
     *native_function_addr() = nullptr;
@@ -1236,9 +1250,14 @@ void Method::link_method(const methodHandle& h_method, TRAPS) {
 
   if (h_method->is_continuation_native_intrinsic()) {
     // the entry points to this method will be set in set_code, called when first resolving this method
+#if INCLUDE_OPT_META_SIZE
+    set_from_compiled_entry(nullptr);
+    set_interpreter_entry(nullptr);  // both _from_interpreted_entry and _i2i_entry are set
+#else
     _from_interpreted_entry = nullptr;
     _from_compiled_entry = nullptr;
     _i2i_entry = nullptr;
+#endif
   }
 }
 
@@ -1259,7 +1278,11 @@ address Method::make_adapters(const methodHandle& mh, TRAPS) {
   }
 
   mh->set_adapter_entry(adapter);
+#if INCLUDE_OPT_META_SIZE
+  mh->set_from_compiled_entry(adapter->get_c2i_entry());
+#else
   mh->_from_compiled_entry = adapter->get_c2i_entry();
+#endif
   return adapter->get_c2i_entry();
 }
 
@@ -1272,8 +1295,13 @@ address Method::make_adapters(const methodHandle& mh, TRAPS) {
 // This function must not hit a safepoint!
 address Method::verified_code_entry() {
   debug_only(NoSafepointVerifier nsv;)
+#if INCLUDE_OPT_META_SIZE
+  assert(_from_compiled_entry != 0, "must be set");
+  return from_compiled_entry();
+#else
   assert(_from_compiled_entry != nullptr, "must be set");
   return _from_compiled_entry;
+#endif
 }
 
 // Check that if an nmethod ref exists, it has a backlink to this or no backlink at all
@@ -1306,25 +1334,51 @@ void Method::set_code(const methodHandle& mh, CompiledMethod *code) {
   }
 
   OrderAccess::storestore();
+#if INCLUDE_OPT_META_SIZE
+  mh->set_from_compiled_entry(code->verified_entry_point());
+#else
   mh->_from_compiled_entry = code->verified_entry_point();
+#endif
   OrderAccess::storestore();
 
   if (mh->is_continuation_native_intrinsic()) {
+#if INCLUDE_OPT_META_SIZE
+    assert(mh->_from_interpreted_entry == 0, "initialized incorrectly"); // see link_method
+#else
     assert(mh->_from_interpreted_entry == nullptr, "initialized incorrectly"); // see link_method
+#endif
 
     if (mh->is_continuation_enter_intrinsic()) {
       // This is the entry used when we're in interpreter-only mode; see InterpreterMacroAssembler::jump_from_interpreted
+#if INCLUDE_OPT_META_SIZE
+      mh->set_i2i_entry(ContinuationEntry::interpreted_entry());
+#else
       mh->_i2i_entry = ContinuationEntry::interpreted_entry();
+#endif
     } else if (mh->is_continuation_yield_intrinsic()) {
+#if INCLUDE_OPT_META_SIZE
+      mh->set_i2i_entry(mh->get_i2c_entry());
+#else
       mh->_i2i_entry = mh->get_i2c_entry();
+#endif
     } else {
       guarantee(false, "Unknown Continuation native intrinsic");
     }
     // This must come last, as it is what's tested in LinkResolver::resolve_static_call
+#if INCLUDE_OPT_META_SIZE
+    OrderAccess::storestore();
+    mh->set_from_interpreted_entry(mh->get_i2c_entry());
+    OrderAccess::storestore();
+#else
     Atomic::release_store(&mh->_from_interpreted_entry , mh->get_i2c_entry());
+#endif
   } else if (!mh->is_method_handle_intrinsic()) {
     // Instantly compiled code can execute.
+#if INCLUDE_OPT_META_SIZE
+    mh->set_from_interpreted_entry(mh->get_i2c_entry());
+#else
     mh->_from_interpreted_entry = mh->get_i2c_entry();
+#endif
   }
 }
 

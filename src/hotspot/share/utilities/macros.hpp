@@ -341,6 +341,10 @@
 #define COMPILER1_OR_COMPILER2_PRESENT(code)
 #endif
 
+// optimize metaspace obj size
+#ifndef INCLUDE_OPT_META_SIZE
+#define INCLUDE_OPT_META_SIZE 1
+#endif
 
 // PRODUCT variant
 #ifdef PRODUCT
