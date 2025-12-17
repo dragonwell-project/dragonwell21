@@ -821,6 +821,11 @@ void InterpreterMacroAssembler::prepare_to_jump_from_interpreted() {
 // in this thread in which case we must call the i2i entry
 void InterpreterMacroAssembler::jump_from_interpreted(Register method, Register temp) {
   prepare_to_jump_from_interpreted();
+#if INCLUDE_OPT_META_SIZE
+  Register temp1 = temp;
+  Register temp2 = temp1 == rscratch2 ? rscratch1 : rscratch2;
+  assert_different_registers(temp1, temp2, r15_thread);
+#endif
 
   if (JvmtiExport::can_post_interpreter_events()) {
     Label run_compiled_code;
@@ -833,11 +838,25 @@ void InterpreterMacroAssembler::jump_from_interpreted(Register method, Register 
     NOT_LP64(get_thread(temp);)
     cmpb(Address(temp, JavaThread::interp_only_mode_offset()), 0);
     jccb(Assembler::zero, run_compiled_code);
+#if INCLUDE_OPT_META_SIZE
+    mov64(temp1, (int64_t)(CodeCache::low_bound()));
+    movl(temp2, Address(method, Method::interpreter_entry_offset()));
+    addptr(temp1, temp2);
+    jmp(temp1);
+#else
     jmp(Address(method, Method::interpreter_entry_offset()));
+#endif
     bind(run_compiled_code);
   }
 
+#if INCLUDE_OPT_META_SIZE
+  mov64(temp1, (int64_t)(CodeCache::low_bound()));
+  movl(temp2, Address(method, Method::from_interpreted_offset()));
+  addptr(temp1, temp2);
+  jmp(temp1);
+#else
   jmp(Address(method, Method::from_interpreted_offset()));
+#endif
 }
 
 // The following two routines provide a hook so that an implementation

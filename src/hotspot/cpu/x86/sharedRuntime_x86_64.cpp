@@ -750,7 +750,13 @@ static void gen_c2i_adapter(MacroAssembler *masm,
   }
 
   // Schedule the branch target address early.
+#if INCLUDE_OPT_META_SIZE
+  __ mov64(rcx, (int64_t)(CodeCache::low_bound()));
+  __ movl(rscratch1, Address(rbx, in_bytes(Method::interpreter_entry_offset())));
+  __ addptr(rcx, rscratch1);
+#else
   __ movptr(rcx, Address(rbx, in_bytes(Method::interpreter_entry_offset())));
+#endif
   __ jmp(rcx);
 }
 
@@ -861,7 +867,13 @@ void SharedRuntime::gen_i2c_adapter(MacroAssembler *masm,
 
   // Will jump to the compiled code just as if compiled code was doing it.
   // Pre-load the register-jump target early, to schedule it better.
+#if INCLUDE_OPT_META_SIZE
+  __ mov64(r11, (int64_t)(CodeCache::low_bound()));
+  __ movl(rscratch1, Address(rbx, in_bytes(Method::from_compiled_offset())));
+  __ addptr(r11, rscratch1);
+#else
   __ movptr(r11, Address(rbx, in_bytes(Method::from_compiled_offset())));
+#endif
 
 #if INCLUDE_JVMCI
   if (EnableJVMCI) {

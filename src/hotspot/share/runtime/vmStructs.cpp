@@ -301,9 +301,9 @@
   nonstatic_field(Method,                      _vtable_index,                                 int)                                   \
   nonstatic_field(Method,                      _intrinsic_id,                                 u2)                                    \
   volatile_nonstatic_field(Method,             _code,                                         CompiledMethod*)                       \
-  nonstatic_field(Method,                      _i2i_entry,                                    address)                               \
-  volatile_nonstatic_field(Method,             _from_compiled_entry,                          address)                               \
-  volatile_nonstatic_field(Method,             _from_interpreted_entry,                       address)                               \
+  nonstatic_field(Method,                      _i2i_entry,                                    MethodEntry)                           \
+  volatile_nonstatic_field(Method,             _from_compiled_entry,                          MethodEntry)                           \
+  volatile_nonstatic_field(Method,             _from_interpreted_entry,                       MethodEntry)                           \
   volatile_nonstatic_field(ConstMethod,        _fingerprint,                                  uint64_t)                              \
   nonstatic_field(ConstMethod,                 _constants,                                    ConstantPool*)                         \
   nonstatic_field(ConstMethod,                 _stackmap_data,                                Array<u1>*)                            \
@@ -1222,6 +1222,7 @@
   /**************************************************/                    \
                                                                           \
   declare_toplevel_type(CompiledICHolder)                                 \
+  declare_toplevel_type(MethodEntry)                                      \
   declare_toplevel_type(MetaspaceObj)                                     \
     declare_type(Metadata, MetaspaceObj)                                  \
     declare_type(Klass, Metadata)                                         \

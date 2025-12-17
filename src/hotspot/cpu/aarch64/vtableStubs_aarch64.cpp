@@ -116,7 +116,11 @@ VtableStub* VtableStubs::create_vtable_stub(int vtable_index) {
   if (DebugVtables) {
     Label L;
     __ cbz(rmethod, L);
+#if INCLUDE_OPT_META_SIZE
+    __ ldrw(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#else
     __ ldr(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#endif
     __ cbnz(rscratch1, L);
     __ stop("Vtable entry is null");
     __ bind(L);
@@ -127,7 +131,13 @@ VtableStub* VtableStubs::create_vtable_stub(int vtable_index) {
   // rmethod: Method*
   // r2: receiver
   address ame_addr = __ pc();
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#endif
   __ br(rscratch1);
 
   masm->flush();
@@ -207,7 +217,11 @@ VtableStub* VtableStubs::create_itable_stub(int itable_index) {
   if (DebugVtables) {
     Label L2;
     __ cbz(rmethod, L2);
+#if INCLUDE_OPT_META_SIZE
+    __ ldrw(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#else
     __ ldr(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#endif
     __ cbnz(rscratch1, L2);
     __ stop("compiler entrypoint is null");
     __ bind(L2);
@@ -217,7 +231,13 @@ VtableStub* VtableStubs::create_itable_stub(int itable_index) {
   // rmethod: Method*
   // j_rarg0: receiver
   address ame_addr = __ pc();
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1, Address(rmethod, Method::from_compiled_offset()));
+#endif
   __ br(rscratch1);
 
   __ bind(L_no_such_interface);

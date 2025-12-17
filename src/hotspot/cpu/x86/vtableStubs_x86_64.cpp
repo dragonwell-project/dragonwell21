@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "asm/macroAssembler.hpp"
+#include "code/codeCache.hpp"
 #include "code/vtableStubs.hpp"
 #include "interp_masm_x86.hpp"
 #include "memory/resourceArea.hpp"
@@ -118,7 +119,11 @@ VtableStub* VtableStubs::create_vtable_stub(int vtable_index) {
     Label L;
     __ cmpptr(method, NULL_WORD);
     __ jcc(Assembler::equal, L);
+#if INCLUDE_OPT_META_SIZE
+    __ cmpl(Address(method, Method::from_compiled_offset()), 0);
+#else
     __ cmpptr(Address(method, Method::from_compiled_offset()), NULL_WORD);
+#endif
     __ jcc(Assembler::notZero, L);
     __ stop("Vtable entry is null");
     __ bind(L);
@@ -129,7 +134,14 @@ VtableStub* VtableStubs::create_vtable_stub(int vtable_index) {
   // method (rbx): Method*
   // rcx: receiver
   address ame_addr = __ pc();
+#if INCLUDE_OPT_META_SIZE
+  __ movl(rscratch2, Address(rbx, Method::from_compiled_offset()));
+  __ mov64(rscratch1, (int64_t)(CodeCache::low_bound()));
+  __ addptr(rscratch1, rscratch2);
+  __ jmp(rscratch1);
+#else
   __ jmp( Address(rbx, Method::from_compiled_offset()));
+#endif
 
   masm->flush();
   slop_bytes += index_dependent_slop; // add'l slop for size variance due to large itable offsets
@@ -229,7 +241,11 @@ VtableStub* VtableStubs::create_itable_stub(int itable_index) {
     Label L2;
     __ cmpptr(method, NULL_WORD);
     __ jcc(Assembler::equal, L2);
+#if INCLUDE_OPT_META_SIZE
+    __ cmpl(Address(method, Method::from_compiled_offset()), 0);
+#else
     __ cmpptr(Address(method, Method::from_compiled_offset()), NULL_WORD);
+#endif
     __ jcc(Assembler::notZero, L2);
     __ stop("compiler entrypoint is null");
     __ bind(L2);
@@ -237,7 +253,14 @@ VtableStub* VtableStubs::create_itable_stub(int itable_index) {
 #endif // ASSERT
 
   address ame_addr = __ pc();
+#if INCLUDE_OPT_META_SIZE
+  __ movl(temp_reg2, Address(method, Method::from_compiled_offset()));
+  __ mov64(temp_reg, (int64_t)CodeCache::low_bound());
+  __ addptr(temp_reg, temp_reg2);
+  __ jmp(temp_reg);
+#else
   __ jmp(Address(method, Method::from_compiled_offset()));
+#endif
 
   __ bind(L_no_such_interface);
   // Handle IncompatibleClassChangeError in itable stubs.

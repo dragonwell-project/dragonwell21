@@ -294,7 +294,14 @@ address UpcallLinker::make_upcall_stub(jobject receiver, Symbol* signature,
 
   __ push_cont_fastpath();
 
+#if INCLUDE_OPT_META_SIZE
+  __ mov64(rscratch1, (int64_t)(CodeCache::low_bound()));
+  __ movl(rscratch2, Address(rbx, Method::from_compiled_offset()));
+  __ addptr(rscratch1, rscratch2);
+  __ call(rscratch1);
+#else
   __ call(Address(rbx, Method::from_compiled_offset()));
+#endif
 
   __ pop_cont_fastpath();
 

@@ -28,14 +28,95 @@
 #include "oops/method.hpp"
 
 #include "classfile/vmIntrinsics.hpp"
+#include "code/codeCache.hpp"
 #include "runtime/atomic.hpp"
 
 inline address Method::from_compiled_entry() const {
+#if INCLUDE_OPT_META_SIZE
+  MethodEntry me = Atomic::load_acquire(&_from_compiled_entry);
+  if (me == 0) {
+    return nullptr;
+  } else {
+    return me + CodeCache::low_bound();
+  }
+#else
   return Atomic::load_acquire(&_from_compiled_entry);
+#endif
+}
+
+inline void Method::set_from_compiled_entry(address entry) {
+#if INCLUDE_OPT_META_SIZE
+  assert(entry == nullptr || CodeCache::contains(entry), "sanity");
+  MethodEntry me = entry == nullptr ? 0 : (MethodEntry)(entry - CodeCache::low_bound());
+  _from_compiled_entry =  me;
+#else
+  _from_compiled_entry =  entry;
+#endif
 }
 
 inline address Method::from_interpreted_entry() const {
+#if INCLUDE_OPT_META_SIZE
+  MethodEntry entry = Atomic::load_acquire(&_from_interpreted_entry);
+  if (entry == 0) {
+    return nullptr;
+  } else {
+    return entry + CodeCache::low_bound();
+  }
+#else
   return Atomic::load_acquire(&_from_interpreted_entry);
+#endif
+}
+
+inline void Method::set_from_interpreted_entry(address entry) {
+#if INCLUDE_OPT_META_SIZE
+  assert(entry == nullptr || CodeCache::contains(entry), "sanity");
+  MethodEntry offset = entry == nullptr ? (MethodEntry) 0 : entry - CodeCache::low_bound();
+  _from_interpreted_entry = offset;
+#else
+  _from_interpreted_entry = entry;
+#endif
+}
+
+inline address Method::interpreter_entry() const {
+#if INCLUDE_OPT_META_SIZE
+  return _i2i_entry == 0 ? nullptr : _i2i_entry + CodeCache::low_bound();
+#else
+  return _i2i_entry;
+#endif
+}
+
+inline void Method::set_interpreter_entry(address entry) {
+#if INCLUDE_OPT_META_SIZE
+  assert(entry == nullptr || CodeCache::contains(entry), "sanity");
+  MethodEntry offset = entry == nullptr ? (MethodEntry) 0 : entry - CodeCache::low_bound();
+  if (_i2i_entry != offset) {
+    _i2i_entry = offset;
+  }
+  if (_from_interpreted_entry != offset) {
+    _from_interpreted_entry = offset;
+  }
+#else
+  if (_i2i_entry != entry) {
+    _i2i_entry = entry;
+  }
+  if (_from_interpreted_entry != entry) {
+    _from_interpreted_entry = entry;
+  }
+#endif
+}
+
+inline address Method::i2i_entry() const {
+  return interpreter_entry();
+}
+
+inline void Method::set_i2i_entry(address entry) {
+#if INCLUDE_OPT_META_SIZE
+  assert(entry == nullptr || CodeCache::contains(entry), "sanity");
+  MethodEntry offset = entry == nullptr ? (MethodEntry) 0 : entry - CodeCache::low_bound();
+  _i2i_entry = offset;
+#else
+  _i2i_entry = entry;
+#endif
 }
 
 inline void Method::set_method_data(MethodData* data) {

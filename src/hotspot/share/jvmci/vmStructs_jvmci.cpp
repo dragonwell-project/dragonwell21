@@ -254,7 +254,7 @@
   nonstatic_field(Method,                      _intrinsic_id,                                 u2)                                    \
   nonstatic_field(Method,                      _flags._status,                                u4)                                    \
   volatile_nonstatic_field(Method,             _code,                                         CompiledMethod*)                       \
-  volatile_nonstatic_field(Method,             _from_compiled_entry,                          address)                               \
+  volatile_nonstatic_field(Method,             _from_compiled_entry,                          MethodEntry)                           \
                                                                                                                                      \
   nonstatic_field(MethodCounters,              _invoke_mask,                                  int)                                   \
   nonstatic_field(MethodCounters,              _backedge_mask,                                int)                                   \

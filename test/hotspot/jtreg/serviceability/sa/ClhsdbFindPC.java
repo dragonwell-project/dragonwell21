@@ -199,9 +199,7 @@ public class ClhsdbFindPC {
             cmds = List.of(cmdStr);
             expStrMap = new HashMap<>();
             expStrMap.put(cmdStr, List.of("Method jdk/test/lib/apps/LingeredApp.steadyState",
-                                          methodAddr,
-                                          /* The following is from a field in the Method object. */
-                                          "In interpreter codelet: method entry point"));
+                                          methodAddr));
             runTest(withCore, cmds, expStrMap);
 
             // Run findpc on a JavaThread*. We can find one in the jstack output.

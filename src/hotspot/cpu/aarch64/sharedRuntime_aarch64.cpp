@@ -536,7 +536,13 @@ static void gen_c2i_adapter(MacroAssembler *masm,
 
   __ mov(esp, sp); // Interp expects args on caller's expression stack
 
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(rmethod, in_bytes(Method::interpreter_entry_offset())));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1, Address(rmethod, in_bytes(Method::interpreter_entry_offset())));
+#endif
   __ br(rscratch1);
 }
 
@@ -616,7 +622,13 @@ void SharedRuntime::gen_i2c_adapter(MacroAssembler *masm,
 
   // Will jump to the compiled code just as if compiled code was doing it.
   // Pre-load the register-jump target early, to schedule it better.
+#if INCLUDE_OPT_META_SIZE
+  __ ldrw(rscratch1, Address(rmethod, in_bytes(Method::from_compiled_offset())));
+  __ mov(rscratch2, CodeCache::low_bound());
+  __ add(rscratch1, rscratch1, rscratch2);
+#else
   __ ldr(rscratch1, Address(rmethod, in_bytes(Method::from_compiled_offset())));
+#endif
 
 #if INCLUDE_JVMCI
   if (EnableJVMCI) {

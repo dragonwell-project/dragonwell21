@@ -135,6 +135,7 @@ void MethodHandles::jump_from_method_handle(MacroAssembler* _masm, Register meth
 
   __ verify_method_ptr(method);
 
+  Register temp2 = temp == rscratch1 ? rscratch2 : rscratch1;
   if (!for_compiler_entry && JvmtiExport::can_post_interpreter_events()) {
     Label run_compiled_code;
     // JVMTI events, such as single-stepping, are implemented partly by avoiding running
@@ -150,13 +151,27 @@ void MethodHandles::jump_from_method_handle(MacroAssembler* _masm, Register meth
     // Is a cmpl faster?
     __ cmpb(Address(rthread, JavaThread::interp_only_mode_offset()), 0);
     __ jccb(Assembler::zero, run_compiled_code);
+#if INCLUDE_OPT_META_SIZE
+    __ mov64(temp, (int64_t)(CodeCache::low_bound()));
+    __ movl(temp2, Address(method, Method::interpreter_entry_offset()));
+    __ addptr(temp, temp2);
+    __ jmp(temp);
+#else
     __ jmp(Address(method, Method::interpreter_entry_offset()));
+#endif
     __ BIND(run_compiled_code);
   }
 
   const ByteSize entry_offset = for_compiler_entry ? Method::from_compiled_offset() :
                                                      Method::from_interpreted_offset();
+#if INCLUDE_OPT_META_SIZE
+  __ mov64(temp, (int64_t)(CodeCache::low_bound()));
+  __ movl(temp2, Address(method, entry_offset));
+  __ addptr(temp, temp2);
+  __ jmp(temp);
+#else
   __ jmp(Address(method, entry_offset));
+#endif
 
   __ bind(L_no_such_method);
   __ jump(RuntimeAddress(StubRoutines::throw_AbstractMethodError_entry()));

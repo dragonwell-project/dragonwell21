@@ -67,6 +67,12 @@ class InlineTableSizes;
 class CompiledMethod;
 class InterpreterOopMap;
 
+#if INCLUDE_OPT_META_SIZE
+typedef uint32_t MethodEntry;
+#else
+typedef address MethodEntry;
+#endif
+
 class Method : public Metadata {
  friend class VMStructs;
  friend class JVMCIVMStructs;
@@ -92,17 +98,17 @@ class Method : public Metadata {
   Symbol* _name;
 #endif
   // Entry point for calling both from and to the interpreter.
-  address _i2i_entry;           // All-args-on-stack calling convention
+  MethodEntry _i2i_entry;           // All-args-on-stack calling convention
   // Entry point for calling from compiled code, to compiled code if it exists
   // or else the interpreter.
-  volatile address _from_compiled_entry;        // Cache of: _code ? _code->entry_point() : _adapter->c2i_entry()
+  volatile MethodEntry _from_compiled_entry;        // Cache of: _code ? _code->entry_point() : _adapter->c2i_entry()
   // The entry point for calling both from and to compiled code is
   // "_code->entry_point()".  Because of tiered compilation and de-opt, this
   // field can come and go.  It can transition from null to not-null at any
   // time (whenever a compile completes).  It can transition from not-null to
   // null only at safepoints (because of a de-opt).
   CompiledMethod* volatile _code;                       // Points to the corresponding piece of native code
-  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter->i2c_entry() : _i2i_entry
+  volatile MethodEntry           _from_interpreted_entry; // Cache of _code ? _adapter->i2c_entry() : _i2i_entry
 
   // Constructor
   Method(ConstMethod* xconst, AccessFlags access_flags, Symbol* name);
@@ -134,7 +140,9 @@ class Method : public Metadata {
 
   static address make_adapters(const methodHandle& mh, TRAPS);
   address from_compiled_entry() const;
+  void set_from_compiled_entry(address entry);
   address from_interpreted_entry() const;
+  void set_from_interpreted_entry(address entry);
 
   // access flag
   AccessFlags access_flags() const               { return _access_flags;  }
@@ -426,9 +434,6 @@ public:
   void set_adapter_entry(AdapterHandlerEntry* adapter) {
     _adapter = adapter;
   }
-  void set_from_compiled_entry(address entry) {
-    _from_compiled_entry =  entry;
-  }
 
   address get_i2c_entry();
   address get_c2i_entry();
@@ -468,16 +473,12 @@ public:
   void set_itable_index(int index);
 
   // interpreter entry
-  address interpreter_entry() const              { return _i2i_entry; }
+  address interpreter_entry() const;
   // Only used when first initialize so we can set _i2i_entry and _from_interpreted_entry
-  void set_interpreter_entry(address entry) {
-    if (_i2i_entry != entry) {
-      _i2i_entry = entry;
-    }
-    if (_from_interpreted_entry != entry) {
-      _from_interpreted_entry = entry;
-    }
-  }
+  void set_interpreter_entry(address entry);
+
+  address i2i_entry() const;
+  void set_i2i_entry(address entry);
 
   // native function (used for native methods only)
   enum {
