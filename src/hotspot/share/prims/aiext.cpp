@@ -41,7 +41,7 @@
 #include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/javaThread.hpp"
 
-static int CurrentVersion = AIEXT_VERSION_1;
+static unsigned int CurrentVersion = AIEXT_VERSION_2;
 
 // Returns JVM version string.
 static aiext_result_t get_jvm_version(char* buf, size_t buf_size) {
@@ -54,7 +54,7 @@ static aiext_result_t get_jvm_version(char* buf, size_t buf_size) {
 }
 
 // Returns current AI-Extension version.
-static int get_aiext_version() { return CurrentVersion; }
+static unsigned int get_aiext_version() { return CurrentVersion; }
 
 #define DEF_GET_JVM_FLAG(n, t)                                         \
   static aiext_result_t get_jvm_flag_##n(const char* name, t* value) { \

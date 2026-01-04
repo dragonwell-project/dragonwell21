@@ -34,7 +34,10 @@ extern "C" {
 #endif
 
 // Versions of AI-Extension.
-#define AIEXT_VERSION_1 0xBABA0001
+// The numerical value of the lower version is guaranteed to be less than that
+// of the higher version.
+#define AIEXT_VERSION_1 0xBABA0001U
+#define AIEXT_VERSION_2 0xBABA0002U
 
 // The result of initializing AI-Extension unit.
 typedef enum {
@@ -84,7 +87,7 @@ struct aiext_env {
   aiext_result_t (*get_jvm_version)(char* buf, size_t buf_size);
 
   // Returns current AI-Extension version.
-  int (*get_aiext_version)();
+  unsigned int (*get_aiext_version)();
 
   // Gets JVM flag by name.
 #define DECL_GET_JVM_FLAG(n, t) \
