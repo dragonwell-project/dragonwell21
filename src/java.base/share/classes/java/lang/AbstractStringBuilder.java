@@ -27,6 +27,7 @@ package java.lang;
 
 import jdk.internal.math.DoubleToDecimal;
 import jdk.internal.math.FloatToDecimal;
+import jdk.internal.util.DecimalDigits;
 
 import java.io.IOException;
 import java.nio.CharBuffer;
@@ -237,11 +238,30 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
      */
     private void ensureCapacityInternal(int minimumCapacity) {
         // overflow-conscious code
-        int oldCapacity = value.length >> coder;
+        ensureCapacityInternal(minimumCapacity, coder);
+    }
+
+    /**
+     * For positive values of {@code minimumCapacity}, this method
+     * behaves like {@code ensureCapacity}, however it is never
+     * synchronized.
+     * If {@code minimumCapacity} is non positive due to numeric
+     * overflow, this method throws {@code OutOfMemoryError}.
+     *
+     * @param   minimumCapacity   the minimum desired capacity.
+     * @param   coder the coder to be used when calculating the capacity length.
+     * @return  Returns the value that ensures the capacity
+     */
+    private byte[] ensureCapacityInternal(int minimumCapacity, byte coder) {
+        // overflow-conscious code
+        byte[] val = this.value;
+        int oldCapacity = val.length >> coder;
         if (minimumCapacity - oldCapacity > 0) {
-            value = Arrays.copyOf(value,
-                    newCapacity(minimumCapacity) << coder);
+            val = Arrays.copyOf(val,
+                    newCapacity(minimumCapacity, val.length, coder) << coder);
+            this.value = val;
         }
+        return val;
     }
 
     /**
@@ -253,11 +273,12 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
      * unless the given minimum capacity is greater than that.
      *
      * @param  minCapacity the desired minimum capacity
+     * @param  oldLength the raw length of the current value array, without being processed using coder.
+     * @param  coder the coder to be used when calculating the capacity length
      * @throws OutOfMemoryError if minCapacity is less than zero or
      *         greater than (Integer.MAX_VALUE >> coder)
      */
-    private int newCapacity(int minCapacity) {
-        int oldLength = value.length;
+    private static int newCapacity(int minCapacity, int oldLength, byte coder) {
         int newLength = minCapacity << coder;
         int growth = newLength - oldLength;
         int length = ArraysSupport.newLength(oldLength, growth, oldLength + (2 << coder));
@@ -632,10 +653,10 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
     }
 
     private AbstractStringBuilder appendNull() {
-        ensureCapacityInternal(count + 4);
         int count = this.count;
-        byte[] val = this.value;
-        if (isLatin1()) {
+        byte coder = this.coder;
+        byte[] val = ensureCapacityInternal(count + 4, coder);
+        if (coder == LATIN1) {
             StringLatin1.putCharsAt(val, count, 'n', 'u', 'l', 'l');
         } else {
             StringUTF16.putCharsAt(val, count, 'n', 'u', 'l', 'l');
@@ -756,10 +777,10 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
      * @return  a reference to this object.
      */
     public AbstractStringBuilder append(boolean b) {
-        ensureCapacityInternal(count + (b ? 4 : 5));
         int count = this.count;
-        byte[] val = this.value;
-        if (isLatin1()) {
+        byte coder = this.coder;
+        byte[] val = ensureCapacityInternal(count + (b ? 4 : 5), coder);
+        if (coder == LATIN1) {
             if (b) {
                 StringLatin1.putCharsAt(val, count, 't', 'r', 'u', 'e');
             } else {
@@ -819,12 +840,13 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
      */
     public AbstractStringBuilder append(int i) {
         int count = this.count;
-        int spaceNeeded = count + Integer.stringSize(i);
-        ensureCapacityInternal(spaceNeeded);
-        if (isLatin1()) {
-            Integer.getChars(i, spaceNeeded, value);
+        int spaceNeeded = count + DecimalDigits.stringSize(i);
+        byte coder = this.coder;
+        byte[] value = ensureCapacityInternal(spaceNeeded, coder);
+        if (coder == LATIN1) {
+            DecimalDigits.getCharsLatin1(i, spaceNeeded, value);
         } else {
-            StringUTF16.getChars(i, count, spaceNeeded, value);
+            DecimalDigits.getCharsUTF16(i, spaceNeeded, value);
         }
         this.count = spaceNeeded;
         return this;
@@ -844,12 +866,13 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
      */
     public AbstractStringBuilder append(long l) {
         int count = this.count;
-        int spaceNeeded = count + Long.stringSize(l);
-        ensureCapacityInternal(spaceNeeded);
-        if (isLatin1()) {
-            Long.getChars(l, spaceNeeded, value);
+        int spaceNeeded = count + DecimalDigits.stringSize(l);
+        byte coder = this.coder;
+        byte[] value = ensureCapacityInternal(spaceNeeded, coder);
+        if (coder == LATIN1) {
+            DecimalDigits.getCharsLatin1(l, spaceNeeded, value);
         } else {
-            StringUTF16.getChars(l, count, spaceNeeded, value);
+            DecimalDigits.getCharsUTF16(l, spaceNeeded, value);
         }
         this.count = spaceNeeded;
         return this;
