@@ -23,6 +23,7 @@
 
 /*
  * @test
+ * @enablePreview
  * @requires jdk.foreign.linker != "FALLBACK"
  * @requires (os.arch == "aarch64" | os.arch=="riscv64") & os.name == "Linux"
  * @requires os.maxMemory > 4G
