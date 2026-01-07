@@ -126,10 +126,6 @@ struct aiext_env {
                                              void* func_or_data,
                                              aiext_naccel_provider_t provider);
 
-  // Gets field offset in bytes in a Java class, returns `-1` on failure.
-  int (*get_field_offset)(const char* klass, const char* field,
-                          const char* sig);
-
   // Gets unit info, including feature name, version and parameter list.
   // `handle` is provided by the JVM in the `aiext_init` function.
   aiext_result_t (*get_unit_info)(aiext_handle_t handle, char* feature_buf,
@@ -151,6 +147,15 @@ struct aiext_env {
   // pointer by `base + (oop << shift)`.
   aiext_result_t (*get_narrow_oop_layout)(uint32_t* null, uintptr_t* base,
                                           size_t* shift);
+
+  // Gets field offset in bytes in a Java class, returns `-1` on failure.
+  int (*get_field_offset)(const char* klass, const char* field,
+                          const char* sig);
+
+  // Gets address of the given static field in a Java class,
+  // returns `nullptr` on failure.
+  void* (*get_static_field_addr)(const char* klass, const char* field,
+                                 const char* sig);
 };
 
 #ifdef __cplusplus

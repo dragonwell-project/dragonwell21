@@ -38,6 +38,7 @@ import compiler.whitebox.CompilerWhiteBoxTest;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.List;
 
 public class TestAIExtension {
@@ -117,33 +118,11 @@ public class TestAIExtension {
         testMethodCompile("add_to_int", "49").shouldContain("49");
         testMethodCompile("add_to_double", "50").shouldContain("50.00");
         testMethodCompile("should_skip").shouldContain("Skipped twice");
-
-        // `read_strs` relies on Java array and oops layout, so we need to
-        // test different combinations of options that may affect the layout.
-        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
-                                       "-XX:-UseCompressedClassPointers",
-                                       "-XX:-UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
-        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
-                                       "-XX:+UseCompressedClassPointers",
-                                       "-XX:-UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
-        testMethodCompile(new String[]{"-XX:-UseCompressedOops",
-                                       "-XX:+UseCompressedClassPointers",
-                                       "-XX:+UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
-        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
-                                       "-XX:-UseCompressedClassPointers",
-                                       "-XX:-UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
-        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
-                                       "-XX:+UseCompressedClassPointers",
-                                       "-XX:-UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
-        testMethodCompile(new String[]{"-XX:+UseCompressedOops",
-                                       "-XX:+UseCompressedClassPointers",
-                                       "-XX:+UseCompactObjectHeaders"},
-                          "read_strs").shouldContain("Hello\nworld\n!\n");
+        testMethodCompileInDifferentOopLayouts((oa) -> oa.shouldContain("Hello\nworld\n!\n"),
+                                               "read_strs");
+        testMethodCompile("add_to_static_int", "34").shouldContain("46");
+        testMethodCompileInDifferentOopLayouts((oa) -> oa.shouldContain("A\nB\n"),
+                                               "check_static_enum");
     }
 
     private static OutputAnalyzer testUnitLoadOk(String... commands) throws Exception {
@@ -182,6 +161,24 @@ public class TestAIExtension {
 
     private static OutputAnalyzer testMethodCompile(String... testArgs) throws Exception {
         return testMethodCompile(null, testArgs);
+    }
+
+    private static void testMethodCompileInDifferentOopLayouts(
+        Consumer<OutputAnalyzer> checker,
+        String... testArgs
+    ) throws Exception {
+        String[][] jvmArgSets = new String[][]{
+            new String[]{"-XX:-UseCompressedOops", "-XX:-UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:-UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:-UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:+UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:-UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:-UseCompactObjectHeaders"},
+            new String[]{"-XX:+UseCompressedOops", "-XX:+UseCompressedClassPointers", "-XX:+UseCompactObjectHeaders"},
+        };
+        for (String[] jvmArgs : jvmArgSets) {
+            OutputAnalyzer output = testMethodCompile(jvmArgs, testArgs);
+            checker.accept(output);
+        }
     }
 
     private static OutputAnalyzer testMethodCompile(String[] jvmArgs, String... testArgs) throws Exception {
@@ -317,6 +314,17 @@ public class TestAIExtension {
                     l.read_strs();
                     break;
                 }
+                case "add_to_static_int": {
+                    int i = Integer.parseInt(args[1]);
+                    add_to_static_int(i);
+                    System.out.println(static_int);
+                    break;
+                }
+                case "check_static_enum": {
+                    check_static_enum();
+                    System.out.println(static_enum.name());
+                    break;
+                }
                 default: {
                     throw new RuntimeException("Unknown test: " + args[0]);
                 }
@@ -346,6 +354,15 @@ public class TestAIExtension {
 
         private String[] strs = {"Hello", "world", "!"};
         private void read_strs() {}
+
+        private static int static_int = 12;
+        private static void add_to_static_int(int i) {}
+
+        enum TestEnum {
+            A, B, C
+        }
+        private static TestEnum static_enum = TestEnum.A;
+        private static void check_static_enum() {}
     }
 
     // This will be invoked by JNI calls.

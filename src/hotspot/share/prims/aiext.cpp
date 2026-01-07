@@ -154,110 +154,6 @@ static aiext_result_t register_naccel_provider(
   return result ? AIEXT_OK : AIEXT_ERROR;
 }
 
-// Gets field offset in a Java class, returns `-1` on failure.
-static int get_field_offset(const char* klass, const char* field,
-                            const char* sig) {
-  // Get the current Java thread.
-  Thread* thread = Thread::current();
-  if (!thread->is_Java_thread()) {
-    log_info(aiext)("Current thread is not a Java thread");
-    return -1;
-  }
-  JavaThread* THREAD = JavaThread::cast(thread);
-
-  // Get class name symbol.
-  if (klass == nullptr || (int)strlen(klass) > Symbol::max_length()) {
-    log_info(aiext)("Invalid class name %s",
-                    klass == nullptr ? "<null>" : klass);
-    return -1;
-  }
-  TempNewSymbol class_name = SymbolTable::new_symbol(klass);
-
-  // Extract pending exception.
-  struct PendingExceptionGuard {
-    JavaThread* thread;
-    Handle pending_exception;
-    const char* exception_file;
-    int exception_line;
-
-    PendingExceptionGuard(TRAPS) {
-      thread = THREAD;
-      pending_exception = Handle(THREAD, PENDING_EXCEPTION);
-      exception_file = THREAD->exception_file();
-      exception_line = THREAD->exception_line();
-      CLEAR_PENDING_EXCEPTION;
-    }
-
-    ~PendingExceptionGuard() {
-      // Restore pending exception.
-      if (pending_exception.not_null()) {
-        thread->set_pending_exception(pending_exception(), exception_file,
-                                      exception_line);
-      }
-    }
-
-    void log(const char* op) const {
-      if (log_is_enabled(Info, aiext)) {
-        oop ex = thread->pending_exception();
-        log_info(aiext)(
-            "Exception while %s, %s: %s", op, ex->klass()->external_name(),
-            java_lang_String::as_utf8_string(java_lang_Throwable::message(ex)));
-      }
-    }
-  } except_guard(THREAD);
-
-  // Transition thread state to VM.
-  ThreadInVMfromNative state_guard(THREAD);
-
-  // Get class loader.
-  Handle protection_domain;
-  Handle loader(THREAD, SystemDictionary::java_system_loader());
-  Klass* k = THREAD->security_get_caller_class(0);
-  if (k != nullptr) {
-    loader = Handle(THREAD, k->class_loader());
-  }
-
-  // Find class from the class loader.
-  k = SystemDictionary::resolve_or_null(class_name, loader, protection_domain,
-                                        THREAD);
-  if (HAS_PENDING_EXCEPTION) {
-    except_guard.log("resolving class");
-    k = nullptr;
-    CLEAR_PENDING_EXCEPTION;
-  }
-
-  // Bail out if class not found, or not an instance class,
-  // or is not initialized.
-  if (k == nullptr) {
-    log_info(aiext)("Class %s not found", klass);
-    return -1;
-  }
-  if (!k->is_instance_klass()) {
-    log_info(aiext)("Class %s is not an instance class", klass);
-    return -1;
-  }
-  InstanceKlass* ik = InstanceKlass::cast(k);
-  if (!ik->is_initialized()) {
-    log_info(aiext)("Class %s is not initialized", klass);
-    return -1;
-  }
-
-  // The class should have been loaded, so the field and signature
-  // should already be in the symbol table.
-  // If they're not there, the field doesn't exist.
-  TempNewSymbol field_name = SymbolTable::probe(field, (int)strlen(field));
-  TempNewSymbol sig_name = SymbolTable::probe(sig, (int)strlen(sig));
-  fieldDescriptor fd;
-  if (field_name == nullptr || sig_name == nullptr ||
-      ik->find_field(field_name, sig_name, false, &fd) == nullptr) {
-    log_info(aiext)("Non-static field %s.%s not found in class %s", field, sig,
-                    klass);
-    return -1;
-  }
-
-  return fd.offset();
-}
-
 // Gets unit info, including feature name, version and parameter list.
 static aiext_result_t get_unit_info(aiext_handle_t handle, char* feature_buf,
                                     size_t feature_buf_size, char* version_buf,
@@ -370,6 +266,149 @@ static aiext_result_t get_narrow_oop_layout(uint32_t* null, uintptr_t* base,
   return AIEXT_OK;
 }
 
+// Gets the current Java thread.
+static JavaThread* get_current_java_thread() {
+  Thread* thread = Thread::current();
+  if (!thread->is_Java_thread()) {
+    log_info(aiext)("Current thread is not a Java thread");
+    return nullptr;
+  }
+  return JavaThread::cast(thread);
+}
+
+// Gets the field descriptor of the given field.
+// Returns `false` on failure.
+static bool get_field_descriptor(const char* klass, const char* field,
+                                 const char* sig, bool is_static,
+                                 fieldDescriptor& fd, TRAPS) {
+  // Get class name symbol.
+  if (klass == nullptr || (int)strlen(klass) > Symbol::max_length()) {
+    log_info(aiext)("Invalid class name %s",
+                    klass == nullptr ? "<null>" : klass);
+    return false;
+  }
+  TempNewSymbol class_name = SymbolTable::new_symbol(klass);
+
+  // Extract pending exception.
+  struct PendingExceptionGuard {
+    JavaThread* thread;
+    Handle pending_exception;
+    const char* exception_file;
+    int exception_line;
+
+    PendingExceptionGuard(TRAPS) {
+      thread = THREAD;
+      pending_exception = Handle(THREAD, PENDING_EXCEPTION);
+      exception_file = THREAD->exception_file();
+      exception_line = THREAD->exception_line();
+      CLEAR_PENDING_EXCEPTION;
+    }
+
+    ~PendingExceptionGuard() {
+      // Restore pending exception.
+      if (pending_exception.not_null()) {
+        thread->set_pending_exception(pending_exception(), exception_file,
+                                      exception_line);
+      }
+    }
+
+    void log(const char* op) const {
+      if (log_is_enabled(Info, aiext)) {
+        oop ex = thread->pending_exception();
+        log_info(aiext)(
+            "Exception while %s, %s: %s", op, ex->klass()->external_name(),
+            java_lang_String::as_utf8_string(java_lang_Throwable::message(ex)));
+      }
+    }
+  } except_guard(THREAD);
+
+  // Get class loader.
+  Handle protection_domain;
+  Handle loader(THREAD, SystemDictionary::java_system_loader());
+  Klass* k = THREAD->security_get_caller_class(0);
+  if (k != nullptr) {
+    loader = Handle(THREAD, k->class_loader());
+  }
+
+  // Find class from the class loader.
+  k = SystemDictionary::resolve_or_null(class_name, loader, protection_domain,
+                                        THREAD);
+  if (HAS_PENDING_EXCEPTION) {
+    except_guard.log("resolving class");
+    k = nullptr;
+    CLEAR_PENDING_EXCEPTION;
+  }
+
+  // Bail out if class not found, or not an instance class,
+  // or is not initialized.
+  if (k == nullptr) {
+    log_info(aiext)("Class %s not found", klass);
+    return false;
+  }
+  if (!k->is_instance_klass()) {
+    log_info(aiext)("Class %s is not an instance class", klass);
+    return false;
+  }
+  InstanceKlass* ik = InstanceKlass::cast(k);
+  if (!ik->is_initialized()) {
+    log_info(aiext)("Class %s is not initialized", klass);
+    return false;
+  }
+
+  // The class should have been loaded, so the field and signature
+  // should already be in the symbol table.
+  // If they're not there, the field doesn't exist.
+  TempNewSymbol field_name = SymbolTable::probe(field, (int)strlen(field));
+  TempNewSymbol sig_name = SymbolTable::probe(sig, (int)strlen(sig));
+  if (field_name == nullptr || sig_name == nullptr ||
+      ik->find_field(field_name, sig_name, is_static, &fd) == nullptr) {
+    log_info(aiext)("Field %s.%s not found in class %s", field, sig, klass);
+    return false;
+  }
+
+  // Done.
+  return true;
+}
+
+// Gets field offset in a Java class, returns `-1` on failure.
+static int get_field_offset(const char* klass, const char* field,
+                            const char* sig) {
+  // Get the current Java thread.
+  JavaThread* THREAD = get_current_java_thread();
+  if (THREAD == nullptr) {
+    return -1;
+  }
+
+  // Transition thread state to VM.
+  ThreadInVMfromNative state_guard(THREAD);
+
+  fieldDescriptor fd;
+  if (!get_field_descriptor(klass, field, sig, false, fd, THREAD)) {
+    return -1;
+  }
+  return fd.offset();
+}
+
+// Gets address of the given static field in a Java class,
+// returns `nullptr` on failure.
+static void* get_static_field_addr(const char* klass, const char* field,
+                                   const char* sig) {
+  // Get the current Java thread.
+  JavaThread* THREAD = get_current_java_thread();
+  if (THREAD == nullptr) {
+    return nullptr;
+  }
+
+  // Transition thread state to VM.
+  ThreadInVMfromNative state_guard(THREAD);
+
+  fieldDescriptor fd;
+  if (!get_field_descriptor(klass, field, sig, true, fd, THREAD)) {
+    return nullptr;
+  }
+  return fd.field_holder()->java_mirror()->field_addr<void>(fd.offset());
+}
+
 extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     // Version.
     get_jvm_version,
@@ -397,7 +436,6 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
 
     // Native acceleration.
     register_naccel_provider,
-    get_field_offset,
 
     // Unit information.
     get_unit_info,
@@ -408,4 +446,6 @@ extern const aiext_env_t GLOBAL_AIEXT_ENV = {
     // Object/pointer layout.
     get_array_layout,
     get_narrow_oop_layout,
+    get_field_offset,
+    get_static_field_addr,
 };

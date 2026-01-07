@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -37,6 +38,9 @@ static uintptr_t narrow_base;
 static size_t narrow_shift;
 
 static int offset_x_int, offset_x_double, offset_strs, offset_string_value;
+
+static void *addr_static_int, *addr_static_enum, *addr_test_enum_a,
+    *addr_test_enum_b, *addr_test_enum_c;
 
 static void* native_provider(const aiext_env_t* env,
                              const char* native_func_name, void* data) {
@@ -56,12 +60,42 @@ static void* native_provider(const aiext_env_t* env,
     offset_string_value =
         env->get_field_offset("java/lang/String", "value", "[B");
   }
+  if (addr_static_int == NULL) {
+    addr_static_int = env->get_static_field_addr("TestAIExtension$Launcher",
+                                                 "static_int", "I");
+  }
+  if (addr_static_enum == NULL) {
+    addr_static_enum =
+        env->get_static_field_addr("TestAIExtension$Launcher", "static_enum",
+                                   "LTestAIExtension$Launcher$TestEnum;");
+  }
+  if (addr_test_enum_a == NULL) {
+    addr_test_enum_a =
+        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "A",
+                                   "LTestAIExtension$Launcher$TestEnum;");
+  }
+  if (addr_test_enum_b == NULL) {
+    addr_test_enum_b =
+        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "B",
+                                   "LTestAIExtension$Launcher$TestEnum;");
+  }
+  if (addr_test_enum_c == NULL) {
+    addr_test_enum_c =
+        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "C",
+                                   "LTestAIExtension$Launcher$TestEnum;");
+  }
   printf(
       "Compiling `%s`, offset_x_int=%d, offset_x_double=%d, "
-      "offset_strs=%d, offset_string_value=%d\n",
-      native_func_name, offset_x_int, offset_x_double);
+      "offset_strs=%d, offset_string_value=%d, addr_static_int=%p, "
+      "addr_static_enum=%p, addr_test_enum_a=%p, addr_test_enum_b=%p, "
+      "addr_test_enum_c=%p\n",
+      native_func_name, offset_x_int, offset_x_double, offset_strs,
+      offset_string_value, addr_static_int, addr_static_enum, addr_test_enum_a,
+      addr_test_enum_b, addr_test_enum_c);
   if (offset_x_int < 0 || offset_x_double < 0 || offset_strs < 0 ||
-      offset_string_value < 0) {
+      offset_string_value < 0 || addr_static_int == NULL ||
+      addr_static_enum == NULL || addr_test_enum_a == NULL ||
+      addr_test_enum_b == NULL || addr_test_enum_c == NULL) {
     return NULL;
   }
   return data;
@@ -77,6 +111,24 @@ static void* get_raw_pointer(void* oop) {
     return (void*)(narrow_base + ((uintptr_t)narrow << narrow_shift));
   } else {
     return *(void**)oop;
+  }
+}
+
+static bool is_oop_eq(const void* lhs, const void* rhs) {
+  if (obj_array_elem_size < sizeof(void*)) {
+    // Narrow oop layout.
+    return *(const uint32_t*)lhs == *(const uint32_t*)rhs;
+  } else {
+    return *(void* const*)lhs == *(void* const*)rhs;
+  }
+}
+
+static void set_oop(void* dst, const void* oop) {
+  if (obj_array_elem_size < sizeof(void*)) {
+    // Narrow oop layout.
+    *(uint32_t*)dst = *(const uint32_t*)oop;
+  } else {
+    *(void**)dst = *(void* const*)oop;
   }
 }
 
@@ -180,6 +232,29 @@ static void read_strs(void* this) {
   }
 }
 
+// Adds the given integer to static field.
+// For (I)V method.
+static void add_to_static_int(int32_t i) {
+  assert(addr_static_int != NULL && "Invalid static field address");
+  *(int32_t*)addr_static_int += i;
+}
+
+// Checks the static enum field and updates it.
+// For ()V method.
+static void check_static_enum() {
+  assert(addr_static_enum != NULL && "Invalid static field address");
+  if (is_oop_eq(addr_static_enum, addr_test_enum_a)) {
+    printf("A\n");
+  } else if (is_oop_eq(addr_static_enum, addr_test_enum_b)) {
+    printf("B\n");
+  } else if (is_oop_eq(addr_static_enum, addr_test_enum_c)) {
+    printf("C\n");
+  } else {
+    printf("Unknown\n");
+  }
+  set_oop(addr_static_enum, addr_test_enum_b);
+}
+
 JNIEXPORT aiext_result_t JNICALL aiext_init(const aiext_env_t* env,
                                             aiext_handle_t handle) {
   return AIEXT_OK;
@@ -244,6 +319,9 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
   REPLACE_WITH_PROVIDER("should_skip", "()V", NULL);
 
   REPLACE_WITH_PROVIDER("read_strs", "()V", read_strs);
+
+  REPLACE_WITH_PROVIDER("add_to_static_int", "(I)V", add_to_static_int);
+  REPLACE_WITH_PROVIDER("check_static_enum", "()V", check_static_enum);
 
 #undef REPLACE_WITH_NATIVE
 #undef REPLACE_WITH_PROVIDER
