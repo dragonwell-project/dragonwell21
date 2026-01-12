@@ -137,7 +137,8 @@ struct aiext_env {
   JNIEnv* (*get_jni_env)();
 
   // Gets Java array layout of the given element type, including element size in
-  // bytes, length offset in bytes and data offset in bytes. The size of length
+  // bytes, length offset in bytes and data offset in bytes.
+  // The offset of length are same for all array types, and the size of length
   // should always be 4 bytes.
   aiext_result_t (*get_array_layout)(aiext_value_type_t elem_type,
                                      size_t* length_offset, size_t* data_offset,
