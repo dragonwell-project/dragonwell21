@@ -133,6 +133,12 @@ class AccelCallEntry : public CHeapObj<mtCompiler> {
         _func_or_data(func_or_data),
         _provider(provider) {}
 
+  ~AccelCallEntry() {
+    if (_native_func_name != nullptr) {
+      os::free((void*)_native_func_name);
+    }
+  }
+
  public:
   // Returns the native function pointer.
   // This method may call the provider function.

@@ -427,8 +427,9 @@ bool AIExt::add_entry(const char* klass, const char* method,
   }
 
   // Create entry and add to table.
-  AccelCallEntry* entry = new AccelCallEntry(
-      klass_sym, method_sym, sig_sym, native_func_name, func_or_data, provider);
+  AccelCallEntry* entry =
+      new AccelCallEntry(klass_sym, method_sym, sig_sym,
+                         os::strdup(native_func_name), func_or_data, provider);
   accel_table->insert_before(index, entry);
   return true;
 }
