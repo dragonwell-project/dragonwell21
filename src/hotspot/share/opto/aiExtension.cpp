@@ -291,14 +291,13 @@ void* AccelCallEntry::get_native_func() const {
 }
 
 // Adds the given native acceleration unit to table.
+// Returns `false` if the unit is already added.
 static bool add_unit(AIExtUnit* unit) {
   assert(loaded_units != nullptr, "must be initialized");
   bool found;
   int index =
       loaded_units->find_sorted<AIExtUnit*, AIExtUnit::compare>(unit, found);
   if (found) {
-    tty->print_cr("Error: Duplicate AI-Extension unit `%s_%s`", unit->feature(),
-                  unit->version());
     return false;
   }
   loaded_units->insert_before(index, unit);
@@ -341,9 +340,9 @@ bool AIExt::init() {
 
     // Add to the table.
     if (!add_unit(unit)) {
+      warning("Ignoring duplicate AI-Extension unit `%s_%s`", unit->feature(),
+              unit->version());
       delete unit;
-      os::free(args);
-      return false;
     }
 
     arg = p + 1;

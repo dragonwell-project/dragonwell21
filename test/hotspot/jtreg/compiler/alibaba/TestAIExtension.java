@@ -69,16 +69,16 @@ public class TestAIExtension {
         testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_INITERR_1 + // Valid unit with multiple parameters.
                        "?init_error=0:post_init_error=0:whatever=xxx");
 
+        // Duplicate units, but okay.
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                       "-XX:AIExtensionUnit=" + UNIT_NACCEL_1)
+            .shouldContain("Ignoring duplicate AI-Extension unit");
+        testUnitLoadOk("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
+                       "-XX:AIExtensionUnit=" + UNIT_NACCEL_2)
+            .shouldContain("Ignoring duplicate AI-Extension unit");
+
         // Invalid acceleration unit name.
         testUnitParseError("-XX:AIExtensionUnit=?");
-
-        // Duplicate units.
-        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
-                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_1)
-            .shouldContain("Duplicate AI-Extension unit");
-        testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
-                          "-XX:AIExtensionUnit=" + UNIT_NACCEL_2)
-            .shouldContain("Duplicate AI-Extension unit");
 
         // Duplicate entries in different units.
         testUnitLoadError("-XX:AIExtensionUnit=" + UNIT_NACCEL_1,
