@@ -155,6 +155,8 @@ struct aiext_env {
 
   // Gets address of the given static field in a Java class,
   // returns `nullptr` on failure.
+  // The address is only valid when calling this API.
+  // Program should not cache the address.
   void* (*get_static_field_addr)(const char* klass, const char* field,
                                  const char* sig);
 };
