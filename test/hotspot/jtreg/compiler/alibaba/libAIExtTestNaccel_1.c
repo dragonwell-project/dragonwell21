@@ -44,46 +44,28 @@ static void *addr_static_int, *addr_static_enum, *addr_test_enum_a,
 
 static void* native_provider(const aiext_env_t* env,
                              const char* native_func_name, void* data) {
-  if (offset_x_int == 0) {
-    offset_x_int =
-        env->get_field_offset("TestAIExtension$Launcher", "x_int", "I");
-  }
-  if (offset_x_double == 0) {
-    offset_x_double =
-        env->get_field_offset("TestAIExtension$Launcher", "x_double", "D");
-  }
-  if (offset_strs == 0) {
-    offset_strs = env->get_field_offset("TestAIExtension$Launcher", "strs",
-                                        "[Ljava/lang/String;");
-  }
-  if (offset_string_value == 0) {
-    offset_string_value =
-        env->get_field_offset("java/lang/String", "value", "[B");
-  }
-  if (addr_static_int == NULL) {
-    addr_static_int = env->get_static_field_addr("TestAIExtension$Launcher",
-                                                 "static_int", "I");
-  }
-  if (addr_static_enum == NULL) {
-    addr_static_enum =
-        env->get_static_field_addr("TestAIExtension$Launcher", "static_enum",
-                                   "LTestAIExtension$Launcher$TestEnum;");
-  }
-  if (addr_test_enum_a == NULL) {
-    addr_test_enum_a =
-        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "A",
-                                   "LTestAIExtension$Launcher$TestEnum;");
-  }
-  if (addr_test_enum_b == NULL) {
-    addr_test_enum_b =
-        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "B",
-                                   "LTestAIExtension$Launcher$TestEnum;");
-  }
-  if (addr_test_enum_c == NULL) {
-    addr_test_enum_c =
-        env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "C",
-                                   "LTestAIExtension$Launcher$TestEnum;");
-  }
+  offset_x_int =
+      env->get_field_offset("TestAIExtension$Launcher", "x_int", "I");
+  offset_x_double =
+      env->get_field_offset("TestAIExtension$Launcher", "x_double", "D");
+  offset_strs = env->get_field_offset("TestAIExtension$Launcher", "strs",
+                                      "[Ljava/lang/String;");
+  offset_string_value =
+      env->get_field_offset("java/lang/String", "value", "[B");
+  addr_static_int =
+      env->get_static_field_addr("TestAIExtension$Launcher", "static_int", "I");
+  addr_static_enum =
+      env->get_static_field_addr("TestAIExtension$Launcher", "static_enum",
+                                 "LTestAIExtension$Launcher$TestEnum;");
+  addr_test_enum_a =
+      env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "A",
+                                 "LTestAIExtension$Launcher$TestEnum;");
+  addr_test_enum_b =
+      env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "B",
+                                 "LTestAIExtension$Launcher$TestEnum;");
+  addr_test_enum_c =
+      env->get_static_field_addr("TestAIExtension$Launcher$TestEnum", "C",
+                                 "LTestAIExtension$Launcher$TestEnum;");
   printf(
       "Compiling `%s`, offset_x_int=%d, offset_x_double=%d, "
       "offset_strs=%d, offset_string_value=%d, addr_static_int=%p, "
