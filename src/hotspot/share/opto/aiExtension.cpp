@@ -568,16 +568,7 @@ static void fill_type_field(const Type**& field, ciType* type, bool is_arg,
       *field++ = TypeInstPtr::BOTTOM;
       break;
     case T_ARRAY:
-      if (is_arg) {
-        // Base pointer does not point to a Java object,
-        // so we use raw pointer here.
-        *field++ = TypeRawPtr::BOTTOM;
-        // Append an integer for array only when it's an argument.
-        *field++ = TypeInt::INT;
-      } else {
-        // We expect the function returns a Java array.
-        *field++ = TypeOopPtr::BOTTOM;
-      }
+      *field++ = TypeOopPtr::BOTTOM;
       break;
     case T_VOID:
       assert(!is_arg, "void argument?");
@@ -594,14 +585,7 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
   ciSignature* signature = callee->signature();
 
   // Get number of stack slots required for arguments.
-  // Array arguments should be passed to native functions as tuples of base
-  // pointer and length (int), so they require an additional slot.
   int arg_size = callee->arg_size();
-  for (int i = 0; i < signature->count(); ++i) {
-    if (signature->type_at(i)->basic_type() == T_ARRAY) {
-      ++arg_size;
-    }
-  }
 
   // Create argument types.
   bool has_fp_type = false;
@@ -649,31 +633,16 @@ JVMState* AccelCallGenerator::generate(JVMState* jvms) {
     call->init_req(req_index++, kit.argument(arg_index++));
   }
   for (int i = 0; i < signature->count(); ++i) {
-    ciType* arg_type = signature->type_at(i);
+    // Push argument.
     Node* arg = kit.argument(arg_index++);
-    switch (arg_type->basic_type()) {
-      case T_ARRAY: {
-        // Pass array's base address and length to the native function.
-        ciType* elem_type = arg_type->as_array_klass()->element_type();
-        BasicType elem_bt = elem_type->basic_type();
-        Node* addr = kit.array_element_address(arg, kit.intcon(0), elem_bt);
-        Node* len = kit.load_array_length(arg);
-        call->init_req(req_index++, addr);
-        call->init_req(req_index++, len);
-        break;
-      }
-      case T_DOUBLE:
-      case T_LONG: {
-        call->init_req(req_index++, arg);
-        Node* top = kit.argument(arg_index++);
-        assert(top == kit.top(), "must be top");
-        call->init_req(req_index++, top);
-        break;
-      }
-      default: {
-        call->init_req(req_index++, arg);
-        break;
-      }
+    call->init_req(req_index++, arg);
+
+    // Push top for double/long types.
+    BasicType bt = signature->type_at(i)->basic_type();
+    if (bt == T_DOUBLE || bt == T_LONG) {
+      Node* top = kit.argument(arg_index++);
+      assert(top == kit.top(), "must be top");
+      call->init_req(req_index++, top);
     }
   }
 

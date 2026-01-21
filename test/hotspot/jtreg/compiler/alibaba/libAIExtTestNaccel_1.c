@@ -32,6 +32,7 @@
 static size_t obj_array_len_offset, obj_array_data_offset, obj_array_elem_size;
 static size_t byte_array_len_offset, byte_array_data_offset,
     byte_array_elem_size;
+static size_t int_array_len_offset, int_array_data_offset, int_array_elem_size;
 
 static uint32_t narrow_null;
 static uintptr_t narrow_base;
@@ -136,8 +137,11 @@ static void hello_double(double d) {
 }
 
 // For ([B)V static method.
-static void hello_bytes(const int8_t* chars, int32_t len) {
-  printf("Hello, I got %.*s (bytes)!\n", len, chars);
+static void hello_bytes(const void* chars) {
+  int32_t len = *(const int32_t*)((const char*)chars + byte_array_len_offset);
+  char* cs = (char*)chars + byte_array_data_offset;
+  assert(byte_array_elem_size == sizeof(char) && "unexpected byte size");
+  printf("Hello, I got %.*s (bytes)!\n", len, cs);
 }
 
 // For (Ljava/lang/Object;)V static method.
@@ -160,10 +164,15 @@ static double add_doubles(double a, double b) { return a + b; }
 
 // Adds two integer arrays, updates the first array in-place.
 // For ([I[I)V method.
-static void add_arrays(const void* this, int32_t* a, int32_t a_len, int32_t* b,
-                       int32_t b_len) {
+static void add_arrays(const void* this, void* a, const void* b) {
+  int32_t a_len = *(int32_t*)((char*)a + int_array_len_offset);
+  int32_t b_len = *(int32_t*)((char*)b + int_array_len_offset);
   for (int i = 0; i < a_len && i < b_len; i++) {
-    a[i] += b[i];
+    int32_t* pa =
+        (int32_t*)((char*)a + int_array_data_offset + i * int_array_elem_size);
+    int32_t* pb =
+        (int32_t*)((char*)b + int_array_data_offset + i * int_array_elem_size);
+    *pa += *pb;
   }
 }
 
@@ -253,6 +262,11 @@ JNIEXPORT aiext_result_t JNICALL aiext_post_init(const aiext_env_t* env,
   }
   res = env->get_array_layout(AIEXT_TYPE_BYTE, &byte_array_len_offset,
                               &byte_array_data_offset, &byte_array_elem_size);
+  if (res != AIEXT_OK) {
+    return res;
+  }
+  res = env->get_array_layout(AIEXT_TYPE_INT, &int_array_len_offset,
+                              &int_array_data_offset, &int_array_elem_size);
   if (res != AIEXT_OK) {
     return res;
   }
