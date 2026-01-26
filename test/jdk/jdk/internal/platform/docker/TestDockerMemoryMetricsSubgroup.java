@@ -39,7 +39,7 @@ import jtreg.SkippedException;
  * @bug 8343191
  * @key cgroups
  * @summary Cgroup v1 subsystem fails to set subsystem path
- * @requires docker.support
+ * @requires container.support
  * @library /test/lib
  * @modules java.base/jdk.internal.platform
  * @build MetricsMemoryTester
