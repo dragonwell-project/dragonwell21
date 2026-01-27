@@ -406,6 +406,13 @@ bool AIExt::add_entry(const char* klass, const char* method,
     return false;
   }
 
+  if ((int)strlen(klass) > Symbol::max_length() ||
+      (int)strlen(method) > Symbol::max_length() ||
+      (int)strlen(signature) > Symbol::max_length()) {
+    log_error(aiext)("Symbol is too long");
+    return false;
+  }
+
   // Create symbols.
   Symbol* klass_sym = SymbolTable::new_permanent_symbol(klass);
   Symbol* method_sym = SymbolTable::new_permanent_symbol(method);
