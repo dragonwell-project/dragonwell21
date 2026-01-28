@@ -31,6 +31,7 @@
 #include "runtime/java.hpp"
 #include "runtime/os.inline.hpp"
 #include "runtime/vm_version.hpp"
+#include "utilities/defaultStream.hpp"
 #include "utilities/formatBuffer.hpp"
 #include "utilities/macros.hpp"
 
@@ -530,7 +531,12 @@ void VM_Version::initialize() {
               FloatRegister::sve_vl_min);
       UseSVE = 0;
     } else if (!((MaxVectorSize % FloatRegister::sve_vl_min) == 0 && is_power_of_2(MaxVectorSize))) {
-      vm_exit_during_initialization(err_msg("Unsupported MaxVectorSize: %d", (int)MaxVectorSize));
+      if (VerifyFlagConstraints) {
+        MaxVectorSize = FloatRegister::sve_vl_min;
+        jio_fprintf(defaultStream::error_stream(), "MaxVectorSize:%d\n", FloatRegister::sve_vl_min);
+      } else {
+        vm_exit_during_initialization(err_msg("Unsupported MaxVectorSize: %d", (int)MaxVectorSize));
+      }
     }
 
     if (UseSVE > 0) {
@@ -558,7 +564,12 @@ void VM_Version::initialize() {
     int max_vector_size = FloatRegister::neon_vl;
     if (!FLAG_IS_DEFAULT(MaxVectorSize)) {
       if (!is_power_of_2(MaxVectorSize)) {
-        vm_exit_during_initialization(err_msg("Unsupported MaxVectorSize: %d", (int)MaxVectorSize));
+        if (VerifyFlagConstraints) {
+          MaxVectorSize = FloatRegister::sve_vl_min;
+          jio_fprintf(defaultStream::error_stream(), "MaxVectorSize:%d\n", FloatRegister::sve_vl_min);
+        } else {
+          vm_exit_during_initialization(err_msg("Unsupported MaxVectorSize: %d", (int)MaxVectorSize));
+        }
       } else if (MaxVectorSize < min_vector_size) {
         warning("MaxVectorSize must be at least %i on this platform", min_vector_size);
         FLAG_SET_DEFAULT(MaxVectorSize, min_vector_size);

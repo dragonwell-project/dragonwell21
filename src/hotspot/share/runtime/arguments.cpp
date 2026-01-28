@@ -779,35 +779,54 @@ static bool set_fp_numeric_flag(JVMFlag* flag, const char* value, JVMFlagOrigin 
 static bool set_numeric_flag(JVMFlag* flag, const char* value, JVMFlagOrigin origin) {
   JVMFlag::Error result = JVMFlag::WRONG_FORMAT;
 
+  // If VerifyFlagConstraints turns on and parse failed, use the default flag value and return success.
   if (flag->is_int()) {
     int v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_int(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:%d\n", flag->name(), flag->read<int>());
     }
   } else if (flag->is_uint()) {
     uint v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_uint(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:%u\n", flag->name(), flag->read<uint>());
     }
   } else if (flag->is_intx()) {
     intx v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_intx(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:" INTX_FORMAT "\n", flag->name(), flag->read<intx>());
     }
   } else if (flag->is_uintx()) {
     uintx v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_uintx(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:" UINTX_FORMAT "\n", flag->name(), flag->read<uintx>());
     }
   } else if (flag->is_uint64_t()) {
     uint64_t v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_uint64_t(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:" UINT64_FORMAT "\n", flag->name(), flag->read<uint64_t>());
     }
   } else if (flag->is_size_t()) {
     size_t v;
     if (parse_integer(value, &v)) {
       result = JVMFlagAccess::set_size_t(flag, &v, origin);
+    } else if (VerifyFlagConstraints) {
+      result = JVMFlag::SUCCESS;
+      jio_fprintf(defaultStream::error_stream(), "%s:" SIZE_FORMAT "\n", flag->name(), flag->read<size_t>());
     }
   }
 

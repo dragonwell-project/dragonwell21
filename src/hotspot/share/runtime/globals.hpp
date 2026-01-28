@@ -1022,6 +1022,10 @@ const int ObjectAlignmentInBytes = 8;
   product(bool, PrintFlagsInitial, false,                                   \
           "Print all VM flags before argument processing and exit VM")      \
                                                                             \
+  product(bool, VerifyFlagConstraints, false, DIAGNOSTIC,                   \
+          "Verify flags, calculate suggested legal values for that "        \
+          "violate the constraints, and then exit VM")                      \
+                                                                            \
   product(bool, PrintFlagsFinal, false,                                     \
           "Print all VM flags after argument and ergonomic processing")     \
                                                                             \

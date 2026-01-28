@@ -63,6 +63,7 @@ public:
   JVMFlag::Error check_constraint_and_set(JVMFlag* flag, void* value_addr, JVMFlagOrigin origin, bool verbose) const {
     verbose |= (origin == JVMFlagOrigin::ERGONOMIC);
     T value = *((T*)value_addr);
+    T old_value = flag->read<T>();
     const JVMTypedFlagLimit<T>* constraint = (const JVMTypedFlagLimit<T>*)JVMFlagLimit::get_constraint(flag);
     if (constraint != nullptr && constraint->phase() <= static_cast<int>(JVMFlagLimit::validating_phase())) {
       JVMFlag::Error err = typed_check_constraint(constraint->constraint_func(), value, verbose);
@@ -74,10 +75,12 @@ public:
       }
     }
 
-    T old_value = flag->read<T>();
     trace_flag_changed<T, EVENT>(flag, old_value, value, origin);
-    flag->write<T>(value);
-    *((T*)value_addr) = old_value;
+
+    if (!VerifyFlagConstraints || old_value == flag->read<T>()) {
+      flag->write<T>(value);
+    }
+    *((T*)value_addr) = old_value; 
     flag->set_origin(origin);
 
     return JVMFlag::SUCCESS;
@@ -113,11 +116,20 @@ public:
     const JVMTypedFlagLimit<T>* range = (const JVMTypedFlagLimit<T>*)JVMFlagLimit::get_range(flag);
     if (range != nullptr) {
       if ((value < range->min()) || (value > range->max())) {
-        range_error(flag->name(), value, range->min(), range->max(), verbose);
-        if (origin == JVMFlagOrigin::ERGONOMIC) {
-          fatal("FLAG_SET_ERGO cannot be used to set an invalid value for %s", flag->name());
+        if (VerifyFlagConstraints) {
+          if (value < range->min()) {
+            *((T*)value_addr) = range->min();
+          } else if (value > range->max()) {
+            *((T*)value_addr) = range->max();
+          }
+          range_constraint_hint(flag->name(), *((T*)value_addr));
+        } else {
+          range_error(flag->name(), value, range->min(), range->max(), verbose);
+          if (origin == JVMFlagOrigin::ERGONOMIC) {
+            fatal("FLAG_SET_ERGO cannot be used to set an invalid value for %s", flag->name());
+          }
+          return JVMFlag::OUT_OF_BOUNDS;
         }
-        return JVMFlag::OUT_OF_BOUNDS;
       }
     }
 
@@ -129,8 +141,17 @@ public:
     if (range != nullptr) {
       T value = flag->read<T>();
       if ((value < range->min()) || (value > range->max())) {
-        range_error(flag->name(), value, range->min(), range->max(), verbose);
-        return JVMFlag::OUT_OF_BOUNDS;
+        if (VerifyFlagConstraints) {
+          if (value < range->min()) {
+            const_cast<JVMFlag*>(flag)->write(range->min());
+          } else if (value > range->max()) {
+            const_cast<JVMFlag*>(flag)->write(range->max());
+          }
+          range_constraint_hint(flag->name(), flag->read<T>());
+        } else {
+          range_error(flag->name(), value, range->min(), range->max(), verbose);
+          return JVMFlag::OUT_OF_BOUNDS;
+        }
       }
     }
     return JVMFlag::SUCCESS;
@@ -142,6 +163,7 @@ public:
   }
 
   virtual void range_error(const char* name, T value, T min, T max, bool verbose) const = 0;
+  virtual void range_constraint_hint(const char* name, T value) const = 0;
   virtual void print_range_impl(outputStream* st, T min, T max) const = 0;
 };
 
@@ -152,6 +174,9 @@ public:
                         "int %s=%d is outside the allowed range "
                         "[ %d ... %d ]\n",
                         name, value, min, max);
+  }
+  void range_constraint_hint(const char* name, int value) const {
+    JVMFlag::printError(true, "%s:%d\n", name, value);
   }
   JVMFlag::Error typed_check_constraint(void* func, int value, bool verbose) const {
     return ((JVMFlagConstraintFunc_int)func)(value, verbose);
@@ -172,6 +197,9 @@ public:
                         "[ %u ... %u ]\n",
                         name, value, min, max);
   }
+  void range_constraint_hint(const char* name, uint value) const {
+    JVMFlag::printError(true, "%s:%u\n", name, value);
+  }
   JVMFlag::Error typed_check_constraint(void* func, uint value, bool verbose) const {
     return ((JVMFlagConstraintFunc_uint)func)(value, verbose);
   }
@@ -190,6 +218,9 @@ public:
                         "intx %s=" INTX_FORMAT " is outside the allowed range "
                         "[ " INTX_FORMAT " ... " INTX_FORMAT " ]\n",
                         name, value, min, max);
+  }
+  void range_constraint_hint(const char* name, intx value) const {
+    JVMFlag::printError(true, "%s:" INTX_FORMAT "\n", name, value);
   }
   JVMFlag::Error typed_check_constraint(void* func, intx value, bool verbose) const {
     return ((JVMFlagConstraintFunc_intx)func)(value, verbose);
@@ -210,6 +241,9 @@ public:
                         "[ " UINTX_FORMAT " ... " UINTX_FORMAT " ]\n",
                         name, value, min, max);
   }
+  void range_constraint_hint(const char* name, uintx value) const {
+    JVMFlag::printError(true, "%s:" UINTX_FORMAT "\n", name, value);
+  }
   JVMFlag::Error typed_check_constraint(void* func, uintx value, bool verbose) const {
     return ((JVMFlagConstraintFunc_uintx)func)(value, verbose);
   }
@@ -228,6 +262,9 @@ public:
                         "uint64_t %s=" UINT64_FORMAT " is outside the allowed range "
                         "[ " UINT64_FORMAT " ... " UINT64_FORMAT " ]\n",
                         name, value, min, max);
+  }
+  void range_constraint_hint(const char* name, uint64_t value) const {
+    JVMFlag::printError(true, "%s:" UINT64_FORMAT "\n", name, value);
   }
   JVMFlag::Error typed_check_constraint(void* func, uint64_t value, bool verbose) const {
     return ((JVMFlagConstraintFunc_uint64_t)func)(value, verbose);
@@ -248,6 +285,9 @@ public:
                         "[ " SIZE_FORMAT " ... " SIZE_FORMAT " ]\n",
                         name, value, min, max);
   }
+  void range_constraint_hint(const char* name, size_t value) const {
+    JVMFlag::printError(true, "%s:" SIZE_FORMAT "\n", name, value);
+  }
   JVMFlag::Error typed_check_constraint(void* func, size_t value, bool verbose) const {
     return ((JVMFlagConstraintFunc_size_t)func)(value, verbose);
   }
@@ -266,6 +306,9 @@ public:
                           "double %s=%f is outside the allowed range "
                           "[ %f ... %f ]\n",
                         name, value, min, max);
+  }
+  void range_constraint_hint(const char* name, double value) const {
+    JVMFlag::printError(true, "%s:%f\n", name, value);
   }
   JVMFlag::Error typed_check_constraint(void* func, double value, bool verbose) const {
     return ((JVMFlagConstraintFunc_double)func)(value, verbose);

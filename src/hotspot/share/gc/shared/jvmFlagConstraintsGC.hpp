@@ -71,7 +71,7 @@
 
 SHARED_GC_CONSTRAINTS(DECLARE_CONSTRAINT)
 
-JVMFlag::Error MaxPLABSizeBounds(const char* name, size_t value, bool verbose);
+JVMFlag::Error MaxPLABSizeBounds(const char* name, size_t* value_addr, size_t value, bool verbose);
 
 #define GC_CONSTRAINTS(f)                      \
   SHARED_GC_CONSTRAINTS(f)                     \
