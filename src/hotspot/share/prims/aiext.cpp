@@ -381,6 +381,8 @@ static int get_field_offset(const char* klass, const char* field,
 
   // Transition thread state to VM.
   ThreadInVMfromNative state_guard(THREAD);
+  ResetNoHandleMark rnhm;
+  HandleMark hm(THREAD);
 
   fieldDescriptor fd;
   if (!get_field_descriptor(klass, field, sig, false, fd, THREAD)) {
@@ -401,6 +403,8 @@ static void* get_static_field_addr(const char* klass, const char* field,
 
   // Transition thread state to VM.
   ThreadInVMfromNative state_guard(THREAD);
+  ResetNoHandleMark rnhm;
+  HandleMark hm(THREAD);
 
   fieldDescriptor fd;
   if (!get_field_descriptor(klass, field, sig, true, fd, THREAD)) {

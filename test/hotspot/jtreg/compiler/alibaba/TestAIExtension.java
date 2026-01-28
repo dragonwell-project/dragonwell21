@@ -153,7 +153,7 @@ public class TestAIExtension {
         args.addAll(List.of(commands));
         args.add("-version");
 
-        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
         return ProcessTools.executeCommand(pb);
@@ -199,7 +199,7 @@ public class TestAIExtension {
         ));
         args.addAll(List.of(testArgs));
 
-        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
 
