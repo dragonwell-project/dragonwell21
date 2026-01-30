@@ -41,7 +41,7 @@
 #include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/javaThread.hpp"
 
-static unsigned int CurrentVersion = AIEXT_VERSION_2;
+static const unsigned int CURRENT_VERSION = AIEXT_VERSION_2;
 
 // Returns JVM version string.
 static aiext_result_t get_jvm_version(char* buf, size_t buf_size) {
@@ -54,10 +54,14 @@ static aiext_result_t get_jvm_version(char* buf, size_t buf_size) {
 }
 
 // Returns current AI-Extension version.
-static unsigned int get_aiext_version() { return CurrentVersion; }
+static unsigned int get_aiext_version() { return CURRENT_VERSION; }
 
 #define DEF_GET_JVM_FLAG(n, t)                                         \
   static aiext_result_t get_jvm_flag_##n(const char* name, t* value) { \
+    if (name == nullptr) {                                             \
+      log_info(aiext)("Invalid flag name");                            \
+      return AIEXT_ERROR;                                              \
+    }                                                                  \
     JVMFlag* flag = JVMFlag::find_flag(name);                          \
     if (flag == nullptr || flag->type() != JVMFlag::TYPE_##n) {        \
       log_info(aiext)("Flag %s not found or type mismatch", name);     \
@@ -82,6 +86,10 @@ DEF_GET_JVM_FLAG(double, double)
 
 static aiext_result_t get_jvm_flag_ccstr(const char* name, char* buf,
                                          size_t buf_size) {
+  if (name == nullptr) {
+    log_info(aiext)("Invalid flag name");
+    return AIEXT_ERROR;
+  }
   JVMFlag* flag = JVMFlag::find_flag(name);
   if (flag == nullptr || (flag->type() != JVMFlag::TYPE_ccstr &&
                           flag->type() != JVMFlag::TYPE_ccstrlist)) {
@@ -100,6 +108,10 @@ static aiext_result_t get_jvm_flag_ccstr(const char* name, char* buf,
 
 #define DEF_SET_JVM_FLAG(n, t)                                         \
   static aiext_result_t set_jvm_flag_##n(const char* name, t value) {  \
+    if (name == nullptr) {                                             \
+      log_info(aiext)("Invalid flag name");                            \
+      return AIEXT_ERROR;                                              \
+    }                                                                  \
     JVMFlag* flag = JVMFlag::find_flag(name);                          \
     if (flag == nullptr || flag->type() != JVMFlag::TYPE_##n) {        \
       log_info(aiext)("Flag %s not found or type mismatch", name);     \
@@ -111,6 +123,10 @@ static aiext_result_t get_jvm_flag_ccstr(const char* name, char* buf,
   }
 
 static aiext_result_t set_jvm_flag_bool(const char* name, int value) {
+  if (name == nullptr) {
+    log_info(aiext)("Invalid flag name");
+    return AIEXT_ERROR;
+  }
   JVMFlag* flag = JVMFlag::find_flag(name);
   if (flag == nullptr || flag->type() != JVMFlag::TYPE_bool) {
     log_info(aiext)("Flag %s not found or type mismatch", name);
@@ -131,6 +147,10 @@ DEF_SET_JVM_FLAG(size_t, size_t)
 DEF_SET_JVM_FLAG(double, double)
 
 static aiext_result_t set_jvm_flag_ccstr(const char* name, const char* value) {
+  if (name == nullptr) {
+    log_info(aiext)("Invalid flag name");
+    return AIEXT_ERROR;
+  }
   JVMFlag* flag = JVMFlag::find_flag(name);
   if (flag == nullptr || (flag->type() != JVMFlag::TYPE_ccstr &&
                           flag->type() != JVMFlag::TYPE_ccstrlist)) {
