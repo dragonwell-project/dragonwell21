@@ -26,6 +26,9 @@
 #include <string.h>
 
 #include "precompiled.hpp"
+#include "classfile/classLoaderData.hpp"
+#include "classfile/classLoaderDataGraph.inline.hpp"
+#include "classfile/dictionary.hpp"
 #include "classfile/javaClasses.hpp"
 #include "classfile/symbolTable.hpp"
 #include "classfile/systemDictionary.hpp"
@@ -40,6 +43,7 @@
 #include "runtime/handles.inline.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/javaThread.hpp"
+#include "runtime/signature.hpp"
 
 static const unsigned int CURRENT_VERSION = AIEXT_VERSION_2;
 
@@ -296,6 +300,25 @@ static JavaThread* get_current_java_thread() {
   return JavaThread::cast(thread);
 }
 
+// Finds the given class in the given class loader.
+static Klass* find_class(Symbol* class_name, Handle class_loader,
+                         Handle protection_domain, TRAPS) {
+  if (Signature::is_array(class_name) || Signature::has_envelope(class_name)) {
+    return nullptr;
+  }
+
+  class_loader = Handle(
+      THREAD,
+      java_lang_ClassLoader::non_reflection_class_loader(class_loader()));
+  ClassLoaderData* loader_data =
+      class_loader() == nullptr
+          ? ClassLoaderData::the_null_class_loader_data()
+          : ClassLoaderDataGraph::find_or_create(class_loader);
+
+  Dictionary* dictionary = loader_data->dictionary();
+  return dictionary->find(THREAD, class_name, protection_domain);
+}
+
 // Gets the field descriptor of the given field.
 // Returns `false` on failure.
 static bool get_field_descriptor(const char* klass, const char* field,
@@ -309,39 +332,6 @@ static bool get_field_descriptor(const char* klass, const char* field,
   }
   TempNewSymbol class_name = SymbolTable::new_symbol(klass);
 
-  // Extract pending exception.
-  struct PendingExceptionGuard {
-    JavaThread* thread;
-    Handle pending_exception;
-    const char* exception_file;
-    int exception_line;
-
-    PendingExceptionGuard(TRAPS) {
-      thread = THREAD;
-      pending_exception = Handle(THREAD, PENDING_EXCEPTION);
-      exception_file = THREAD->exception_file();
-      exception_line = THREAD->exception_line();
-      CLEAR_PENDING_EXCEPTION;
-    }
-
-    ~PendingExceptionGuard() {
-      // Restore pending exception.
-      if (pending_exception.not_null()) {
-        thread->set_pending_exception(pending_exception(), exception_file,
-                                      exception_line);
-      }
-    }
-
-    void log(const char* op) const {
-      if (log_is_enabled(Info, aiext)) {
-        oop ex = thread->pending_exception();
-        log_info(aiext)(
-            "Exception while %s, %s: %s", op, ex->klass()->external_name(),
-            java_lang_String::as_utf8_string(java_lang_Throwable::message(ex)));
-      }
-    }
-  } except_guard(THREAD);
-
   // Get class loader.
   Handle protection_domain;
   Handle loader(THREAD, SystemDictionary::java_system_loader());
@@ -351,16 +341,7 @@ static bool get_field_descriptor(const char* klass, const char* field,
   }
 
   // Find class from the class loader.
-  k = SystemDictionary::resolve_or_null(class_name, loader, protection_domain,
-                                        THREAD);
-  if (HAS_PENDING_EXCEPTION) {
-    except_guard.log("resolving class");
-    k = nullptr;
-    CLEAR_PENDING_EXCEPTION;
-  }
-
-  // Bail out if class not found, or not an instance class,
-  // or is not initialized.
+  k = find_class(class_name, loader, protection_domain, THREAD);
   if (k == nullptr) {
     log_info(aiext)("Class %s not found", klass);
     return false;
