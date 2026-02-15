@@ -645,7 +645,9 @@ cmsPipeline* DefaultICCintents(cmsContext       ContextID,
         if (!cmsPipelineCat(Result, Lut))
             goto Error;
 
+
         cmsPipelineFree(Lut);
+        Lut = NULL;
         Lut = NULL;
 
         // Update current space
