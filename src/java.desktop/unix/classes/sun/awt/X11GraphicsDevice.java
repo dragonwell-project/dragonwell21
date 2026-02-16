@@ -44,6 +44,7 @@ import sun.awt.util.ThreadGroupUtils;
 import sun.java2d.SunGraphicsEnvironment;
 import sun.java2d.loops.SurfaceType;
 import sun.awt.X11.XToolkit;
+import sun.awt.X11.XToolkit;
 import sun.java2d.opengl.GLXGraphicsConfig;
 import sun.java2d.pipe.Region;
 import sun.java2d.xr.XRGraphicsConfig;
