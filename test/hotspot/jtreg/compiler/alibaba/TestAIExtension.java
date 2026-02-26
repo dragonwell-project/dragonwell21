@@ -24,7 +24,7 @@
 /**
  * @test TestAIExtension
  * @summary Check that the AI-Extension feature works correctly
- * @requires vm.aiext
+ * @requires vm.aiext & vm.flagless
  * @library /test/lib /
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
@@ -153,7 +153,7 @@ public class TestAIExtension {
         args.addAll(List.of(commands));
         args.add("-version");
 
-        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
         return ProcessTools.executeCommand(pb);
@@ -199,7 +199,7 @@ public class TestAIExtension {
         ));
         args.addAll(List.of(testArgs));
 
-        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
+        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder(args);
         // Setup `DRAGONWELL_AIEXT_HOME` for testing.
         pb.environment().put("DRAGONWELL_AIEXT_HOME", System.getProperty("test.nativepath"));
 
