@@ -62,7 +62,8 @@ public class VersionCheck extends TestHelper {
         "jweblauncher",
         "jpackage",
         "ssvagent",
-        "jwebserver"
+        "jwebserver",
+        "jtune"
     };
 
     // tools that do not accept -version
@@ -108,7 +109,8 @@ public class VersionCheck extends TestHelper {
         "rmiregistry",
         "serialver",
         "servertool",
-        "ssvagent"
+        "ssvagent",
+        "jtune"
     };
 
     // expected reference strings
