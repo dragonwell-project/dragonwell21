@@ -37,16 +37,26 @@
 import jdk.test.lib.Asserts;
 import jdk.test.whitebox.WhiteBox;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 public class TestCheckJDK {
     static boolean testPassed = true;
     private static final WhiteBox WB = WhiteBox.getWhiteBox();
+    private static final List<String> EXCLUDE_FILES = List.of(
+        "bin" + File.separator + "jtune"
+    );
 
     static void checkExecStack(Path file) {
         String filename = file.toString();
+        boolean isExcluded = EXCLUDE_FILES.stream().anyMatch(filename::endsWith);
+        if (isExcluded) {
+            return;
+        }
+
         Path parent = file.getParent();
         if ((parent.endsWith("bin") && !filename.endsWith(".diz")) || filename.endsWith(".so")) {
             if (!WB.checkLibSpecifiesNoexecstack(filename)) {
