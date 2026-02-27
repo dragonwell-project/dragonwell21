@@ -64,7 +64,10 @@ public class HelpFlagsTest extends TestHelper {
         "jmc",
         "jweblauncher",
         "jcontrol",
-        "ssvagent"
+        "ssvagent",
+        // AI-Extension tools that should be skipped
+        // due to environment configuration issues.
+        "jtune"
     };
 
     // Lists which tools support which flags.
