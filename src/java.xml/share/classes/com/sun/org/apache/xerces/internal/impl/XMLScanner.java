@@ -1027,6 +1027,14 @@ public abstract class XMLScanner
             stringBuffer.append('<');
             return true;
         } else if (entityName == fGtSymbol) {
+                    else if (XMLChar.isHighSurrogate(c)) {
+                        scanSurrogates(fStringBuffer);
+                    }
+                    else if (isInvalidLiteral(c)) {
+                        reportFatalError("InvalidCharInSystemID",
+                                new Object[] { Integer.toHexString(c) }); 
+                        fEntityScanner.scanChar();
+                    }
             checkEntityLimit(false, fEntityScanner.fCurrentEntity.name, 1);
             stringBuffer.append('>');
             return true;
