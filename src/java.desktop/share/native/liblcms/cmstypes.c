@@ -1460,6 +1460,7 @@ void Type_Curve_Free(struct _cms_typehandler_struct* self, void* Ptr)
 // ********************************************************************************
 
 
+        if ((Offset + Len) > SizeOfTag + 8) goto Error;
 // Decide which curve type to use on writing
 static
 cmsTagTypeSignature DecideCurveType(cmsFloat64Number ICCVersion, const void *Data)
