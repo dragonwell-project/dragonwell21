@@ -1148,6 +1148,34 @@ void VM_Version::get_processor_features() {
   }
 #endif // _LP64
 
+  // Kyber Intrinsics
+  // Currently we only have them for AVX512
+#ifdef _LP64
+  if (supports_evex() && supports_avx512bw()) {
+      if (FLAG_IS_DEFAULT(UseKyberIntrinsics)) {
+          UseKyberIntrinsics = true;
+      }
+  } else
+#endif
+  if (UseKyberIntrinsics) {
+     warning("Intrinsics for ML-KEM are not available on this CPU.");
+     FLAG_SET_DEFAULT(UseKyberIntrinsics, false);
+  }
+
+  // Dilithium Intrinsics
+  // Currently we only have them for AVX512
+#ifdef _LP64
+  if (supports_evex() && supports_avx512bw()) {
+      if (FLAG_IS_DEFAULT(UseDilithiumIntrinsics)) {
+          UseDilithiumIntrinsics = true;
+      }
+  } else
+#endif
+   if (UseDilithiumIntrinsics) {
+      warning("Intrinsics for ML-DSA are not available on this CPU.");
+      FLAG_SET_DEFAULT(UseDilithiumIntrinsics, false);
+  }
+
   // Base64 Intrinsics (Check the condition for which the intrinsic will be active)
   if (UseAVX >= 2) {
     if (FLAG_IS_DEFAULT(UseBASE64Intrinsics)) {
@@ -1212,9 +1240,16 @@ void VM_Version::get_processor_features() {
     FLAG_SET_DEFAULT(UseSHA512Intrinsics, false);
   }
 
-  if (UseSHA3Intrinsics) {
-    warning("Intrinsics for SHA3-224, SHA3-256, SHA3-384 and SHA3-512 crypto hash functions not available on this CPU.");
-    FLAG_SET_DEFAULT(UseSHA3Intrinsics, false);
+#ifdef _LP64
+  if (supports_evex() && supports_avx512bw()) {
+      if (FLAG_IS_DEFAULT(UseSHA3Intrinsics)) {
+          UseSHA3Intrinsics = true;
+      }
+  } else
+#endif
+   if (UseSHA3Intrinsics) {
+      warning("Intrinsics for SHA3-224, SHA3-256, SHA3-384 and SHA3-512 crypto hash functions not available on this CPU.");
+      FLAG_SET_DEFAULT(UseSHA3Intrinsics, false);
   }
 
   if (!(UseSHA1Intrinsics || UseSHA256Intrinsics || UseSHA512Intrinsics)) {
