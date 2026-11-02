@@ -458,7 +458,7 @@ class methodHandle;
    do_signature(vectorizedMismatch_signature, "(Ljava/lang/Object;JLjava/lang/Object;JII)I")                            \
                                                                                                                         \
   /* java/lang/ref/Reference */                                                                                         \
-  do_intrinsic(_Reference_get,              java_lang_ref_Reference, get_name,       void_object_signature,    F_R)     \
+  do_intrinsic(_Reference_get0,             java_lang_ref_Reference, get0_name,      void_object_signature,    F_RN)    \
   do_intrinsic(_Reference_refersTo0,        java_lang_ref_Reference, refersTo0_name, object_boolean_signature, F_RN)    \
   do_intrinsic(_PhantomReference_refersTo0, java_lang_ref_PhantomReference, refersTo0_name, object_boolean_signature, F_RN) \
                                                                                                                         \
@@ -514,6 +514,12 @@ class methodHandle;
   do_class(sun_security_provider_sha3,                             "sun/security/provider/SHA3")                        \
   do_intrinsic(_sha3_implCompress, sun_security_provider_sha3, implCompress_name, implCompress_signature, F_R)          \
                                                                                                                         \
+  /* support for sun.security.provider.SHAKE128Parallel */                                                              \
+  do_class(sun_security_provider_sha3_parallel,                "sun/security/provider/SHA3Parallel")                    \
+   do_intrinsic(_double_keccak, sun_security_provider_sha3_parallel, double_keccak_name, double_keccak_signature, F_S)   \
+   do_name(     double_keccak_name,                                 "doubleKeccak")                                     \
+   do_signature(double_keccak_signature,                            "([J[J)I")                                          \
+                                                                                                                        \
   /* support for sun.security.provider.DigestBase */                                                                    \
   do_class(sun_security_provider_digestbase,                       "sun/security/provider/DigestBase")                  \
   do_intrinsic(_digestBase_implCompressMB, sun_security_provider_digestbase, implCompressMB_name, countPositives_signature, F_R)   \
@@ -547,6 +553,47 @@ class methodHandle;
   do_intrinsic(_chacha20Block, com_sun_crypto_provider_chacha20cipher, chacha20Block_name, chacha20Block_signature, F_S) \
    do_name(chacha20Block_name,                                 "implChaCha20Block")                                         \
    do_signature(chacha20Block_signature, "([I[B)I")                                                                    \
+                                                                                                                        \
+  /* support for com.sun.crypto.provider.ML_KEM */                                                                      \
+  do_class(com_sun_crypto_provider_ML_KEM,      "com/sun/crypto/provider/ML_KEM")                                       \
+   do_signature(SaSaSaSaI_signature, "([S[S[S[S)I")                                                                     \
+   do_signature(BaISaII_signature, "([BI[SI)I")                                                                         \
+   do_signature(SaSaSaI_signature, "([S[S[S)I")                                                                         \
+   do_signature(SaSaI_signature, "([S[S)I")                                                                             \
+   do_signature(SaI_signature, "([S)I")                                                                                 \
+   do_name(kyberAddPoly_name,                             "implKyberAddPoly")                                           \
+  do_intrinsic(_kyberNtt, com_sun_crypto_provider_ML_KEM, kyberNtt_name, SaSaI_signature, F_S)                          \
+   do_name(kyberNtt_name,                                  "implKyberNtt")                                              \
+  do_intrinsic(_kyberInverseNtt, com_sun_crypto_provider_ML_KEM, kyberInverseNtt_name, SaSaI_signature, F_S)            \
+   do_name(kyberInverseNtt_name,                           "implKyberInverseNtt")                                       \
+  do_intrinsic(_kyberNttMult, com_sun_crypto_provider_ML_KEM, kyberNttMult_name, SaSaSaSaI_signature, F_S)              \
+   do_name(kyberNttMult_name,                              "implKyberNttMult")                                          \
+  do_intrinsic(_kyberAddPoly_2, com_sun_crypto_provider_ML_KEM, kyberAddPoly_name, SaSaSaI_signature, F_S)              \
+  do_intrinsic(_kyberAddPoly_3, com_sun_crypto_provider_ML_KEM, kyberAddPoly_name, SaSaSaSaI_signature, F_S)            \
+  do_intrinsic(_kyber12To16, com_sun_crypto_provider_ML_KEM, kyber12To16_name, BaISaII_signature, F_S)                  \
+   do_name(kyber12To16_name,                             "implKyber12To16")                                             \
+  do_intrinsic(_kyberBarrettReduce, com_sun_crypto_provider_ML_KEM, kyberBarrettReduce_name, SaI_signature, F_S)        \
+   do_name(kyberBarrettReduce_name,                        "implKyberBarrettReduce")                                    \
+                                                                                                                        \
+  /* support for sun.security.provider.ML_DSA */                                                                        \
+  do_class(sun_security_provider_ML_DSA,      "sun/security/provider/ML_DSA")                                           \
+   do_signature(IaII_signature, "([II)I")                                                                               \
+   do_signature(IaIaI_signature, "([I[I)I")                                                                             \
+   do_signature(IaIaIaI_signature, "([I[I[I)I")                                                                         \
+   do_signature(IaIaIaIII_signature, "([I[I[III)I")                                                                     \
+  do_intrinsic(_dilithiumAlmostNtt, sun_security_provider_ML_DSA, dilithiumAlmostNtt_name, IaIaI_signature, F_S)        \
+   do_name(dilithiumAlmostNtt_name,                            "implDilithiumAlmostNtt")                                \
+  do_intrinsic(_dilithiumAlmostInverseNtt, sun_security_provider_ML_DSA,                                                \
+                dilithiumAlmostInverseNtt_name, IaIaI_signature, F_S)                                                   \
+   do_name(dilithiumAlmostInverseNtt_name,                     "implDilithiumAlmostInverseNtt")                         \
+  do_intrinsic(_dilithiumNttMult, sun_security_provider_ML_DSA, dilithiumNttMult_name, IaIaIaI_signature, F_S)          \
+   do_name(dilithiumNttMult_name,                              "implDilithiumNttMult")                                  \
+  do_intrinsic(_dilithiumMontMulByConstant, sun_security_provider_ML_DSA,                                               \
+                dilithiumMontMulByConstant_name, IaII_signature, F_S)                                                   \
+   do_name(dilithiumMontMulByConstant_name,                    "implDilithiumMontMulByConstant")                        \
+  do_intrinsic(_dilithiumDecomposePoly, sun_security_provider_ML_DSA,                                                   \
+                dilithiumDecomposePoly_name, IaIaIaIII_signature, F_S)                                                  \
+   do_name(dilithiumDecomposePoly_name,                    "implDilithiumDecomposePoly")                                \
                                                                                                                         \
   /* support for java.util.zip */                                                                                       \
   do_class(java_util_zip_CRC32,           "java/util/zip/CRC32")                                                        \
