@@ -32,11 +32,9 @@ FT_BEGIN_HEADER
 
   typedef struct  TT_CMapRec_
   {
-    FT_CMapRec     cmap;
-    FT_Byte*       data;        /* pointer to in-memory cmap table */
-    FT_Int         flags;       /* for format 4 only               */
-    FT_CMap_Class  cmap_class;  /* class before applying 'DMAP'    */
-    FT_CMap        dmap;        /* overriding 'DMAP' subtable      */
+    FT_CMapRec  cmap;
+    FT_Byte*    data;           /* pointer to in-memory cmap table */
+    FT_Int      flags;          /* for format 4 only               */
 
   } TT_CMapRec, *TT_CMap;
 
@@ -113,12 +111,6 @@ FT_BEGIN_HEADER
 
   FT_LOCAL( FT_Error )
   tt_face_build_cmaps( TT_Face  face );
-
-  FT_LOCAL( FT_Error )
-  tt_face_build_dmaps( TT_Face  face );
-
-  FT_LOCAL( void )
-  tt_face_done_dmaps( TT_Face  face );
 
   /* used in tt-cmaps service */
   FT_LOCAL( FT_Error )

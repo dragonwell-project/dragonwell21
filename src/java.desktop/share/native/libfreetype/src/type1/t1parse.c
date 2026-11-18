@@ -268,34 +268,33 @@
 
     if ( parser->in_pfb )
     {
-      /* in the case of the PFB format, the private dictionary can be */
-      /* made of several adjacent segments.                           */
+      /* in the case of the PFB format, the private dictionary can be  */
+      /* made of several segments.  We thus first read the number of   */
+      /* segments to compute the total size of the private dictionary  */
+      /* then re-read them into memory.                                */
+      FT_ULong   start_pos = FT_STREAM_POS();
       FT_UShort  tag;
-      FT_Byte*   priv_dict = NULL;
-      FT_ULong   priv_len  = 0;
 
 
+      parser->private_len = 0;
       for (;;)
       {
         error = read_pfb_tag( stream, &tag, &size );
         if ( error )
+          goto Fail;
+
+        if ( tag != 0x8002U )
           break;
 
-        if ( tag != 0x8002U || size > stream->size - stream->pos )
-          break;
+        parser->private_len += size;
 
-        if ( FT_QREALLOC( priv_dict, priv_len, priv_len + size ) ||
-             FT_STREAM_READ( priv_dict + priv_len, size )        )
-          break;
-
-        priv_len += size;
+        if ( FT_STREAM_SKIP( size ) )
+          goto Fail;
       }
 
-      parser->private_dict = priv_dict;
-      parser->private_len  = priv_len;
-
       /* Check that we have a private dictionary there */
-      if ( priv_len == 0 )
+      /* and allocate private dictionary buffer        */
+      if ( parser->private_len == 0 )
       {
         FT_ERROR(( "T1_Get_Private_Dict:"
                    " invalid private dictionary section\n" ));
@@ -303,8 +302,26 @@
         goto Fail;
       }
 
-      /* discard any errors from truncated files */
-      error = FT_Err_Ok;
+      if ( FT_STREAM_SEEK( start_pos )                            ||
+           FT_QALLOC( parser->private_dict, parser->private_len ) )
+        goto Fail;
+
+      parser->private_len = 0;
+      for (;;)
+      {
+        error = read_pfb_tag( stream, &tag, &size );
+        if ( error || tag != 0x8002U )
+        {
+          error = FT_Err_Ok;
+          break;
+        }
+
+        if ( FT_STREAM_READ( parser->private_dict + parser->private_len,
+                             size ) )
+          goto Fail;
+
+        parser->private_len += size;
+      }
     }
     else
     {
@@ -322,8 +339,11 @@
       FT_Bool     test_cr;
 
 
-      parser->root.cursor = cur;
-      parser->root.limit  = limit;
+      parser->root.cursor = parser->base_dict;
+      parser->root.limit  = parser->base_dict + parser->base_len;
+
+      cur   = parser->root.cursor;
+      limit = parser->root.limit;
 
       while ( cur < limit )
       {

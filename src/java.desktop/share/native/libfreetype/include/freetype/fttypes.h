@@ -25,6 +25,8 @@
 #include <freetype/ftsystem.h>
 #include <freetype/ftimage.h>
 
+#include <stddef.h>
+
 
 FT_BEGIN_HEADER
 

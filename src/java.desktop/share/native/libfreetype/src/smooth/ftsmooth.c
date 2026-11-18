@@ -124,8 +124,7 @@
 
 
     for ( ; count--; spans++ )
-      for ( dst = dst_line + (unsigned short)spans->x * 3,
-            w = spans->len; w--; dst += 3 )
+      for ( dst = dst_line + spans->x * 3, w = spans->len; w--; dst += 3 )
         *dst = spans->coverage;
   }
 
@@ -152,7 +151,7 @@
 
     params.clip_box.xMin = 0;
     params.clip_box.yMin = 0;
-    params.clip_box.xMax = bitmap->width / 3;
+    params.clip_box.xMax = bitmap->width;
     params.clip_box.yMax = bitmap->rows;
 
     if ( bitmap->pitch < 0 )
@@ -291,8 +290,7 @@
 
 
     for ( ; count--; spans++ )
-      for ( dst = dst_line + (unsigned short)spans->x,
-            w = spans->len; w--; dst++ )
+      for ( dst = dst_line + spans->x, w = spans->len; w--; dst++ )
       {
         dst[0] += ( spans->coverage * target->wght[0] + 85 ) >> 8;
         dst[1] += ( spans->coverage * target->wght[1] + 85 ) >> 8;
@@ -387,8 +385,7 @@
 
 
     for ( ; count--; spans++ )
-      for ( dst = dst_line + (unsigned short)spans->x,
-            w = spans->len; w--; dst++ )
+      for ( dst = dst_line + spans->x, w = spans->len; w--; dst++ )
       {
         dst[        0] += ( spans->coverage * target->wght[0] + 85 ) >> 8;
         dst[    pitch] += ( spans->coverage * target->wght[1] + 85 ) >> 8;
@@ -476,7 +473,7 @@
 
 
     unsigned char*  dst = target->origin - ( y / SCALE ) * target->pitch;
-    unsigned int    x, i;
+    unsigned short  x;
     unsigned int    cover, sum;
 
 
@@ -490,9 +487,8 @@
       cover = ( spans->coverage + SCALE * SCALE / 2 ) / ( SCALE * SCALE );
       for ( x = 0; x < spans->len; x++ )
       {
-        i      = ( (unsigned short)spans->x + x ) / SCALE;
-        sum    = dst[i] + cover;
-        dst[i] = (unsigned char)( sum - ( sum >> 8 ) );
+        sum                           = dst[( spans->x + x ) / SCALE] + cover;
+        dst[( spans->x + x ) / SCALE] = (unsigned char)( sum - ( sum >> 8 ) );
       }
     }
   }

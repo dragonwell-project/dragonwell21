@@ -52,9 +52,5 @@
   TTCMAPCITEM( tt_cmap14_class_rec )
 #endif
 
-#ifdef TT_CONFIG_CMAP_FORMAT_15
-  TTCMAPCITEM( tt_cmap15_class_rec )
-#endif
-
 
   /* END */

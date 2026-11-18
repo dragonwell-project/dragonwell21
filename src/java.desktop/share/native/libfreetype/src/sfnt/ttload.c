@@ -227,9 +227,7 @@
         /* ignore in general).                                            */
 
         if ( table.Tag == TTAG_hmtx ||
-             table.Tag == TTAG_HMTX ||
-             table.Tag == TTAG_vmtx ||
-             table.Tag == TTAG_VMTX )
+             table.Tag == TTAG_vmtx )
           valid_entries++;
         else
         {
@@ -441,9 +439,7 @@
       else if ( entry.Length > stream->size - entry.Offset )
       {
         if ( entry.Tag == TTAG_hmtx ||
-             entry.Tag == TTAG_HMTX ||
-             entry.Tag == TTAG_vmtx ||
-             entry.Tag == TTAG_VMTX )
+             entry.Tag == TTAG_vmtx )
         {
 #ifdef FT_DEBUG_LEVEL_TRACE
           FT_ULong  old_length = entry.Length;
@@ -753,8 +749,7 @@
                      FT_Stream  stream )
   {
     FT_Error        error;
-    TT_MaxProfile*  maxProfile  = &face->max_profile;
-    FT_Bool         is_extended = FALSE;
+    TT_MaxProfile*  maxProfile = &face->max_profile;
 
     static const FT_Frame_Field  maxp_fields[] =
     {
@@ -787,37 +782,12 @@
     };
 
 
-    face->maxp_num_glyphs = 0;
-
-    error = face->goto_table( face, TTAG_MAXP, stream, 0 );
-    if ( !error )
-      is_extended = TRUE;
-    else if ( FT_ERR_EQ( error, Table_Missing ) )
-      error = face->goto_table( face, TTAG_maxp, stream, 0 );
-
+    error = face->goto_table( face, TTAG_maxp, stream, 0 );
     if ( error )
       goto Exit;
 
-    if ( is_extended )
-    {
-      FT_UInt32  num_glyphs;
-
-
-      if ( FT_READ_LONG( maxProfile->version ) ||
-           FT_READ_UOFF3( num_glyphs )         )
-        goto Exit;
-
-      face->maxp_num_glyphs = num_glyphs;
-      maxProfile->numGlyphs = num_glyphs > 0xFFFFU ? 0xFFFFU
-                                                   : (FT_UShort)num_glyphs;
-    }
-    else
-    {
-      if ( FT_STREAM_READ_FIELDS( maxp_fields, maxProfile ) )
-        goto Exit;
-
-      face->maxp_num_glyphs = maxProfile->numGlyphs;
-    }
+    if ( FT_STREAM_READ_FIELDS( maxp_fields, maxProfile ) )
+      goto Exit;
 
     maxProfile->maxPoints             = 0;
     maxProfile->maxContours           = 0;
@@ -859,7 +829,7 @@
       }
     }
 
-    FT_TRACE3(( "numGlyphs: %u\n", face->maxp_num_glyphs ));
+    FT_TRACE3(( "numGlyphs: %hu\n", maxProfile->numGlyphs ));
 
   Exit:
     return error;
@@ -1164,21 +1134,6 @@
 
     if ( FT_FRAME_EXTRACT( face->cmap_size, face->cmap_table ) )
       face->cmap_size = 0;
-
-    if ( error )
-      goto Exit;
-
-    error = face->goto_table( face, TTAG_DMAP, stream, &face->dmap_size );
-    if ( error )
-    {
-      face->dmap_size = 0;
-      if ( FT_ERR_EQ( error, Table_Missing ) )
-        error = FT_Err_Ok;
-      goto Exit;
-    }
-
-    if ( FT_FRAME_EXTRACT( face->dmap_size, face->dmap_table ) )
-      face->dmap_size = 0;
 
   Exit:
     return error;

@@ -52,8 +52,6 @@ import java.io.IOException;
  *                   initial(9),
  *                   pre-authent(10),
  *                   hw-authent(11),
- *                   transited-policy-checked(12),
- *                   ok-as-delegate(13)
  *                   enc-pa-rep(15)
  *                  }
  */
@@ -182,17 +180,8 @@ public class TicketFlags extends KerberosFlags {
                 case 11:
                     sb.append("HW-AUTHENT;");
                     break;
-                case 12:
-                    sb.append("TRANSIT-POLICY-CHECKED;");
-                    break;
-                case 13:
-                    sb.append("OK-AS-DELEGATE;");
-                    break;
                 case 15:
                     sb.append("ENC-PA-REP;");
-                    break;
-                default:
-                    sb.append(i).append(";");
                     break;
                 }
             }
