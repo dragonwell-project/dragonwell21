@@ -241,12 +241,12 @@ bool C2Compiler::is_intrinsic_supported(const methodHandle& method) {
     break;
   case vmIntrinsics::_compress_i:
   case vmIntrinsics::_compress_l:
-    // disable because of JDK-8350896
-    return false;
+    if (!Matcher::match_rule_supported(Op_CompressBits)) return false;
+    break;
   case vmIntrinsics::_expand_i:
   case vmIntrinsics::_expand_l:
-    // disable because of JDK-8350896
-    return false;
+    if (!Matcher::match_rule_supported(Op_ExpandBits)) return false;
+    break;
   case vmIntrinsics::_numberOfLeadingZeros_i:
     if (!Matcher::match_rule_supported(Op_CountLeadingZerosI)) return false;
     break;

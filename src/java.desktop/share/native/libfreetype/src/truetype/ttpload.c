@@ -69,11 +69,7 @@
 
 
     /* we need the size of the `glyf' table for malformed `loca' tables */
-    error = face->goto_table( face,
-                              face->is_extended_glyf ? TTAG_GLYF
-                                                     : TTAG_glyf,
-                              stream,
-                              &face->glyf_len );
+    error = face->goto_table( face, TTAG_glyf, stream, &face->glyf_len );
 
     /* it is possible that a font doesn't have a glyf table at all */
     /* or its size is zero                                         */
@@ -95,11 +91,7 @@
     }
 
     FT_TRACE2(( "Locations " ));
-    error = face->goto_table( face,
-                              face->is_extended_glyf ? TTAG_LOCA
-                                                     : TTAG_loca,
-                              stream,
-                              &table_len );
+    error = face->goto_table( face, TTAG_loca, stream, &table_len );
     if ( error )
     {
       error = FT_THROW( Locations_Missing );
@@ -108,8 +100,7 @@
 
     shift = face->header.Index_To_Loc_Format != 0 ? 2 : 1;
 
-    if ( !face->is_extended_glyf        &&
-         table_len > 0x10000UL << shift )
+    if ( table_len > 0x10000UL << shift )
     {
       FT_TRACE2(( "table too large\n" ));
       table_len = 0x10000UL << shift;
